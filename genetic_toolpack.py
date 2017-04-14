@@ -1,0 +1,207 @@
+# -*- coding: utf-8 -*-
+# <nbformat>3.0</nbformat>
+
+#AUTHOR: ALEXANDRE YAHI
+#AFFILATION: LAPPALAINEN LAB - New York Genome Center - Columbia University
+#DATE: 2015-2016
+#VERSION: 1.1
+
+'''Python function for sequencing data - 1.1'''
+
+from __future__ import print_function
+
+import sys
+if sys.version_info.major is not 2 and sys.version_info.minor is not 7:
+    sys.exit("Please use Python 2.7 for this module: " + __name__)
+
+
+import os
+import gzip
+from string import maketrans
+
+def rvcomplement(seq): # type: (str) -> str
+    '''Produces the reverse complement of a nucleotide sequence'''
+    table = maketrans('ACGT', 'TGCA') # type: str
+    return seq.translate(table)
+
+
+class Read(object):
+    """A FastQ read"""
+
+    def __init__(self, readid, sequence, quality): # type: (str, str, str) -> None
+        self._readid = str(readid)
+        self._sequence = str(sequence)
+        self._quality = str(quality)
+
+    def __repr__(self): # type: (None) -> str
+        return self.get_readid()
+
+    def __len__(self): # type: (None) -> int
+        return len(self._sequence)
+
+    def rvcomplement(self): # type(None) -> None
+        """Reverse complement the sequence for this read"""
+        self._sequence = rvcomplement(seq=self._sequence)
+
+    def get_readid(self): # type: (None) -> str
+        """Get the read ID"""
+        return self._readid
+
+    def get_sequence(self): # type: (None) -> str
+        """Get the sequence of this read"""
+        return self._sequence
+
+    def get_quality(self): # type: (None) -> str
+        """Get the quality scores for this read"""
+        return self._quality
+
+
+class FastQ(object):
+    """A FASTQ file (collection of reads)"""
+
+    def __init__(self): # type: (None) -> None
+        self._reads = dict()
+
+    def __len__(self): # type: (None) -> int
+        return len(self._reads)
+
+    def add_read(self, read): # type: (Read) -> None
+        """Add a Read to our FASTQ file"""
+        if not isinstance(read, Read):
+            raise TypeError("'read' must be of type Read")
+        if read.get_readid() in self._reads:
+            raise ValueError("Cannot have multiple Reads with the same read ID")
+        self._reads[read.get_readid()] = read
+
+    def get_read(self, readid): # type: (str) -> Read
+        """Get a Read by read ID"""
+        return self._reads[readid]
+
+    def get_all_reads(self): # type: (None) -> List[Read]
+        """Get all Reads from this FastQ"""
+        return self._reads.values()
+
+    def get_seqs(self): # type: (None) -> List[str]
+        """Get all the sequence data in this FASTQ"""
+        return [read.get_sequence() for read in self._reads.values()]
+
+
+def load_fastq(fastq_file): # type: (str) -> FastQ
+    '''Loading reads from a fastq file, list of lists including the +'''
+    # output, temp = list(), list()
+    output, temp = FastQ(), list()
+    if 'gz' in fastq_file:
+        fastq_handle = gzip.open(fastq_file, 'rb')
+    else:
+        fastq_handle = open(fastq_file, 'rb')
+    for i, line in enumerate(fastq_handle):
+        if i % 4 == 2:
+            continue
+        temp.append(line.decode().rstrip('\n'))
+        if i % 4 == 3:
+            this_read = Read(readid=temp[0], sequence=temp[1], quality=temp[2])
+            output.add_read(this_read)
+            temp = list()
+    fastq_handle.close()
+    return output
+
+
+def load_seq(seq_file): # type: (str) -> (str, str)
+    '''Load reference and template'''
+    output, name = str(), str() # type: str, str
+    with open(seq_file, 'rb') as sfile:
+        for line in sfile:
+            if line.startswith('>'):
+                name += line.strip()
+                continue
+            output += line.strip().replace(' ', '').upper()
+    if not name:
+        name = os.path.splitext(os.path.basename(seq_file))[0] # type: str
+    name = name.split(' ')[0].replace('>', '')
+    return name, output
+
+
+def get_mismatch(seq_a, seq_b, head=None, tail=None, matches=False):
+    '''Get mismatches between two sequences after trimming head/tail gaps
+    Optionally, get indecies where the sequences match as well'''
+    if len(seq_a) != len(seq_b):
+        raise ValueError("Sequences must be the same length")
+    mis_list, match_list = list(), list() # type: Tuple[int, Tuple[str]], List[int]
+    if head and tail:
+        seq_range = xrange(head, tail + 1) # type: xrange
+    else:
+        seq_range = xrange(len(seq_a)) # type: xrange
+    for index in seq_range: # type: int
+        if seq_a[index] == '-' or seq_b[index] == '-':
+            #   Gap, not mismatch, continue
+            continue
+        if seq_a[index] == seq_b[index]:
+            #   Match, not mismatch
+            match_list.append(index)
+            continue
+        #   If neither a gap nor a match, it's a mismatch
+        mis_list.append((index, (seq_a[index], seq_b[index])))
+    if matches:
+        return mis_list, match_list
+    else:
+        return mis_list
+
+
+def trim_interval(seq): # type: (str) -> (int, int)
+    '''Define the interval discarding head/tail gaps caused by alignment'''
+    # HEAD TRIMMING
+    head = 0
+    while seq[head] == '-':
+        head += 1
+    tail = -1
+    while seq[tail] == '-':
+        tail -= 1
+    tail = len(seq) + tail
+    return head, tail
+
+
+def side_trimmer(seq): # type: (str) -> str
+    '''Trim only side gaps of an aligned sequence, return trimmed aligned sequence'''
+    trimmed_seq = str() # type: str
+    head, tail = trim_interval(seq) # type: int, int
+    if tail == -1:
+        trimmed_seq = seq[head:]
+    else:
+        trimmed_seq = seq[head:tail+1]
+    return trimmed_seq
+
+
+def find_gaps(seq, head=None, tail=None): # type: (str, Optional[int], Optional[int]) -> List[List[int]]
+    '''Return absolute position and length of all the gaps in a sequence
+    Use known head and tail, or optionally find head and tail'''
+    #Adjust the interval of study to discard head/tail gaps due to alignment
+    if not (head and tail):
+        head, tail = trim_interval(seq) # type: int, int
+    gap_list = list() # type: List
+    gap_open = False # type: bool
+    # Temporary values
+    index, length = 0, 0 # type: int, int
+    for i in range(head, tail + 1):
+        if seq[i] == '-': # GAP
+            if not gap_open: # Open the gap
+                gap_open = True # type: bool
+                length = 1 # type: int
+                index = i # type: int
+            else: #continue previous gap
+                length += 1
+        else:
+            if gap_open: # Close the gap
+                gap_list.append((index, length))
+                index, length = 0, 0 # type: int, int
+                gap_open = False # type: bool
+            else: # Move along
+                continue
+    return gap_list # type: List(Tuple[int])
+
+
+def sim_seq(seq1, seq2): # type: (Iterable, Iterable) -> int
+    '''Find up to which index seq2 is similar to seq1'''
+    sim_index = 0 # type: int
+    while seq1[sim_index] == seq2[sim_index]:
+        sim_index += 1
+    return sim_index
