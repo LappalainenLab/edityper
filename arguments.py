@@ -23,11 +23,11 @@ _VALID_PLATFORMS = (
     'PACBIO'
 )
 _VERBOSITY_LEVELS = (
-    'DEBUG',
-    'INFO',
-    'WARNING',
-    'ERROR',
-    'CRITICAL'
+    'debug',
+    'info',
+    'warning',
+    'error',
+    'critical'
 )
 
 def make_argument_parser():
