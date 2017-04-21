@@ -218,8 +218,10 @@ def display_classification(
 ):
     # type: (...) -> None
     """Display the report of the read classifification
-    'read_classification' is a four dictionaries where the values are lists of Alignment
-    and 'total_reads' is the total number of reads for the entire sample"""
+    'read_classification' is a tuple of four dictionaries where the values are
+    lists of Alignment objects and the four dictionaries are (in order):
+    'HDR', 'NHEJ', 'NO EDIT', and 'DISCARD' read classifications;
+    'total_reads' is the total number of reads for the entire sample"""
     logging.warning("################################################")
     logging.warning("--------------Read Classifications--------------")
     iter_tag = { # A dictionary of classifications, numbered for easy access
@@ -259,61 +261,74 @@ def create_report(
         reporter, # type: Reporter
         reference, # type: str
         snp_index, # type: int
+        output_prefix, # type: str
         interesting_only=True # type: bool
 ):
     # type: (...) -> None
     """Report"""
+    #   Unpack our report
     deletions, insertions, mismatches, matches = reporter
+    #   Start counting coverage
     cumulative_deletions = Counter() # type: collections.Counter
     for position, dist in deletions.items(): # type: int, List[int]
         for length in dist: # type: int
             for index in xrange(length): # type: int
                 cumulative_deletions[position + index] += 1
-    for position, base in enumerate(reference): # type: int, str
-        if position in insertions:
-            count_ins = len(insertions[position])
-            mean_ins = round(np.mean(insertions[position]), 2)
-        else:
-            count_ins, mean_ins = 0, 0 # type: int, int
-        if position in mismatches:
-            nuc_counter = Counter(mismatches[position]) # type: collections.Counter
-        else:
-            nuc_counter = {base: 0 for base in 'ACGT'} # type: Dict[str, int]
-        if position in deletions:
-            count_del = len(deletions[position])
-            mean_del = round(np.mean(deletions[position]), 2)
-        else:
-            count_del, mean_del = 0, 0
-        covered = cumulative_deletions[position] + sum(nuc_counter.values())
-        if position in matches:
-            covered += matches[position]
-        if interesting_only:
-            check = [ # type: List[int]
+    #   Prepare output file
+    events_name = output_prefix + '.events'
+    #   Start classifying events
+    logging.info('Writing events log to %s', events_name)
+    with open(events_name, 'w') as efile:
+        for position, base in enumerate(reference): # type: int, str
+            if position in insertions:
+                count_ins = len(insertions[position]) # type: int
+                mean_ins = round(np.mean(insertions[position]), 2) # type: float
+            else:
+                count_ins, mean_ins = 0, 0 # type: int, int
+            if position in mismatches:
+                nuc_counter = Counter(mismatches[position]) # type: collections.Counter
+            else:
+                nuc_counter = {base: 0 for base in 'ACGT'} # type: Dict[str, int]
+            if position in deletions:
+                count_del = len(deletions[position]) # type: int
+                mean_del = round(np.mean(deletions[position]), 2) # type: float
+            else:
+                count_del, mean_del = 0, 0 # type: int, int
+            covered = cumulative_deletions[position] + sum(nuc_counter.values()) # type: int
+            if position in matches:
+                covered += matches[position]
+            if interesting_only:
+                check = [ # type: List[int]
+                    covered,
+                    count_ins,
+                    mean_ins,
+                    count_del,
+                    mean_del
+                ]
+                check.extend(nuc_counter.values())
+                if sum(check) == 0:
+                    continue
+            msg = (
+                position + 1,
+                base,
                 covered,
+                count_del,
+                mean_del,
                 count_ins,
                 mean_ins,
-                count_del,
-                mean_del
-            ]
-            check.extend(nuc_counter.values())
-            if sum(check) == 0:
-                continue
-        msg = (
-            position + 1,
-            base,
-            covered,
-            count_del,
-            mean_del,
-            count_ins,
-            mean_ins,
-            nuc_counter['A'],
-            nuc_counter['T'],
-            nuc_counter['C'],
-            nuc_counter['G']
-        )
-        if position == snp_index:
-            print(_DISP_BREAK)
-        msg = map(str, msg)
-        print('\t'.join(msg))
-        if position == snp_index:
-            print(_DISP_BREAK)
+                nuc_counter['A'],
+                nuc_counter['T'],
+                nuc_counter['C'],
+                nuc_counter['G']
+            )
+            if position == snp_index:
+                efile.write(_DISP_BREAK + '\n')
+                print(_DISP_BREAK)
+            msg = map(str, msg) # type: Iterable[str]
+            msg = '\t'.join(msg) # type: str
+            efile.write(msg + '\n')
+            print(msg)
+            if position == snp_index:
+                efile.write(_DISP_BREAK + '\n')
+                print(_DISP_BREAK)
+

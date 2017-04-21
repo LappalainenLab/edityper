@@ -271,7 +271,7 @@ def main(args): # type: (Dict) -> None
                     is_reverse=do_reverse,
                     output_prefix=output_prefix
                 )
-            an.create_report(reporter=report, reference=ref_seq, snp_index=snp_index)
+            an.create_report(reporter=report, reference=ref_seq, snp_index=snp_index, output_prefix=output_prefix)
     except IOError as error:
         sys.exit(logging.critical("Cannot find file %s, exiting", error.filename))
     except:
