@@ -141,6 +141,7 @@ def make_sam_file(
         reference_seq, # type: str
         alignments, # type: Iterable[al.Alignment]]
         is_reverse, # type: bool
+        output_prefix # type: str
 ):
     # type: (...) -> None
     """Make a SAM file"""
@@ -205,7 +206,7 @@ def make_sam_file(
     )
     logging.debug("Making headers took %s seconds", round(time.time() - header_start, 3))
     #   Write the SAM file
-    sam_name = configure.make_prefix_name(directory=conf_dict['outdirectory'], base=conf_dict['project']) + '.sam' # type: str
+    sam_name = output_prefix + '.sam' # type: str
     logging.info("Writing SAM information to %s", sam_name)
     write_start = time.time()
     with open(sam_name, 'w') as samfile:
@@ -232,6 +233,7 @@ def main(args): # type: (Dict) -> None
             configure.write_config(args)
         elif args['subroutine'] == 'ALIGN':
             conf_dict = configure.read_config(args['config_file']) # type: Dict
+            output_prefix = configure.make_prefix_name(directory=conf_dict['outdirectory'], base=conf_dict['project'])
             ref_name, ref_seq, temp_name, temp_seq, fastq_list = load_data( # type: str, str str, str, List[toolpack.FastQ]]
                 conf_dict=conf_dict
             )
@@ -266,7 +268,8 @@ def main(args): # type: (Dict) -> None
                     reference_name=ref_name,
                     reference_seq=ref_seq,
                     alignments=tuple(al for al in itertools.chain.from_iterable(alignments.values())),
-                    is_reverse=do_reverse
+                    is_reverse=do_reverse,
+                    output_prefix=output_prefix
                 )
             an.create_report(reporter=report, reference=ref_seq, snp_index=snp_index)
     except IOError as error:
