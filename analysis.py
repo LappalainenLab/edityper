@@ -307,9 +307,9 @@ def create_report(
             count_ins,
             mean_ins,
             nuc_counter['A'],
+            nuc_counter['T'],
             nuc_counter['C'],
-            nuc_counter['G'],
-            nuc_counter['T']
+            nuc_counter['G']
         )
         if position == snp_index:
             print(_DISP_BREAK)
