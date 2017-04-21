@@ -268,7 +268,7 @@ def main(args): # type: (Dict) -> None
                     alignments=tuple(al for al in itertools.chain.from_iterable(alignments.values())),
                     is_reverse=do_reverse
                 )
-            # an.create_report(reporter=report, reference=ref_seq)
+            an.create_report(reporter=report, reference=ref_seq, snp_index=snp_index)
     except IOError as error:
         sys.exit(logging.critical("Cannot find file %s, exiting", error.filename))
     except:
