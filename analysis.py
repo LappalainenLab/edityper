@@ -29,8 +29,9 @@ except ImportError:
 
 
 _DISP_BREAK = '-----------------------------------------------------------------------------------------'
-NAN = float('nan')
+NA = 'NA'
 Reporter = namedtuple('Reporter', ('deletions', 'insertions', 'mismatches', 'matches'))
+
 percent = lambda num, total: round(num * 100 / total, 2)
 
 def summarize(data, rounding=None): # type: (Iterable[int], Optional[int]) -> Tuple[int, float, float]
@@ -336,19 +337,19 @@ def display_classification(
                 total_del, avg_del, std_del = summarize(data=event_lists['deletions'], rounding=2)
                 total_mis, avg_mis, std_mis = summarize(data=event_lists['mismatches'], rounding=2)
             else:
-                total_ins, avg_ins, std_ins = NAN, NAN, NAN
-                total_del, avg_del, std_del = NAN, NAN, NAN
-                total_mis, avg_mis, std_mis = NAN, NAN, NAN
+                total_ins, avg_ins, std_ins = NA, NA, NA
+                total_del, avg_del, std_del = NA, NA, NA
+                total_mis, avg_mis, std_mis = NA, NA, NA
             if tag == iter_tag[0]:
                 none_total, perc_none = event_counts['none'], percent(num=event_counts['none'], total=count)
                 del_total, perc_del = event_counts['deletions'], percent(num=event_counts['deletions'], total=count)
                 ins_total, perc_ins = event_counts['insertions'], percent(num=event_counts['insertions'], total=count)
                 indel_total, perc_indel = event_counts['indels'], percent(num=event_counts['indels'], total=count)
             else:
-                none_total, perc_none = NAN, NAN
-                del_total, perc_del = NAN, NAN
-                ins_total, perc_ins = NAN, NAN
-                indel_total, perc_indel = NAN, NAN
+                none_total, perc_none = NA, NA
+                del_total, perc_del = NA, NA
+                ins_total, perc_ins = NA, NA
+                indel_total, perc_indel = NA, NA
             out = (
                 tag,
                 count,
