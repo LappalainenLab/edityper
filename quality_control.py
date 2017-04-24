@@ -116,4 +116,4 @@ def determine_alignment_direction(
     score_threshold = np.std(use_scores) * norm.pdf(1 - pvalue_threshold) + np.median(use_scores) # type: numpy.float64
     logging.warning("%s: %s vs %s (norm vs reverse) - threshold: %s", msg, fwd_median, rev_median, score_threshold)
     logging.debug("Determining alignment direction took %s seconds", round(time.time() - direction_start, 3))
-    return reverse, score_threshold
+    return reverse, fwd_median, rev_median, score_threshold

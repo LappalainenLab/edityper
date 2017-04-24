@@ -2,6 +2,7 @@
 
 """Analysis of alignments for the CRISPR program"""
 
+from __future__ import division
 from __future__ import print_function
 
 import sys
@@ -12,6 +13,7 @@ if sys.version_info.major is not 2 and sys.version_info.minor is not 7:
 import re
 import time
 import logging
+import warnings
 import itertools
 from collections import Counter, defaultdict, namedtuple
 
@@ -27,7 +29,20 @@ except ImportError:
 
 
 _DISP_BREAK = '-----------------------------------------------------------------------------------------'
+NAN = float('nan')
 Reporter = namedtuple('Reporter', ('deletions', 'insertions', 'mismatches', 'matches'))
+percent = lambda num, total: round(num * 100 / total, 2)
+
+def summarize(data, rounding=None): # type: (Iterable[int], Optional[int]) -> Tuple[int, float, float]
+    '''Get the sum, mean, and standard deviation of a collection of data'''
+    total = sum(data)
+    avg = np.mean(data)
+    std = np.std(data)
+    if rounding:
+        avg = round(avg, rounding)
+        std = round(std, rounding)
+    return total, avg, std
+
 
 def find_insertions(
         ref_seq, # type: str
@@ -214,7 +229,14 @@ def run_analysis(
 
 def display_classification(
         read_classification, # type: Tuple[defaultdict[int, List[Alignment]]]
-        total_reads # type: int
+        total_reads, # type: int
+        snp_position, # type: int
+        ref_state, # type: str
+        target_snp, # type: str
+        fwd_score, # type: float
+        rev_score, # type: float
+        score_threshold, # type: float
+        output_prefix # type: str
 ):
     # type: (...) -> None
     """Display the report of the read classifification
@@ -222,39 +244,142 @@ def display_classification(
     lists of Alignment objects and the four dictionaries are (in order):
     'HDR', 'NHEJ', 'NO EDIT', and 'DISCARD' read classifications;
     'total_reads' is the total number of reads for the entire sample"""
+    warnings.simplefilter('error')
+    full_class_name = output_prefix + '.classifications'
+    logging.info("Writing full classification breakdown to %s", full_class_name)
     logging.warning("################################################")
     logging.warning("--------------Read Classifications--------------")
+    num_unique = len(
+        tuple(
+            itertools.chain.from_iterable(
+                (alignment_list for class_dict in read_classification for alignment_list in class_dict.values())
+            )
+        )
+    )
+    snp_header = ('##SNP', 'POS:%d' % snp_position, 'REF:%s' % ref_state, 'TEMPLATE:%s' % target_snp)
+    read_header = (
+        '##READS',
+        'TOTAL:%d' % total_reads,
+        'UNIQUE:%d' % num_unique,
+        'PERC_UNIQ:%d' % percent(num=num_unique, total=total_reads)
+    )
+    score_header = ('##SCORE', 'FWD:%d' % fwd_score, 'REV:%d' % rev_score, 'THESHOLD:%d' % score_threshold)
+    category_header = (
+        '#TAG',
+        'COUNT',
+        'PERC_COUNT',
+        'INS_EVENTS',
+        'AVG_INS',
+        'STD_DEV_INS',
+        'DEL_EVENTS',
+        'AVG_DEL',
+        'STD_DEV_DEL',
+        'MISMATCH_EVENTS',
+        'AVG_MIS',
+        'STD_DEV_MIS',
+        'NO_INDELS',
+        'PERC_NO_INDELS',
+        'INS_ONLY',
+        'PERC_INS_ONLY',
+        'DEL_ONLY',
+        'PERC_DEL_ONLY',
+        'INDELS',
+        'PERC_INDELS'
+    )
+    #   Four categories, and read_classification is a tuple, so need index, not names
     iter_tag = { # A dictionary of classifications, numbered for easy access
         0: 'HDR',
         1: 'NHEJ',
-        2: 'NO EDIT',
+        2: 'NO_EDIT',
         3: 'DISCARD'
     }
     counted_total = 0 # type: int
-    #   Four categories, and read_classification is a tuple, so need index, not names
-    for index in xrange(4): # type: int
-        #   Some holding values
-        count = 0 # type: int
-        indels = list() # type: List[int]
-        for alignment in itertools.chain.from_iterable(read_classification[index].values()): # type: al.Alignment
-            #   Create summaries
-            num_reads, nm_del, nm_ins, nm_mis = alignment.get_stats(); del nm_mis
-            indels.append(nm_ins + nm_del)
-            count += num_reads
-            counted_total += num_reads
-        #   Do this to avoid Numpy warnings
-        if indels:
-            avg_indels = np.mean(indels) # type: numpy.float64
+    with open(full_class_name, 'w') as cfile:
+        cfile.write('\t'.join(snp_header) + '\n')
+        cfile.write('\t'.join(read_header) + '\n')
+        cfile.write('\t'.join(score_header) + '\n')
+        cfile.write('\t'.join(category_header) + '\n')
+        cfile.flush()
+        for index, tag in sorted(iter_tag.items(), key=lambda tup: tup[0]): # type: int, str
+            #   Some holding values
+            count = 0 # type: int
+            event_lists = dict.fromkeys(('indels', 'insertions', 'deletions', 'mismatches'), list())
+            event_counts = dict.fromkeys(('none', 'deletions', 'insertions', 'indels'), 0)
+            for alignment in itertools.chain.from_iterable(read_classification[index].values()): # type: al.Alignment
+                #   Create summaries
+                num_reads, nm_del, nm_ins, nm_mis = alignment.get_stats()#; del nm_mis
+                event_lists['indels'].append(nm_ins + nm_del)
+                event_lists['insertions'].extend([nm_ins] * num_reads)
+                event_lists['deletions'].extend([nm_del] * num_reads)
+                event_lists['mismatches'].extend([nm_mis] * num_reads)
+                if nm_ins > 0 and nm_del > 0:
+                    event_counts['indels'] += num_reads
+                elif nm_ins > 0 and nm_del <= 0:
+                    event_counts['insertions'] += num_reads
+                elif nm_del > 0 and nm_ins <= 0:
+                    event_counts['deletions'] += num_reads
+                else:
+                    event_counts['none'] += num_reads
+                count += num_reads
+                counted_total += num_reads
+            #   Do this to avoid Numpy warnings
+            try:
+                avg_indels = np.mean(event_lists['indels']) # type: numpy.float64
+            except RuntimeWarning:
+                avg_indels = 0
+            perc_count = percent(num=count, total=total_reads)
+            #   Display our summaries
+            logging.warning("%s: count %s", iter_tag[index], count)
+            logging.warning("%s: avg indels %s", iter_tag[index], round(avg_indels, 3))
+            if tag in {iter_tag[0], iter_tag[1]}:
+                total_ins, avg_ins, std_ins = summarize(data=event_lists['insertions'], rounding=2)
+                total_del, avg_del, std_del = summarize(data=event_lists['deletions'], rounding=2)
+                total_mis, avg_mis, std_mis = summarize(data=event_lists['mismatches'], rounding=2)
+            else:
+                total_ins, avg_ins, std_ins = NAN, NAN, NAN
+                total_del, avg_del, std_del = NAN, NAN, NAN
+                total_mis, avg_mis, std_mis = NAN, NAN, NAN
+            if tag == iter_tag[0]:
+                none_total, perc_none = event_counts['none'], percent(num=event_counts['none'], total=count)
+                del_total, perc_del = event_counts['deletions'], percent(num=event_counts['deletions'], total=count)
+                ins_total, perc_ins = event_counts['insertions'], percent(num=event_counts['insertions'], total=count)
+                indel_total, perc_indel = event_counts['indels'], percent(num=event_counts['indels'], total=count)
+            else:
+                none_total, perc_none = NAN, NAN
+                del_total, perc_del = NAN, NAN
+                ins_total, perc_ins = NAN, NAN
+                indel_total, perc_indel = NAN, NAN
+            out = (
+                tag,
+                count,
+                perc_count,
+                total_ins,
+                avg_ins,
+                std_ins,
+                total_del,
+                avg_del,
+                std_del,
+                total_mis,
+                avg_mis,
+                std_mis,
+                none_total,
+                perc_none,
+                del_total,
+                perc_del,
+                ins_total,
+                perc_ins,
+                indel_total,
+                perc_indel
+            )
+            out = map(str, out)
+            cfile.write('\t'.join(out) + '\n')
+            cfile.flush()
+            #   Write full classifications
+        if counted_total == total_reads:
+            logging.warning("Classified all reads")
         else:
-            avg_indels = 0 # type: int
-        #   Display our summaries
-        logging.warning("%s: count %s", iter_tag[index], count)
-        logging.warning("%s: avg indels %s", iter_tag[index], round(avg_indels, 3))
-    if counted_total == total_reads:
-        logging.warning("Classified all reads")
-    else:
-        logging.error("%s reads missing after classification", total_reads - counted_total)
-    logging.warning("################################################")
+            logging.error("%s reads missing after classification", total_reads - counted_total)
+        logging.warning("################################################")
 
 
 def create_report(
@@ -331,4 +456,3 @@ def create_report(
             if position == snp_index:
                 efile.write(_DISP_BREAK + '\n')
                 print(_DISP_BREAK)
-

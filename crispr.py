@@ -98,7 +98,7 @@ def run_qc(
     raw_read_dict = ri.load_seqs( # type: Dict[str, List[toolpack.Read]]
         raw_reads=tuple(itertools.chain.from_iterable(fastq.get_all_reads() for fastq in fastq_list))
     ) # raw_read_dict is {unique sequences: [reads that have this sequence]}
-    do_reverse, score_threshold = qc.determine_alignment_direction( # type: bool, numpy.float64
+    do_reverse, fwd_median, rev_median, score_threshold = qc.determine_alignment_direction( # type: bool, numpy.float64, numpy.float64, numpy.float64
         raw_sequences=raw_read_dict, # Effectively keys (unique sequences) only
         reference=aligned_reference,
         gap_open=conf_dict['gap_opening'],
@@ -110,7 +110,7 @@ def run_qc(
     else:
         reads_dict = deepcopy(raw_read_dict) # type: Dict[str, List[toolpack.Read]]
     logging.debug("Quality control took %s seconds", round(time.time() - qc_start, 3))
-    return reads_dict, score_threshold, snp_index, target_snp, do_reverse
+    return reads_dict, fwd_median, rev_median, score_threshold, snp_index, reference_state, target_snp, do_reverse
 
 
 def run_alignment(
@@ -237,7 +237,7 @@ def main(args): # type: (Dict) -> None
             ref_name, ref_seq, temp_name, temp_seq, fastq_list = load_data( # type: str, str str, str, List[toolpack.FastQ]]
                 conf_dict=conf_dict
             )
-            reads_dict, score_threshold, snp_index, target_snp, do_reverse = run_qc( # type: Dict[str, List[toolpack.Read]], numpy.float64, int, str, bool
+            reads_dict, fwd_median, rev_median, score_threshold, snp_index, reference_state, target_snp, do_reverse = run_qc( # type: Dict[str, List[toolpack.Read]], numpy.float64, numpy.float64, numpy.float64, int, str, str, bool
                 conf_dict=conf_dict,
                 reference=ref_seq,
                 template=temp_seq,
@@ -258,7 +258,18 @@ def main(args): # type: (Dict) -> None
             total_reads = sum((len(read_list) for read_list in reads_dict.values())) # type: int
             # import code; code.interact(local=locals()); sys.exit()
             # align_tup = tuple(al.__dict__ for al in itertools.chain.from_iterable(alignments.values()))
-            an.display_classification(read_classification=read_classifications, total_reads=total_reads)
+            an.display_classification(
+                read_classification=read_classifications,
+                total_reads=total_reads,
+                snp_position=snp_index,
+                ref_state=reference_state,
+                target_snp=target_snp,
+                fwd_score=fwd_median,
+                rev_score=rev_median,
+                score_threshold=score_threshold,
+                output_prefix=output_prefix
+            )
+            sys.exit()
             if args['suppress_sam']:
                 logging.warning("SAM output suppressed, not writing SAM file")
             else:
