@@ -462,11 +462,8 @@ def create_report(
             )
             if position == snp_index:
                 efile.write(_DISP_BREAK + '\n')
-                print(_DISP_BREAK)
             msg = map(str, msg) # type: Iterable[str]
             msg = '\t'.join(msg) # type: str
             efile.write(msg + '\n')
-            print(msg)
             if position == snp_index:
                 efile.write(_DISP_BREAK + '\n')
-                print(_DISP_BREAK)
