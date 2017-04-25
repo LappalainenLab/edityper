@@ -244,7 +244,14 @@ def display_classification(
     'read_classification' is a tuple of four dictionaries where the values are
     lists of Alignment objects and the four dictionaries are (in order):
     'HDR', 'NHEJ', 'NO EDIT', and 'DISCARD' read classifications;
-    'total_reads' is the total number of reads for the entire sample"""
+    'total_reads' is the total number of reads for the entire sample
+    'snp_position' is the position of the SNP
+    'ref_state' is the state of the reference sequence at 'snp_position'
+    'target_snp' is the ideal SNP state
+    'fwd_score' is the score of the forward alignment (from QC steps)
+    'rev_score' is the score of the reverse alignment (from QC steps)
+    'score_threshold' is the score threshold (from QC steps)
+    'output_prefix' is the output directory + basename for the events report"""
     warnings.simplefilter('error')
     full_class_name = output_prefix + '.classifications'
     logging.info("Writing full classification breakdown to %s", full_class_name)
@@ -391,7 +398,13 @@ def create_report(
         interesting_only=True # type: bool
 ):
     # type: (...) -> None
-    """Report"""
+    """Create the events report for the CRISPR program
+    'reporter' is a namedtuple with four dictionaries of lists of alignments in the following order:
+        'deletions', 'insertions', 'mismatches', 'matches'
+    'reference' is the reference sequence
+    'snp_index' is the position of the SNP
+    'output_prefix' is the output directory + basename for the events report
+    'interesting_only' tells us to report bases in the reference sequence where an event happens"""
     #   Unpack our report
     deletions, insertions, mismatches, matches = reporter
     #   Start counting coverage
