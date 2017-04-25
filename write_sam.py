@@ -163,7 +163,8 @@ class SAM(object):
         self._seq = seq # From write_sam.make_cigar_sequence()
         self._qual = qual # genetic_toolpack.Read._quality
         #   Create a metadata set for holding optional tags, like RG and PG
-        self._metadata = set() # type: Set[str]
+        # self._metadata = set() # type: Set[str]
+        self._metadata = dict() # type: Dict[str, Tuple(str)]
         #   Make our read group
         self._set_read_group()
 
@@ -186,7 +187,7 @@ class SAM(object):
         )
         out = filter(lambda x: x is not None, out) # type: Tuple[Any]
         out = map(str, out) # type: List[str]
-        out += list(self._metadata)
+        out += [':'.join((tag, tup[0], tup[1])) for tag, tup in sorted(self._metadata.items(), key=lambda tup: tup[0])]
         return '\t'.join(out)
 
     def __eq__(self, other):
@@ -224,22 +225,34 @@ class SAM(object):
 
     def add_metadata(self, tag, tag_type, value): # type: (str, str, Any) -> None
         """Set tag data"""
+        #   Ensure we have a proper tag
         if tag_type not in self._VALID_TAG_TYPES:
             raise ValueError("'tag_type' must be one of '%s'" % "', '".join(self._VALID_TAG_TYPES))
-        complete_tag = ':'.join((str(tag), str(tag_type), str(value)))
-        self._metadata.add(complete_tag)
+        #   Type checking between tag_type and value
+        if tag_type == 'A' and len(str(value)) != 1:
+            raise ValueError("A tag of type 'A' must have a value that is a single character")
+        elif tag_type == 'f' and not isinstance(value, (float, int)):
+            raise ValueError("A tag of type 'f' must have a value of type 'float' or 'int'")
+        elif tag_type == 'i' and not isinstance(value, int):
+            raise ValueError("A tag of type 'i' must have a value of type 'int'")
+        elif tag_type == 'Z' and not isinstance(value, str):
+            raise ValueError("A tag of type 'Z' must have a value of type 'str'")
+        #   Simple warning
+        if tag in self._metadata:
+            warn("A tag of '%s' was found in the metadata, overwriting" % tag)
+        #   Add the metadata to our SAM object
+        self._metadata[str(tag)] = (str(tag_type), str(value))
 
     def modify_read_group(self, modifier): # type: (str) -> Union[str, None]
         """Modify a read group ID to handle multiple lanes and avoid clashing"""
         try:
+            #   Get the read group and modify it
             read_group = self.get_read_group() # type: str
-            rg_meta = 'RG:Z:' + read_group # type: str
-            self._metadata.remove(rg_meta)
-        except (KeyError, TypeError):
+            new_rg_tag = read_group + str(modifier) # type: str
+        except TypeError: # Concatenating a NoneType and str will raise a TypeError
             warn("Cannot modify an unset read group")
             new_read_group = None # type: NoneType
-        else:
-            new_rg_tag = read_group + modifier # type: str
+        else: # We properly modified our read group, now add it back to the metadata dictionary
             self.add_metadata(tag='RG', tag_type='Z', value=new_rg_tag)
             new_read_group = self.get_read_group() # type: str
         finally:
@@ -247,28 +260,27 @@ class SAM(object):
 
     def no_reference(self): # type: (None) -> None
         """Use this if there is no reference
-        Will modify RNAME, POS, and CIGAR fields
+        Will modify FLAG, RNAME, POS, MAPQ,
+        CIGAR, RNEXT, and PNEXT fields
         to represent no reference found (basically unmapped)"""
+        self._flag = 4 # type: int
         self._rname = '*' # type: str
         self._pos = 0 # type: int
+        self._mapq = 255 # type: int
         self._cigar = '*' # type: str
+        self._rnext = '*' # type: str
+        self._pnext = 0 # type: int
 
     def get_rname(self): # type: (None) -> str
         """Get the reference feature name"""
         return self._rname
 
-    def get_metadata(self, tag, tag_type=None): # type: (str, Optional[str]) -> Union[str, None]
+    def get_metadata(self, tag): # type: (str) -> Union[str, None]
         """Get metadata"""
-        if tag_type and tag_type not in self._VALID_TAG_TYPES:
-            raise ValueError("'tag_type' must be one of '%s'" % "', '".join(self._VALID_TAG_TYPES))
-        joined = ':'.join(filter(None, (tag, tag_type)))
-        if joined[-1] != ':':
-            joined += ':'
         try:
-            meta_tag = tuple(meta for meta in self._metadata if joined in meta)[0] # type: str
-            metadata = meta_tag.replace(joined, '')
+            metadata = tuple(meta for meta in self._metadata if tag in meta)[0] # type: str
         except IndexError:
-            warn("Could not find a value in the metadata matching '%s', returning 'None'" % joined)
+            warn("Could not find a value in the metadata matching '%s', returning 'None'" % tag)
             metadata = None
         finally:
             return metadata
@@ -280,15 +292,22 @@ class SAM(object):
     def get_read_group(self): # type: (None) -> str
         """Get the read group ID for this alignment
         Wrapper around SAM.get_metadata()"""
-        read_group = self.get_metadata(tag='RG', tag_type='Z')
-        if not read_group:
+        read_group = self.get_metadata(tag='RG')
+        try:
+            read_group = ':'.join(read_group.split(':')[2:])
+        except AttributeError: # NoneTypes don't have a split attribute
             warn("No read group set, returning 'None'")
         return read_group
 
-    def get_program(self): # type: (None) -> Union[str, None]
+    def get_program(self, full=False): # type: (Optional[bool]) -> Union[str, None]
         """Get the program ID for this alignment
+        Set 'full' to 'True' to get the program with 'PG:Z:' prefix
         Wrapper around SAM.get_metadata()"""
-        return self.get_metadata(tag='PG', tag_type='Z')
+        program = self.get_metadata(tag='PG')
+        if not full:
+            try: program = ':'.join(program.split(':')[2:])
+            except AttributeError: pass
+        return program
 
 
 def make_sam_sequence(alignment, head=None, tail=None): # type: (str, Optional[int], Optional[int]) -> str
@@ -529,7 +548,8 @@ def make_sam(
             flag=bit_flag,
             rname=ref_name,
             pos=position,
-            mapq=alignment.get_score(),
+            # mapq=alignment.get_score(),
+            mapq=255,
             cigar=cigar,
             rnext='*',
             pnext=0,
@@ -537,6 +557,7 @@ def make_sam(
             seq=sam_seq,
             qual=quality
         )
+        sam.add_metadata(tag='AS', tag_type='i', value=alignment.get_score())
         sam_lines.append(sam)
     #   Add unaligned reads
     #   This can be here because unaligned will return empty
