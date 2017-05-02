@@ -268,14 +268,14 @@ def display_classification(
             )
         )
     )
-    snp_header = ('##SNP', 'POS:%d' % snp_position + 1, 'REF:%s' % ref_state, 'TEMPLATE:%s' % target_snp) # type: Tuple[str]
+    snp_header = ('##SNP', 'POS:%s' % (snp_position + 1), 'REF:%s' % ref_state, 'TEMPLATE:%s' % target_snp) # type: Tuple[str]
     read_header = ( # type: Tuple[str]
         '##READS',
-        'TOTAL:%d' % total_reads,
-        'UNIQUE:%d' % num_unique,
-        'PERC_UNIQ:%d' % percent(num=num_unique, total=total_reads)
+        'TOTAL:%s' % total_reads,
+        'UNIQUE:%s' % num_unique,
+        'PERC_UNIQ:%s' % percent(num=num_unique, total=total_reads)
     )
-    score_header = ('##SCORE', 'FWD:%d' % fwd_score, 'REV:%d' % rev_score, 'THESHOLD:%d' % score_threshold) # type: Tuple[str]
+    score_header = ('##SCORE', 'FWD:%s' % fwd_score, 'REV:%s' % rev_score, 'THESHOLD:%s' % score_threshold) # type: Tuple[str]
     category_header = ( # type: Tuple[str]
         '#TAG',
         'COUNT',
