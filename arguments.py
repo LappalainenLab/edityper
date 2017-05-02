@@ -12,6 +12,14 @@ import argparse
 
 _OUTDIR_DEFAULT = '/'.join((os.getcwd(), 'output'))
 _PROJECT_DEFAULT = 'crispr'
+_VERBOSITY_DEFAULT = 'info'
+_VERBOSITY_LEVELS = (
+    'debug',
+    'info',
+    'warning',
+    'error',
+    'critical'
+)
 _VALID_PLATFORMS = (
     'CAPILLARY',
     'LS454',
@@ -22,14 +30,6 @@ _VALID_PLATFORMS = (
     'ONT',
     'PACBIO'
 )
-_VERBOSITY_LEVELS = (
-    'debug',
-    'info',
-    'warning',
-    'error',
-    'critical'
-)
-_VERBOSITY_DEFAULT='info'
 
 def make_argument_parser():
     """Create an argument parser"""
@@ -161,7 +161,6 @@ def make_argument_parser():
     )
     out_opts = configure.add_argument_group(
         title='Output options',
-        # description='Provide names for output and configuration files'
         description='Provide an output directory and project name. All files, including the configuration file, will be placed in the output directory with a basename of the project name.'
     )
     out_opts.add_argument(
