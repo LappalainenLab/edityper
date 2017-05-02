@@ -413,6 +413,19 @@ def create_report(
     'snp_index' is the position of the SNP
     'output_prefix' is the output directory + basename for the events report
     'interesting_only' tells us to report bases in the reference sequence where an event happens"""
+    events_header = ( # type: Tuple[str]
+        '#POS',
+        'BASE',
+        'COV',
+        'DEL',
+        'AVG_DEL',
+        'INS',
+        'AVG_INS',
+        'A_MIS',
+        'T_MIS',
+        'C_MIS',
+        'G_MIS'
+    )
     #   Unpack our report
     deletions, insertions, mismatches, matches = reporter
     #   Start counting coverage
@@ -426,6 +439,7 @@ def create_report(
     #   Start classifying events
     logging.info('Writing events log to %s', events_name)
     with open(events_name, 'w') as efile:
+        efile.write('\t'.join(events_header) + '\n')
         for position, base in enumerate(reference): # type: int, str
             if position in insertions:
                 count_ins = len(insertions[position]) # type: int
