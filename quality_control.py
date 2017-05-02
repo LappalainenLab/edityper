@@ -19,7 +19,7 @@ try:
     import numpy as np
     from scipy.stats import norm
 except ImportError as error:
-    sys.exit("Please install Numpy for this module")
+    sys.exit("Please install Numpy and SciPy for this module")
 
 try:
     import genetic_toolpack as toolpack
@@ -108,11 +108,10 @@ def determine_alignment_direction(
     if rev_median > fwd_median:
         reverse = True # type: bool
         use_scores = map(get_third, perm_scores_r) # type: List[int]
-        msg = "Aligning in the reverse direction" # type: str
     else:
         reverse = False # type: bool
         use_scores = map(get_third, perm_scores) # type: List[int]
-        msg = "Aligning in the forward direction" # type: str
+    msg = "Aligning in the %s direction" % ('reverse' if reverse else 'forward') # type: str
     score_threshold = np.std(use_scores) * norm.pdf(1 - pvalue_threshold) + np.median(use_scores) # type: numpy.float64
     logging.warning("%s: %s vs %s (norm vs reverse) - threshold: %s", msg, fwd_median, rev_median, score_threshold)
     logging.debug("Determining alignment direction took %s seconds", round(time.time() - direction_start, 3))
