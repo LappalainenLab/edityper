@@ -29,6 +29,7 @@ _VERBOSITY_LEVELS = (
     'error',
     'critical'
 )
+_VERBOSITY_DEFAULT='info'
 
 def make_argument_parser():
     """Create an argument parser"""
@@ -42,10 +43,10 @@ def make_argument_parser():
         dest='verbosity',
         type=str,
         choices=_VERBOSITY_LEVELS,
-        default='INFO',
+        default=_VERBOSITY_DEFAULT,
         required=False,
         metavar='VERBOSITY',
-        help="Set the verbosity level, choose from '%s'; defaults to 'INFO'" % "', '".join(_VERBOSITY_LEVELS)
+        help="Set the verbosity level, choose from '%s'; defaults to '%s'" % ("', '".join(_VERBOSITY_LEVELS), _VERBOSITY_DEFAULT)
     )
     parser.add_argument( # Log file
         '-l',
