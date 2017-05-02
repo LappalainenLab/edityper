@@ -59,8 +59,12 @@ class Read(object):
 class FastQ(object):
     """A FASTQ file (collection of reads)"""
 
-    def __init__(self): # type: (None) -> None
+    def __init__(self, fastq_file): # type: (str) -> None
+        self._name = fastq_file
         self._reads = dict()
+
+    def __repr__(self): # type: (None) -> str
+        return self._name
 
     def __len__(self): # type: (None) -> int
         return len(self._reads)
@@ -81,15 +85,19 @@ class FastQ(object):
         """Get all Reads from this FastQ"""
         return self._reads.values()
 
-    def get_seqs(self): # type: (None) -> List[str]
+    def get_ids(self): # type: (None) -> Tuple(str)
+        """Get all the read IDs from this FastQ"""
+        return tuple(readid for readid in self._reads)
+
+    def get_seqs(self): # type: (None) -> Tuple[str]
         """Get all the sequence data in this FASTQ"""
-        return [read.get_sequence() for read in self._reads.values()]
+        return (read.get_sequence() for read in self._reads.values())
 
 
 def load_fastq(fastq_file): # type: (str) -> FastQ
     '''Loading reads from a fastq file, list of lists including the +'''
     # output, temp = list(), list()
-    output, temp = FastQ(), list()
+    output, temp = FastQ(fastq_file), list()
     if 'gz' in fastq_file:
         fastq_handle = gzip.open(fastq_file, 'rb')
     else:
