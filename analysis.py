@@ -32,7 +32,10 @@ _DISP_BREAK = '-----------------------------------------------------------------
 NA = 'NA'
 Reporter = namedtuple('Reporter', ('deletions', 'insertions', 'mismatches', 'matches'))
 
-percent = lambda num, total: round(num * 100 / total, 2)
+def percent(num, total): # type: (int, int) -> float
+    """Calculate a percent"""
+    return round(num * 100 / total, 2)
+
 
 def summarize(data, rounding=None): # type: (Iterable[int], Optional[int]) -> Tuple[int, float, float]
     '''Get the sum, mean, and standard deviation of a collection of data'''
@@ -42,7 +45,7 @@ def summarize(data, rounding=None): # type: (Iterable[int], Optional[int]) -> Tu
     if rounding:
         avg = round(avg, rounding)
         std = round(std, rounding)
-    return total, avg, std
+    return total, float(avg), float(std)
 
 
 def find_insertions(
@@ -84,7 +87,7 @@ def find_deletions(
         head, # type: int
         tail # type: int
 ):
-    # type: (...) -> (Dict[int, List[int]], int)
+    # type: (...) -> Dict[int, List[int]], int
     """Find and log deletions"""
     logging.info("Looking for deletions in alignment number %s", out_idx)
     deletions = defaultdict(list)
@@ -252,27 +255,28 @@ def display_classification(
     'rev_score' is the score of the reverse alignment (from QC steps)
     'score_threshold' is the score threshold (from QC steps)
     'output_prefix' is the output directory + basename for the events report"""
+    class_header = "################################################"
     warnings.simplefilter('error')
     full_class_name = output_prefix + '.classifications'
     logging.info("Writing full classification breakdown to %s", full_class_name)
-    logging.warning("################################################")
+    logging.warning(class_header)
     logging.warning("--------------Read Classifications--------------")
-    num_unique = len(
+    num_unique = len( # type: int
         tuple(
             itertools.chain.from_iterable(
                 (alignment_list for class_dict in read_classification for alignment_list in class_dict.values())
             )
         )
     )
-    snp_header = ('##SNP', 'POS:%d' % snp_position, 'REF:%s' % ref_state, 'TEMPLATE:%s' % target_snp)
-    read_header = (
+    snp_header = ('##SNP', 'POS:%d' % snp_position + 1, 'REF:%s' % ref_state, 'TEMPLATE:%s' % target_snp) # type: Tuple[str]
+    read_header = ( # type: Tuple[str]
         '##READS',
         'TOTAL:%d' % total_reads,
         'UNIQUE:%d' % num_unique,
         'PERC_UNIQ:%d' % percent(num=num_unique, total=total_reads)
     )
-    score_header = ('##SCORE', 'FWD:%d' % fwd_score, 'REV:%d' % rev_score, 'THESHOLD:%d' % score_threshold)
-    category_header = (
+    score_header = ('##SCORE', 'FWD:%d' % fwd_score, 'REV:%d' % rev_score, 'THESHOLD:%d' % score_threshold) # type: Tuple[str]
+    category_header = ( # type: Tuple[str]
         '#TAG',
         'COUNT',
         'PERC_COUNT',
@@ -295,7 +299,8 @@ def display_classification(
         'PERC_INDELS'
     )
     #   Four categories, and read_classification is a tuple, so need index, not names
-    iter_tag = { # A dictionary of classifications, numbered for easy access
+    #   A dictionary of classifications, numbered for easy access
+    iter_tag = { # type: Dict[int, str]
         0: 'HDR',
         1: 'NHEJ',
         2: 'NO_EDIT',
@@ -311,8 +316,8 @@ def display_classification(
         for index, tag in sorted(iter_tag.items(), key=lambda tup: tup[0]): # type: int, str
             #   Some holding values
             count = 0 # type: int
-            event_lists = dict.fromkeys(('indels', 'insertions', 'deletions', 'mismatches'), list())
-            event_counts = dict.fromkeys(('none', 'deletions', 'insertions', 'indels'), 0)
+            event_lists = dict.fromkeys(('indels', 'insertions', 'deletions', 'mismatches'), list()) # type: Dict[str, List[int]]
+            event_counts = dict.fromkeys(('none', 'deletions', 'insertions', 'indels'), 0) # type: Dict[str, int]
             for alignment in itertools.chain.from_iterable(read_classification[index].values()): # type: al.Alignment
                 #   Create summaries
                 num_reads, nm_del, nm_ins, nm_mis = alignment.get_stats()#; del nm_mis
@@ -339,6 +344,7 @@ def display_classification(
             #   Display our summaries
             logging.warning("%s: count %s", iter_tag[index], count)
             logging.warning("%s: avg indels %s", iter_tag[index], round(avg_indels, 3))
+            #   Reporting for HDR and NHEJ
             if tag in {iter_tag[0], iter_tag[1]}:
                 total_ins, avg_ins, std_ins = summarize(data=event_lists['insertions'], rounding=2)
                 total_del, avg_del, std_del = summarize(data=event_lists['deletions'], rounding=2)
@@ -347,6 +353,7 @@ def display_classification(
                 total_ins, avg_ins, std_ins = NA, NA, NA
                 total_del, avg_del, std_del = NA, NA, NA
                 total_mis, avg_mis, std_mis = NA, NA, NA
+            #   HDR-specific reporting
             if tag == iter_tag[0]:
                 none_total, perc_none = event_counts['none'], percent(num=event_counts['none'], total=count)
                 del_total, perc_del = event_counts['deletions'], percent(num=event_counts['deletions'], total=count)
@@ -357,7 +364,8 @@ def display_classification(
                 del_total, perc_del = NA, NA
                 ins_total, perc_ins = NA, NA
                 indel_total, perc_indel = NA, NA
-            out = (
+            #   Assemble our output line
+            out = ( # type: Tuple[Any]
                 tag,
                 count,
                 perc_count,
@@ -387,7 +395,7 @@ def display_classification(
             logging.warning("Classified all reads")
         else:
             logging.error("%s reads missing after classification", total_reads - counted_total)
-        logging.warning("################################################")
+        logging.warning(class_header)
 
 
 def create_report(
