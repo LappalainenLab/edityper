@@ -164,26 +164,6 @@ def make_argument_parser():
         # description='Provide names for output and configuration files'
         description='Provide an output directory and project name. All files, including the configuration file, will be placed in the output directory with a basename of the project name.'
     )
-    # out_opts.add_argument( # Where to we write our config file?
-    #     '-c',
-    #     '--config-file',
-    #     dest='config_file',
-    #     type=str,
-    #     default=_CONFIG_DEFAULT,
-    #     required=False,
-    #     metavar='CONFIG FILE',
-    #     help="Choose where we write our config, defaults to '%s'" % _CONFIG_DEFAULT
-    # )
-    # out_opts.add_argument(
-    #     '-s',
-    #     '--samfile',
-    #     dest='sam_file',
-    #     type=str,
-    #     default=_SAM_DEFAULT,
-    #     required=False,
-    #     metavar='SAM FILE',
-    #     help="Provide a name for SAM output, defaults to '%s'" % _SAM_DEFAULT
-    # )
     out_opts.add_argument(
         '-d',
         '--output-directory',
@@ -267,6 +247,13 @@ def make_argument_parser():
         action='store_true',
         required=False,
         help="Pass this flag to suppress SAM output"
+    )
+    align.add_argument(
+        '--xkcd',
+        dest='xkcd',
+        action='store_true',
+        required=False,
+        help=argparse.SUPPRESS
     )
     # #   Plot subroutine
     # plot = subparsers.add_parser('PLOT')
