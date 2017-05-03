@@ -87,5 +87,6 @@ def quality_plot(
     #   Set labels
     plt.ylabel('Alignment Score')
     plt.xlabel('')
+    plt.xticks([])
     #   Yield the plot
     plt.show()
