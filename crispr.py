@@ -306,10 +306,9 @@ def main(args): # type: (Dict) -> None
                     insertions=report.insertions,
                     deletions=report.deletions,
                     mismatches=report.mismatches,
-                    reference=ref_seq,
+                    num_reads=total_reads,
                     output_prefix=output_prefix
                 )
-            # import code; code.interact(local=locals())
     except IOError as error:
         sys.exit(logging.critical("Cannot find file %s, exiting", error.filename))
     except:

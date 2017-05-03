@@ -10,12 +10,9 @@ if sys.version_info.major != 2 and sys.version_info.minor != 7:
 
 
 import os
-from collections import defaultdict, Counter
-
-# from analysis import Reporter
+from collections import defaultdict
 
 try:
-    import numpy as np
     import matplotlib.pyplot as plt
     import matplotlib.font_manager as fm
 except ImportError as error:
@@ -29,29 +26,29 @@ _XKCD = False
 
 _check_fonts = lambda: 'Humor-Sans.ttf' in map(os.path.basename, fm.findSystemFonts()) if _XKCD else _XKCD
 
-
 def locus_plot(
         insertions, # type: Mapping[int, List[int]]
         deletions, # type: Mapping[int, List[int]]
         mismatches, # type: Mapping[int, List[str]]
-        reference, # type: str
+        num_reads, # type: int
         output_prefix # type: str
 ):
     # type: (...) -> None
     """Make a locus plot"""
     if _check_fonts():
         plt.xkcd()
-    indels = Counter() # type: Counter
+    #   Create our subplots
     fig, ax = plt.subplots()
-    # indels = dict.fromkeys(xrange(len(reference)), 0)
-    # mis_dict = {position: len(mismatches[position]) if position in mismatches else 0 for position in xrange(len(reference))}
-    mis_dict = {position: len(bases) for position, bases in mismatches.items()}
-    # xlocations = np.arange(len(reference)) # type: numpy.ndarray
+    #   Get our data ready for plotting
+    mis_dict = {position: len(bases) for position, bases in mismatches.items()} # type: Dict[int, int]
+    indels = defaultdict(int) # type: Mapping[int, int]
     for this_dict in (insertions, deletions): # type: Mapping[int, List[int]]
-        for position, counts in this_dict.items(): # type: int, List[int]
-            indels[position] += sum(counts)
+        for position, lengths in this_dict.items(): # type: int, List[int]
+            indels[position] += len(lengths)
+    #   Sort our data
     indel_counts = map(lambda tup: tup[1], sorted(indels.items())) # type: List[int]
     mis_counts = map(lambda tup: tup[1], sorted(mis_dict.items())) # type: List[int]
+    #   Create the bar graphs
     indel_bars = ax.bar(
         left=sorted(indels),
         height=indel_counts,
@@ -64,9 +61,14 @@ def locus_plot(
         width=_LOCUS_WIDTH,
         color=_MISMATCH_COLOR
     )
-    max_count = max(indel_counts + mis_counts)
-    plt.ylim(0, max_count + (max_count / 8))
+    #   Set the y limits and labels
+    plt.ylim(0, num_reads)
     plt.ylabel('Number of Reads')
+    #   Add a percent y axis
+    ax2 = ax.twinx()
+    ax2.set_ylabel('Percent')
+    ax2.set_yticks(map(lambda x: round(x * 100), ax2.get_yticks()))
+    #   Yield the plot
     plt.show()
 
 
@@ -78,8 +80,12 @@ def quality_plot(
     """Make a violin plot of the alignment scores"""
     if _check_fonts():
         plt.xkcd()
+    #   Assemble our scores
     scores = tuple(al.get_score() for al in alignments)
+    #   Plot the scores
     vlnplt = plt.violinplot(scores)
+    #   Set labels
     plt.ylabel('Alignment Score')
     plt.xlabel('')
+    #   Yield the plot
     plt.show()
