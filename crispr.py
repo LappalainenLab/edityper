@@ -16,6 +16,7 @@ import itertools
 from copy import deepcopy
 
 try:
+    import plots
     import arguments
     import configure
     import analysis as an
@@ -258,18 +259,20 @@ def main(args): # type: (Dict) -> None
             total_reads = sum((len(read_list) for read_list in reads_dict.values())) # type: int
             # import code; code.interact(local=locals()); sys.exit()
             # align_tup = tuple(al.__dict__ for al in itertools.chain.from_iterable(alignments.values()))
-            an.display_classification(
-                read_classification=read_classifications,
-                total_reads=total_reads,
-                snp_position=snp_index,
-                ref_state=reference_state,
-                target_snp=target_snp,
-                fwd_score=fwd_median,
-                rev_score=rev_median,
-                score_threshold=score_threshold,
-                output_prefix=output_prefix
-            )
-            sys.exit()
+            if args['suppress_classification'] or args['suppress_tables']:
+                logging.warning("Read classification suppressed, not writing classification table")
+            else:
+                an.display_classification(
+                    read_classification=read_classifications,
+                    total_reads=total_reads,
+                    snp_position=snp_index,
+                    ref_state=reference_state,
+                    target_snp=target_snp,
+                    fwd_score=fwd_median,
+                    rev_score=rev_median,
+                    score_threshold=score_threshold,
+                    output_prefix=output_prefix
+                )
             if args['suppress_sam']:
                 logging.warning("SAM output suppressed, not writing SAM file")
             else:
@@ -282,7 +285,28 @@ def main(args): # type: (Dict) -> None
                     is_reverse=do_reverse,
                     output_prefix=output_prefix
                 )
-            an.create_report(reporter=report, reference=ref_seq, snp_index=snp_index, output_prefix=output_prefix)
+            if args['suppress_events'] or args['suppress_tables']:
+                logging.warning("Events output suppressed, not writing events table")
+            else:
+                an.create_report(reporter=report, reference=ref_seq, snp_index=snp_index, output_prefix=output_prefix)
+            #   Plotting
+            if args['suppress_plots']:
+                logging.warning("Plots suppressed, not creating plots")
+            else:
+                if args['xkcd']:
+                    plots._XKCD = True
+                plots.quality_plot(
+                    alignments=tuple(al for al in itertools.chain.from_iterable(alignments.values())),
+                    output_prefix=output_prefix
+                )
+                plots.locus_plot(
+                    insertions=report.insertions,
+                    deletions=report.deletions,
+                    mismatches=report.mismatches,
+                    reference=ref_seq,
+                    output_prefix=output_prefix
+                )
+            # import code; code.interact(local=locals())
     except IOError as error:
         sys.exit(logging.critical("Cannot find file %s, exiting", error.filename))
     except:
