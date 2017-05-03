@@ -26,6 +26,39 @@ class Alignment(object):
 
     """An alignment just to make my life easier"""
 
+    @classmethod
+    def from_alignment_dict(cls, align_dict): # type: (Dict[str, Any]) -> Alignment
+        """Create an Alignment from another Alignment's __dict__ method"""
+        #   Use __init__ for parts of the new alignment
+        #   As these are required arguments, just call them from the dictionary
+        self = cls( # type: Alignment
+            ref_align=align_dict['_ref'],
+            read_align=align_dict['_read'],
+            score=align_dict['_score'],
+            names=align_dict['_names']
+        )
+        #   Get the rest of the information
+        #   These are not required, so use dict.get() to
+        #   ask if the key is in our alignment dictionary
+        #   Set the value in our instance if so, otherwise
+        #   set to None (None is default value of dict.get())
+        self._unaligned = align_dict.get('_unaligned') # type: Optional[str]
+        self._num_reads = align_dict.get('_num_reads') # type: Optional[int]
+        self._nmdel = align_dict.get('_nmdel') # type: Optional[int]
+        self._nmins = align_dict.get('_nmins') # type: Optional[int]
+        self._nmmis = align_dict.get('_nmmis') # type: Optional[int]
+        return self
+
+    @staticmethod
+    def from_dict(other_dict): # type: (Dict[str, Any]) -> Alignment
+        """Create an Alignment from a dictionary with the following keys:
+        Required: 'ref', 'read', 'score', 'names'
+        Optional: 'unaligned', 'num_reads', 'nmdel', 'nmins', 'nmmis'"""
+        try:
+            return Alignment.from_alignment_dict(align_dict={'_' + key: value for key, value in other_dict.items()})
+        except TypeError:
+            raise KeyError("An Alignment only has the following attributes: 'ref', 'read', 'score', 'names', 'unaligned', 'num_reads', 'nmdel', nmins', and 'nmmis'")
+
     def __init__(
             self,
             ref_align, # type: str
@@ -74,7 +107,7 @@ class Alignment(object):
         """Get the name of this alignment"""
         return tuple(self._names)
 
-    def get_stats(self): # type: (None) -> (int, int, int)
+    def get_stats(self): # type: (None) -> (int, int, int, int)
         """Get the stats for this alignment"""
         return self._num_reads, self._nmdel, self._nmins, self._nmmis
 
