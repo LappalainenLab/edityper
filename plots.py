@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+"""Plotting utilities for the CRISPR program"""
+
 from __future__ import division
 
 import sys
