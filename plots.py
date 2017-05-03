@@ -70,9 +70,6 @@ def locus_plot(
     plt.show()
 
 
-
-# plots.locus_plot(insertions=report.insertions, deletions=report.deletions, mismatches=report.mismatches, reference=ref_seq, output_prefix='potato')
-
 def quality_plot(
         alignments, # type: Iterable[alignment.Alignment]
         output_prefix # type: str
