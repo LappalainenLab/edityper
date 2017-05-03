@@ -235,20 +235,24 @@ def main(args): # type: (Dict) -> None
         elif args['subroutine'] == 'ALIGN':
             conf_dict = configure.read_config(args['config_file']) # type: Dict
             output_prefix = configure.make_prefix_name(directory=conf_dict['outdirectory'], base=conf_dict['project'])
+            #   Load the data
             ref_name, ref_seq, temp_name, temp_seq, fastq_list = load_data( # type: str, str str, str, List[toolpack.FastQ]]
                 conf_dict=conf_dict
             )
+            #   Run through quality control steps
             reads_dict, fwd_median, rev_median, score_threshold, snp_index, reference_state, target_snp, do_reverse = run_qc( # type: Dict[str, List[toolpack.Read]], numpy.float64, numpy.float64, numpy.float64, int, str, str, bool
                 conf_dict=conf_dict,
                 reference=ref_seq,
                 template=temp_seq,
                 fastq_list=fastq_list
             )
+            #   Align the reads
             alignments = run_alignment( # type: Dict[int, List[al.Alignment]]
                 reference=ref_seq,
                 reads_dict=reads_dict,
                 conf_dict=conf_dict
             )
+            #   Run analyses
             report, read_classifications = an.run_analysis( # type: an.Reporter, Tuple[defaultdict[int, List[al.Alignment]]]
                 reads_dict=reads_dict,
                 alignments=alignments,
@@ -257,8 +261,7 @@ def main(args): # type: (Dict) -> None
                 target_snp=target_snp
             )
             total_reads = sum((len(read_list) for read_list in reads_dict.values())) # type: int
-            # import code; code.interact(local=locals()); sys.exit()
-            # align_tup = tuple(al.__dict__ for al in itertools.chain.from_iterable(alignments.values()))
+            #   Start outputs
             if args['suppress_classification'] or args['suppress_tables']:
                 logging.warning("Read classification suppressed, not writing classification table")
             else:
