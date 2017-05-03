@@ -68,7 +68,7 @@ def make_argument_parser():
     #   Configure subroutine
     configure = subparsers.add_parser('CONFIG')
     align_opts = configure.add_argument_group(
-        title='Alignment Options',
+        title='alignment arguments',
         description='Set parameters for alignment'
     )
     align_opts.add_argument( # Analysis mode
@@ -113,7 +113,7 @@ def make_argument_parser():
         help="Set the gap extension penalty, defaults to '1'"
     )
     ref_opts = configure.add_argument_group(
-        title='Reference options',
+        title='reference arguments',
         description='Provide FASTA files for the reference and template sequences'
     )
     ref_opts.add_argument( # Reference sequence
@@ -137,7 +137,7 @@ def make_argument_parser():
         help="Choose a template FASTA file"
     )
     in_opts = configure.add_argument_group(
-        title='Input Options',
+        title='input arguments',
         description='Provide either a single FASTQ file or a list of FASTQ files. Note: we currently do NOT support paired-end FASTQ files'
     )
     in_files = in_opts.add_mutually_exclusive_group(required=True)
@@ -160,7 +160,7 @@ def make_argument_parser():
         help="Provdide a sample list, with each sample on its own line, mutually exclusive with '-i | --input-file'"
     )
     out_opts = configure.add_argument_group(
-        title='Output options',
+        title='output arguments',
         description='Provide an output directory and project name. All files, including the configuration file, will be placed in the output directory with a basename of the project name.'
     )
     out_opts.add_argument(
@@ -184,7 +184,7 @@ def make_argument_parser():
         help="Provide a project name to be used as the basename for all output files; defaults to '%s'" % _PROJECT_DEFAULT
     )
     rg_opts = configure.add_argument_group(
-        title='Set read group options',
+        title='read group arguments',
         description="Provide extra read group information. Note: this information will be applied to ALL read groups"
     )
     rg_opts.add_argument(
@@ -230,7 +230,10 @@ def make_argument_parser():
     )
     #   Alignment subroutine
     align = subparsers.add_parser('ALIGN')
-    align.add_argument( # Where is our configuration file?
+    required = align.add_argument_group(
+        title='required arguments',
+    )
+    required.add_argument( # Where is our configuration file?
         '-c',
         '--config-file',
         dest='config_file',
@@ -239,13 +242,44 @@ def make_argument_parser():
         metavar='CONFIG FILE',
         help="Specify the path to the config file"
     )
-    align.add_argument(
-        '-s',
+    suppression = align.add_argument_group(
+        title='suppression arguments',
+        description="Choose to suppress some or all of the output files"
+    )
+    suppression.add_argument(
         '--suppress-sam',
         dest='suppress_sam',
         action='store_true',
         required=False,
-        help="Pass this flag to suppress SAM output"
+        help="Suppress SAM output"
+    )
+    suppression.add_argument(
+        '--suppress-events',
+        dest='suppress_events',
+        action='store_true',
+        required=False,
+        help="Suppress events output"
+    )
+    suppression.add_argument(
+        '--suppress-classification',
+        dest='suppress_classification',
+        action='store_true',
+        required=False,
+        help="Suppress read classification"
+    )
+    suppression.add_argument(
+        '--suppress-tables',
+        dest='suppress_tables',
+        action='store_true',
+        required=False,
+        help="Suppress both events and read classification tables"
+    )
+    suppression.add_argument(
+        '--suppress-plots',
+        dest='suppress_plots',
+        action='store_true',
+        required=False,
+        help="Suppress plots"
     )
     align.add_argument(
         '--xkcd',
