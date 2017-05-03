@@ -1,4 +1,22 @@
+# Ignore Python byte code
+#########################
 *.pyc
+
+# Ignore system directories
+###########################
 .vscode
 .DS_Store
+
+# Ignore compiled libraries
+###########################
 *.so
+
+# Ignore output files and lists
+###############################
+*.sam
+*.bam
+*.classifications
+*.events
+*.pdf
+*.ini
+*.txt
