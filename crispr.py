@@ -56,11 +56,11 @@ def load_data(conf_dict): # type: (Dict[Any]) -> (str, str, str, str, List[toolp
     elif 'input_file' in conf_dict:
         fastq_files = [conf_dict['input_file']] # type: List[str]
     else:
-        raise ValueError("Cannot find the input file(s)")
+        raise ValueError("Cannot find the input FASTQ file(s)")
     logging.info("Loading %s as reference", conf_dict['reference'])
-    ref_name, ref_seq = toolpack.load_seq(conf_dict['reference'])
+    ref_name, ref_seq = toolpack.load_seq(conf_dict['reference']) # type: str, str
     logging.info("Loading %s as template", conf_dict['template'])
-    temp_name, temp_seq = toolpack.load_seq(conf_dict['template'])
+    temp_name, temp_seq = toolpack.load_seq(conf_dict['template']) # type: str, str
     fastq_list = [toolpack.load_fastq(f) for f in fastq_files] # type: List[toolpack.FastQ]
     logging.debug("Data load took %s seconds", round(time.time() - load_start, 3))
     return ref_name, ref_seq, temp_name, temp_seq, fastq_list
