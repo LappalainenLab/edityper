@@ -116,7 +116,7 @@ class FastQ(object):
 
 def load_fastq(fastq_file): # type: (str) -> FastQ
     '''Loading reads from a fastq file, list of lists including the +'''
-    fastq, temp = FastQ(fastq_file), list()
+    fastq, temp = FastQ(os.path.basename(fastq_file)), list()
     if 'gz' in fastq_file:
         fastq_handle = gzip.open(fastq_file, 'rb')
     else:
