@@ -33,9 +33,19 @@ class Read(object):
         self._sequence = str(sequence)
         self._quality = str(quality)
         self._source = None
+        if len(self._sequence) != len(self._quality):
+            raise ValueError("'sequence' and 'quality' must be the same length!")
 
     def __repr__(self): # type: (None) -> str
         return self.get_readid()
+
+    def __eq__(self, other): # type: (Union[Read, str]) -> bool
+        if isinstance(other, Read):
+            return self._readid == other._readid and self._sequence == other._sequence and self._quality == other._quality
+        elif isinstance(other, str):
+            return self._readid == other or self._sequence == other or self._quality == other
+        else:
+            return NotImplemented
 
     def __len__(self): # type: (None) -> int
         return len(self._sequence)
