@@ -32,6 +32,7 @@ class Read(object):
         self._readid = str(readid)
         self._sequence = str(sequence)
         self._quality = str(quality)
+        self._source = None
 
     def __repr__(self): # type: (None) -> str
         return self.get_readid()
@@ -39,9 +40,13 @@ class Read(object):
     def __len__(self): # type: (None) -> int
         return len(self._sequence)
 
-    def rvcomplement(self): # type(None) -> None
+    def rvcomplement(self): # type: (None) -> None
         """Reverse complement the sequence for this read"""
         self._sequence = rvcomplement(seq=self._sequence)
+
+    def set_source(self, source_file): # type: (str) -> None
+        """Set the source file"""
+        self._source = source_file
 
     def get_readid(self): # type: (None) -> str
         """Get the read ID"""
@@ -54,6 +59,10 @@ class Read(object):
     def get_quality(self): # type: (None) -> str
         """Get the quality scores for this read"""
         return self._quality
+
+    def get_source(self): # type: (None) -> Optional[str]
+        """Get the source file"""
+        return self._source
 
 
 class FastQ(object):
@@ -75,6 +84,7 @@ class FastQ(object):
             raise TypeError("'read' must be of type Read")
         if read.get_readid() in self._reads:
             raise ValueError("Cannot have multiple Reads with the same read ID")
+        read.set_source(source_file=self._name)
         self._reads[read.get_readid()] = read
 
     def get_read(self, readid): # type: (str) -> Read
@@ -96,8 +106,7 @@ class FastQ(object):
 
 def load_fastq(fastq_file): # type: (str) -> FastQ
     '''Loading reads from a fastq file, list of lists including the +'''
-    # output, temp = list(), list()
-    output, temp = FastQ(fastq_file), list()
+    fastq, temp = FastQ(fastq_file), list()
     if 'gz' in fastq_file:
         fastq_handle = gzip.open(fastq_file, 'rb')
     else:
@@ -108,10 +117,10 @@ def load_fastq(fastq_file): # type: (str) -> FastQ
         temp.append(line.decode().rstrip('\n'))
         if i % 4 == 3:
             this_read = Read(readid=temp[0], sequence=temp[1], quality=temp[2])
-            output.add_read(this_read)
+            fastq.add_read(this_read)
             temp = list()
     fastq_handle.close()
-    return output
+    return fastq
 
 
 def load_seq(seq_file): # type: (str) -> (str, str)
