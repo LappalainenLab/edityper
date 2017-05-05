@@ -10,11 +10,13 @@ if sys.version_info.major != 2 and sys.version_info.minor != 7:
 
 
 import os
+import time
 import logging
 from collections import defaultdict
 
 try:
     import matplotlib.pyplot as plt
+    import matplotlib.patches as ptch
     import matplotlib.font_manager as fm
 except ImportError as error:
     sys.exit("Please install Numpy and Matplotlib for this module: " + error.message)
@@ -39,12 +41,17 @@ def locus_plot(
         deletions, # type: Mapping[int, List[int]]
         mismatches, # type: Mapping[int, List[str]]
         num_reads, # type: int
+        fastq_name, # type: str
         output_prefix # type: str
 ):
     # type: (...) -> None
     """Make a locus plot"""
+    logging.info("Making locus plot")
+    locus_start = time.time()
     if _check_fonts():
         plt.xkcd()
+    #   Make a name for our locus plot
+    plot_name = output_prefix + '_locus.pdf'
     #   Create our subplots
     fig, ax = plt.subplots()
     #   Get our data ready for plotting
@@ -69,6 +76,11 @@ def locus_plot(
         width=_LOCUS_WIDTH,
         color=_MISMATCH_COLOR
     )
+    #   Add title and legend
+    plt.title(fastq_name)
+    indel_patch = ptch.Patch(color=_INDEL_COLOR, label='Indels')
+    mismatch_patch = ptch.Patch(color=_MISMATCH_COLOR, label='Mismatches')
+    plt.legend(handles=(indel_patch, mismatch_patch))
     #   Set the y limits and labels
     plt.ylim(0, num_reads)
     plt.ylabel('Number of Reads')
@@ -77,7 +89,10 @@ def locus_plot(
     ax2.set_ylabel('Percent')
     ax2.set_yticks(map(lambda x: round(x * 100), ax2.get_yticks()))
     #   Yield the plot
-    plt.show()
+    # plt.show()
+    logging.info("Saving plot to %s", plot_name)
+    plt.savefig(plot_name, format='pdf')
+    logging.debug("Making locus plot took %s seconds", round(time.time() - locus_start, 3))
 
 
 def quality_plot(
