@@ -10,6 +10,7 @@ if sys.version_info.major != 2 and sys.version_info.minor != 7:
 
 
 import os
+import logging
 from collections import defaultdict
 
 try:
@@ -24,7 +25,14 @@ _INDEL_COLOR = 'r'
 _MISMATCH_COLOR = 'b'
 _XKCD = False
 
-_check_fonts = lambda: 'Humor-Sans.ttf' in map(os.path.basename, fm.findSystemFonts()) if _XKCD else _XKCD
+def _check_fonts():
+    if _XKCD:
+        if 'Humor-Sans.ttf' in map(os.path.basename, fm.findSystemFonts()):
+            return True
+        else:
+            logging.error("Cannot find 'Humor-Sans.ttf' font. Please install and clear your matplotlib cache")
+    return False
+
 
 def locus_plot(
         insertions, # type: Mapping[int, List[int]]
