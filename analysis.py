@@ -143,7 +143,7 @@ def find_mismatches(
 
 def run_analysis(
         reads_dict, # type: Dict[str, int]
-        alignments, # type: Dict[int, List[al.Alignment]]
+        alignments, # type: Iterable[al.Alignment]
         score_threshold, # type: numpy.float64
         snp_index, # type: int
         target_snp # type: str
@@ -167,7 +167,7 @@ def run_analysis(
     hdr, nhej, no_edit, disc = class_reads
     out_idx = 0 # type: int
     #   Start doing things
-    for alignment in itertools.chain.from_iterable(alignments.values()): # type: al.Alignment
+    for alignment in alignments: # type: al.Alignment
         out_idx += 1
         num_reads = len(reads_dict[alignment.get_unaligned()]) # type: int
         #   Alignment is below score threshold, discard it
