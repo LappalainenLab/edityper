@@ -20,7 +20,7 @@ except ImportError as error:
     sys.exit("Please keep this program in it's directory to load custom modules: " + error.message)
 
 
-ReadSummary = namedtuple("ReadSummary", ('sequence', 'names'))
+ReadSummary = namedtuple("ReadSummary", ('sequence', 'reads'))
 
 class Alignment(object):
 
@@ -42,6 +42,7 @@ class Alignment(object):
         #   ask if the key is in our alignment dictionary
         #   Set the value in our instance if so, otherwise
         #   set to None (None is default value of dict.get())
+        self._sources = align_dict.get('_sources') # type: Optional[str]
         self._unaligned = align_dict.get('_unaligned') # type: Optional[str]
         self._num_reads = align_dict.get('_num_reads') # type: Optional[int]
         self._nmdel = align_dict.get('_nmdel') # type: Optional[int]
@@ -57,7 +58,7 @@ class Alignment(object):
         try:
             return Alignment.from_alignment_dict(align_dict={'_' + key: value for key, value in other_dict.items()})
         except TypeError:
-            raise KeyError("An Alignment only has the following attributes: 'ref', 'read', 'score', 'names', 'unaligned', 'num_reads', 'nmdel', nmins', and 'nmmis'")
+            raise KeyError("An Alignment only has the following attributes: 'ref', 'read', 'score', 'names', 'sources' 'unaligned', 'num_reads', 'nmdel', nmins', and 'nmmis'")
 
     def __init__(
             self,
@@ -67,15 +68,16 @@ class Alignment(object):
             names=None # type: Optional[Iterable[str]]
     ):
         # type: (...) -> None
-        self._ref = ref_align
-        self._read = read_align
-        self._score = score
-        self._names = names
-        self._unaligned = None
-        self._num_reads = None
-        self._nmdel = None
-        self._nmins = None
-        self._nmmis = None
+        self._ref = ref_align # type: str
+        self._read = read_align # type: str
+        self._score = score # type: str
+        self._names = names # type: Iterable[str]
+        self._sources = None # type: Optional[Iterable[str]]
+        self._unaligned = None # type: Optional[str]
+        self._num_reads = None # type: Optional[int]
+        self._nmdel = None # type: Optional[int]
+        self._nmins = None # type: Optional[int]
+        self._nmmis = None # type: Optional[int]
 
     def __repr__(self): # type: (None) -> str
         return self._unaligned
@@ -83,6 +85,10 @@ class Alignment(object):
     def set_unaligned(self, sequence): # type: (str) -> None
         """Provide an unaligned sequence"""
         self._unaligned = sequence
+
+    def set_sources(self, sources): # type: Iterable(str) -> None
+        """Set the source FASTQ files for this alignment"""
+        self._sources = {source for source in sources}
 
     def set_stats(self, num_reads, nm_del, nm_ins, nm_mis):  # type: (int, int, int, int) -> None
         """Set the stats"""
@@ -107,6 +113,10 @@ class Alignment(object):
         """Get the name of this alignment"""
         return tuple(self._names)
 
+    def get_sources(self): # type: (None) -> Tuple[str]
+        """Get the FASTQ files that support this alignment"""
+        return tuple(self._sources)
+
     def get_stats(self): # type: (None) -> (int, int, int, int)
         """Get the stats for this alignment"""
         return self._num_reads, self._nmdel, self._nmins, self._nmmis
@@ -123,7 +133,7 @@ def sort_reads_by_length(reads_dict): # type: (Dict[str, List[toolpack.Read]]) -
     reads_by_length = defaultdict(list)
     for seq, reads_list in reads_dict.items(): # type: str, List[toolpack.Read]
         length = len(seq) # type: int
-        seq_info = ReadSummary(sequence=seq, names=tuple(read.get_readid() for read in reads_list)) # type: ReadSummary
+        seq_info = ReadSummary(sequence=seq, reads=tuple(read for read in reads_list)) # type: ReadSummary
         reads_by_length[length].append(seq_info)
         reads_by_length[length].sort(key=lambda summary: summary.sequence)
     logging.debug("Sorting the reads took %s seconds", round(time.time() - sort_start, 3))
@@ -146,14 +156,16 @@ def align_recurse(
     for length, reads_list in reads_by_length.items(): # type: int, List[ReadSummary]
         count, temp = 0, '' # type: int, str
         total = len(reads_list)
-        for read in reads_list: # type: ReadSummary
+        for summary in reads_list: # type: ReadSummary
             count += 1
-            # seq = read.get_sequence() # type: str
-            seq = read.sequence
+            seq = summary.sequence # type: str
+            names = tuple(read.get_readid() for read in summary.reads) # type: Tuple[str]
+            fastqs = {read.get_source() for read in summary.reads} # type: Set[str]
             if not temp: # basically, first sequence to be aligned
                 al_ref, al_read, score = NW.align_aff_mem(reference, seq, gap_open, gap_ext, 0, 0) # type: str, str, int
-                aligned = Alignment(ref_align=al_ref, read_align=al_read, score=score, names=read.names) # type: Alignment
+                aligned = Alignment(ref_align=al_ref, read_align=al_read, score=score, names=names) # type: Alignment
                 aligned.set_unaligned(sequence=seq)
+                aligned.set_sources(sources=fastqs)
                 alignments[length].append(aligned)
                 temp = seq # type: str
                 continue
@@ -163,9 +175,22 @@ def align_recurse(
                 al_ref, al_read, score = NW.align_aff_mem(reference, seq, gap_open, gap_ext, index, 1) # type: str, str, int
             else:
                 al_ref, al_read, score = NW.align_aff_mem(reference, seq, gap_open, gap_ext, index, 0) # type: str, str, int
-            aligned = Alignment(ref_align=al_ref, read_align=al_read, score=score, names=read.names)
+            aligned = Alignment(ref_align=al_ref, read_align=al_read, score=score, names=names)
             aligned.set_unaligned(sequence=seq)
+            aligned.set_sources(sources=fastqs)
             alignments[length].append(aligned)
             temp = seq # type: str
     logging.debug("Aligning reads using the recursive method took %s seconds", round(time.time() - align_start, 3))
     return dict(alignments)
+
+
+def alignment_by_fastq(
+        alignments, # type: Iterable[alignment.Alignment]
+):
+    # type: (...) -> Dict[str, List[alignment.Alignment]]
+    """Organize alignments by the FASTQ files that contained the reads supporting each alignment"""
+    sorted_alignments = defaultdict(list)
+    for aligned in alignments:
+        for source in aligned.get_sources():
+            sorted_alignments[source].append(aligned)
+    return sorted_alignments
