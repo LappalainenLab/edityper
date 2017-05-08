@@ -151,7 +151,7 @@ def load_seq(seq_file): # type: (str) -> (str, str)
         if name.count('.') == 2:
             name = name.split('.')[0] # type: str
         else:
-            name = os.path.splitext()[0] # type: str
+            name = os.path.splitext(name)[0] # type: str
     name = name.split(' ')[0].replace('>', '')
     return name, output
 
