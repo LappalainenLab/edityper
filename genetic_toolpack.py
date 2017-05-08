@@ -136,14 +136,22 @@ def load_fastq(fastq_file): # type: (str) -> FastQ
 def load_seq(seq_file): # type: (str) -> (str, str)
     '''Load reference and template'''
     output, name = str(), str() # type: str, str
-    with open(seq_file, 'rb') as sfile:
+    if 'gz' in seq_file:
+        my_open = gzip.open
+    else:
+        my_open = open
+    with my_open(seq_file, 'rb') as sfile:
         for line in sfile:
             if line.startswith('>'):
                 name += line.strip()
                 continue
             output += line.strip().replace(' ', '').upper()
     if not name:
-        name = os.path.splitext(os.path.basename(seq_file))[0] # type: str
+        name = os.path.basename(seq_file) # type:str
+        if name.count('.') == 2:
+            name = name.split('.')[0] # type: str
+        else:
+            name = os.path.splitext()[0] # type: str
     name = name.split(' ')[0].replace('>', '')
     return name, output
 
