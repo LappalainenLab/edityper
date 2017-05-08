@@ -80,7 +80,8 @@ def make_argument_parser():
         default='SNP',
         required=False,
         metavar='ANALYSIS MODE',
-        help="Set the analysis mode, choose from 'SNP' or 'SNP+PAM', defaults to 'SNP'"
+        # help="Set the analysis mode, choose from 'SNP' or 'SNP+PAM', defaults to 'SNP'"
+        help=argparse.SUPPRESS
     )
     align_opts.add_argument( # p-value threshold
         '-p',
@@ -163,7 +164,7 @@ def make_argument_parser():
         title='output arguments',
         description='Provide an output directory and project name. All files, including the configuration file, will be placed in the output directory with a basename of the project name.'
     )
-    out_opts.add_argument(
+    out_opts.add_argument( # Output directory
         '-d',
         '--output-directory',
         dest='outdirectory',
@@ -173,7 +174,7 @@ def make_argument_parser():
         metavar='OUTPUT DIRECTORY',
         help="Choose where all output files are to be stored; defaults to '%s'" % _OUTDIR_DEFAULT
     )
-    out_opts.add_argument(
+    out_opts.add_argument( # Project name
         '-j',
         '--project',
         dest='project',
@@ -187,7 +188,7 @@ def make_argument_parser():
         title='read group arguments',
         description="Provide extra read group information. Note: this information will be applied to ALL read groups"
     )
-    rg_opts.add_argument(
+    rg_opts.add_argument( # Read center
         '-rc',
         '--read-center',
         dest='read_center',
@@ -197,7 +198,7 @@ def make_argument_parser():
         metavar='READ CENTER',
         help="Name of the sequencing center (@RG CN)"
     )
-    rg_opts.add_argument(
+    rg_opts.add_argument( # Read library
         '-rl',
         '--read-library',
         dest='read_library',
@@ -207,7 +208,7 @@ def make_argument_parser():
         metavar='READ LIBRARY',
         help="Library (@RG LB)"
     )
-    rg_opts.add_argument(
+    rg_opts.add_argument( # Read platform
         '-rp',
         '--read-platform',
         dest='read_platform',
@@ -218,7 +219,7 @@ def make_argument_parser():
         metavar='READ PLATFORM',
         help="Platform technology for sequencing, choose from '%s' (@RG PL)" % "', '".join(_VALID_PLATFORMS)
     )
-    rg_opts.add_argument(
+    rg_opts.add_argument( # Read sample
         '-rs',
         '--read-sample',
         dest='read_sample',
@@ -246,35 +247,35 @@ def make_argument_parser():
         title='suppression arguments',
         description="Choose to suppress some or all of the output files"
     )
-    suppression.add_argument(
+    suppression.add_argument( # Suppress SAM output
         '--suppress-sam',
         dest='suppress_sam',
         action='store_true',
         required=False,
         help="Suppress SAM output"
     )
-    suppression.add_argument(
+    suppression.add_argument( # Suppress .events table
         '--suppress-events',
         dest='suppress_events',
         action='store_true',
         required=False,
         help="Suppress events output"
     )
-    suppression.add_argument(
+    suppression.add_argument( # Suppress .classifications table
         '--suppress-classification',
         dest='suppress_classification',
         action='store_true',
         required=False,
         help="Suppress read classification"
     )
-    suppression.add_argument(
+    suppression.add_argument( # Suppress both .events and .classifications tables
         '--suppress-tables',
         dest='suppress_tables',
         action='store_true',
         required=False,
         help="Suppress both events and read classification tables"
     )
-    suppression.add_argument(
+    suppression.add_argument( # Suppress plots
         '--suppress-plots',
         dest='suppress_plots',
         action='store_true',
@@ -288,6 +289,4 @@ def make_argument_parser():
         required=False,
         help=argparse.SUPPRESS
     )
-    # #   Plot subroutine
-    # plot = subparsers.add_parser('PLOT')
     return parser
