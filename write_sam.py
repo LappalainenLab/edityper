@@ -382,7 +382,7 @@ def calc_read_pos(alignment): # type: alignment.Alignment -> int
     #   Start our pattern for the final regex search
     pattern = '(' # type: str
     #   Create this iterable to validate the checks below
-    possible_references = itertools.repeat(reference, 2) # type: itertools.repeat
+    possible_references = tuple(itertools.repeat(reference, 2)) # type: Tuple[str]
     #   Count the number of types we modify the reference
     #   Use this for fuzzy matching bounds
     #   when searching for a new reference
