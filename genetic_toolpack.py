@@ -17,6 +17,7 @@ if sys.version_info.major is not 2 and sys.version_info.minor is not 7:
 
 import os
 import gzip
+import logging
 from string import maketrans
 
 def rvcomplement(seq): # type: (str) -> str
@@ -167,15 +168,19 @@ def get_mismatch(seq_a, seq_b, head=None, tail=None, matches=False):
     else:
         seq_range = xrange(len(seq_a)) # type: xrange
     for index in seq_range: # type: int
-        if seq_a[index] == '-' or seq_b[index] == '-':
-            #   Gap, not mismatch, continue
-            continue
-        if seq_a[index] == seq_b[index]:
-            #   Match, not mismatch
-            match_list.append(index)
-            continue
-        #   If neither a gap nor a match, it's a mismatch
-        mis_list.append((index, (seq_a[index], seq_b[index])))
+        try:
+            if seq_a[index] == '-' or seq_b[index] == '-':
+                #   Gap, not mismatch, continue
+                continue
+            if seq_a[index] == seq_b[index]:
+                #   Match, not mismatch
+                match_list.append(index)
+                continue
+            #   If neither a gap nor a match, it's a mismatch
+            mis_list.append((index, (seq_a[index], seq_b[index])))
+        except IndexError:
+            logging.error("No sequence found at base %i", index)
+            break
     if matches:
         return mis_list, match_list
     else:
@@ -217,20 +222,24 @@ def find_gaps(seq, head=None, tail=None): # type: (str, Optional[int], Optional[
     # Temporary values
     index, length = 0, 0 # type: int, int
     for i in range(head, tail + 1):
-        if seq[i] == '-': # GAP
-            if not gap_open: # Open the gap
-                gap_open = True # type: bool
-                length = 1 # type: int
-                index = i # type: int
-            else: #continue previous gap
-                length += 1
-        else:
-            if gap_open: # Close the gap
-                gap_list.append((index, length))
-                index, length = 0, 0 # type: int, int
-                gap_open = False # type: bool
-            else: # Move along
-                continue
+        try:
+            if seq[i] == '-': # GAP
+                if not gap_open: # Open the gap
+                    gap_open = True # type: bool
+                    length = 1 # type: int
+                    index = i # type: int
+                else: #continue previous gap
+                    length += 1
+            else:
+                if gap_open: # Close the gap
+                    gap_list.append((index, length))
+                    index, length = 0, 0 # type: int, int
+                    gap_open = False # type: bool
+                else: # Move along
+                    continue
+        except IndexError:
+            logging.error("No sequence at %s", i)
+            break
     return gap_list # type: List(Tuple[int])
 
 
