@@ -114,8 +114,8 @@ class SAM(object):
         """Validate a SAM FLAG"""
         bits = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048} # type: Set[int]
         combinations = {seq for i in xrange(len(bits), 0, -1) for seq in itertools.combinations(bits, i) if sum(seq) == flag} # type: Set[int]
-        if not combinations:
-            raise ValueError("The FLAG must be the sum of any of the following: " + ', '.join(map(str, sorted(bits))))
+        if not combinations and flag != 0:
+            raise ValueError("The FLAG must be the sum of any of the following: %s; not %s" % (', '.join(map(str, sorted(bits))), flag))
 
     @staticmethod
     def validate_quality(quality, sequence):
@@ -189,6 +189,11 @@ class SAM(object):
         out = map(str, out) # type: List[str]
         out += [':'.join((tag, tup[0], tup[1])) for tag, tup in sorted(self._metadata.items(), key=lambda tup: tup[0])]
         return '\t'.join(out)
+
+    def __del__(self):
+        del self._qname, self._flag, self._rname, self._pos, self._mapq, self._cigar, \
+            self._rnext, self._pnext, self._tlen, self._seq, self._qual
+        del self._metadata
 
     def __eq__(self, other):
         if not isinstance(other, SAM):
