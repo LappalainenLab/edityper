@@ -79,7 +79,6 @@ def load_data(conf_dict): # type: (Dict[Any]) -> (str, str, str, str, List[toolp
     logging.info("Loading %s as template", conf_dict['template'])
     temp_name, temp_seq = toolpack.load_seq(conf_dict['template']) # type: str, str
     fastq_list = [toolpack.load_fastq(f) for f in fastq_files] # type: List[toolpack.FastQ]
-    # import code; code.interact(local=locals()); sys.exit()
     logging.debug("Data load took %s seconds", round(time.time() - load_start, 3))
     return ref_name, ref_seq, temp_name, temp_seq, fastq_list
 
