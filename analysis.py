@@ -11,10 +11,10 @@ if sys.version_info.major is not 2 and sys.version_info.minor is not 7:
 
 
 import re
-import time
 import logging
 import warnings
 import itertools
+from math import floor, ceil
 from collections import Counter, defaultdict, namedtuple
 
 try:
@@ -143,8 +143,7 @@ def run_analysis(
     'score_threshold' is a floating point score threshold
     'snp_index', is an int representing the index where the SNP is
     'target_snp' is a signle character str reperesenting the target SNP for this experiment"""
-    logging.info("Analyzing alignments")
-    analyze_start = time.time() # type: float
+    #   Create some holding dicts
     total_deletions = defaultdict(list)
     total_insertions = defaultdict(list)
     total_mismatches = defaultdict(list)
@@ -212,11 +211,11 @@ def run_analysis(
         mismatches=total_mismatches,
         matches=total_matches
     )
-    logging.debug("Alignment analysis took %s seconds", round(time.time() - analyze_start, 3))
     return report, class_reads
 
 
 def display_classification(
+        fastq, # type: toolpack.FastQ
         read_classification, # type: Tuple[defaultdict[int, List[Alignment]]]
         total_reads, # type: int
         snp_position, # type: int
@@ -240,12 +239,20 @@ def display_classification(
     'rev_score' is the score of the reverse alignment (from QC steps)
     'score_threshold' is the score threshold (from QC steps)
     'output_prefix' is the output directory + basename for the events report"""
+    #   Make some headers for the display
     class_header = "################################################"
+    name = str(fastq) # type: str
+    # pre_repeat = int(floor((len(class_header) - len(name) / 2))) # type: int
+    # post_repeat = int(ceil((len(class_header) - len(name) / 2))) # type: int
+    pre_repeat = int(floor((len(class_header) - len(name)) / 2)) # type: int
+    post_repeat = int(ceil((len(class_header) - len(name)) / 2)) # type: int
+    name_header = ''.join(itertools.repeat('-', pre_repeat)) + name + ''.join(itertools.repeat('-', post_repeat))
     warnings.simplefilter('error')
     full_class_name = output_prefix + '.classifications'
     logging.info("Writing full classification breakdown to %s", full_class_name)
     logging.warning(class_header)
     logging.warning("--------------Read Classifications--------------")
+    logging.warning(name_header)
     num_unique = len( # type: int
         tuple(
             itertools.chain.from_iterable(

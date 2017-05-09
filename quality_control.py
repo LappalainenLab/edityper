@@ -76,6 +76,7 @@ def get_snp_states(reference, template, mismatch, mode): # type: (str, str, List
 
 
 def determine_alignment_direction(
+        fastq, # type: toolpack.FastQ
         raw_sequences, # type: List[str]
         reference, # type: str
         gap_open, # type: int
@@ -84,7 +85,6 @@ def determine_alignment_direction(
 ):
     # type: (...) -> (bool, float)
     """Determine if we're aligning our reads in the forward or reverse direction"""
-    logging.info("Determining how to align the reads")
     direction_start = time.time()
     ten_percent = int(round(0.1 * len(raw_sequences)) + 1)
     sampled_reads = random.sample(raw_sequences, k=min([500, ten_percent])) # Sample at most 500 reads
@@ -113,6 +113,6 @@ def determine_alignment_direction(
         use_scores = map(get_third, perm_scores) # type: List[int]
     msg = "Aligning in the %s direction" % ('reverse' if reverse else 'forward') # type: str
     score_threshold = np.std(use_scores) * norm.pdf(1 - pvalue_threshold) + np.median(use_scores) # type: numpy.float64
-    logging.warning("%s: %s vs %s (norm vs reverse) - threshold: %s", msg, fwd_median, rev_median, score_threshold)
-    logging.debug("Determining alignment direction took %s seconds", round(time.time() - direction_start, 3))
+    logging.warning("FASTQ %s: %s", str(fastq), msg)
+    logging.warning("FASTQ %s: %s vs %s (norm vs reverse) - threshold: %s", str(fastq), fwd_median, rev_median, score_threshold)
     return reverse, fwd_median, rev_median, score_threshold

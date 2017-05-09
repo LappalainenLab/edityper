@@ -9,8 +9,6 @@ if sys.version_info.major is not 2 and sys.version_info.minor is not 7:
     sys.exit("Please use Python 2.7 for this module: " + __name__)
 
 
-import time
-import logging
 from collections import defaultdict, namedtuple
 
 try:
@@ -128,15 +126,12 @@ class Alignment(object):
 
 def sort_reads_by_length(reads_dict): # type: (Dict[str, List[toolpack.Read]]) -> Dict[int, List[ReadSummary]]
     """Sort a list of reads by their length"""
-    logging.info("Sorting reads by length")
-    sort_start = time.time() # type: float
     reads_by_length = defaultdict(list)
     for seq, reads_list in reads_dict.items(): # type: str, List[toolpack.Read]
         length = len(seq) # type: int
         seq_info = ReadSummary(sequence=seq, reads=tuple(read for read in reads_list)) # type: ReadSummary
         reads_by_length[length].append(seq_info)
         reads_by_length[length].sort(key=lambda summary: summary.sequence)
-    logging.debug("Sorting the reads took %s seconds", round(time.time() - sort_start, 3))
     return reads_by_length
 
 
@@ -148,8 +143,6 @@ def align_recurse(
 ):
     # type: (...) -> Dict[int, List[Alignment]]
     """Align using the recurisve method"""
-    logging.info("Aligning reads using the recursive method")
-    align_start = time.time() # type: float
     #   Keep track of matrix re-used lines
     alignments = defaultdict(list) # type: defaultdict[List]
     reuse = 0 # type: int
@@ -180,7 +173,6 @@ def align_recurse(
             aligned.set_sources(sources=fastqs)
             alignments[length].append(aligned)
             temp = seq # type: str
-    logging.debug("Aligning reads using the recursive method took %s seconds", round(time.time() - align_start, 3))
     return dict(alignments)
 
 

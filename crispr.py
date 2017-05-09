@@ -51,6 +51,10 @@ def _set_verbosity(level): # type: (str) -> int
         raise ValueError("'level' must be one of 'DEBUG', 'INFO', 'WARNING', 'ERROR', or 'CRITICAL'")
     return log_level
 
+def _check_suppressions(suppressions): # type: (Dict[str, bool]) -> bool
+    suppress_tables = suppressions['suppress_events'] and suppressions['suppress_classification']
+    return suppressions['suppress_plots'] and suppressions['suppress_sam'] and (suppressions['suppress_tables'] or suppress_tables)
+
 
 def unpack(collection):
     """Unpack a series of nested lists, sets, or tuples"""
@@ -85,38 +89,20 @@ def load_data(conf_dict): # type: (Dict[Any]) -> (str, str, str, str, List[toolp
 
 def run_qc(
         conf_dict, # type: Dict[str, Any]
-        reference, # type: str
-        template, # type: str
+        aligned_reference, # type: str
         fastq, # type: toolpack.FastQ
 ):
     # type: (...) -> (str, Dict[str, List[toolpack.Read]], numpy.float64, int, str, bool)
     """Run the QC steps"""
-    logging.info("Running quality control")
+    logging.info("FASTQ %s: Running quality control", str(fastq))
     qc_start = time.time()
-    #   Validate our reference and template sequences by aligning them
-    aligned_reference, aligned_template = qc.align_reference( # type: str, str
-        reference=reference,
-        template=template,
-        gap_penalty=conf_dict['gap_opening']
-    )
-    reference_template_mismatch = qc.validate_reference_alignment( # type: List[List[int, Tuple[str]]]
-        reference=aligned_reference,
-        template=aligned_template,
-        snp_mode=True if conf_dict['analysis_mode'] == 'SNP' else False
-    )
-    #   Get the reference SNP state and target SNP from our aligned reference and template
-    snp_index, reference_state, target_snp = qc.get_snp_states( # type: int, str, str
-        reference=aligned_reference,
-        template=aligned_template,
-        mismatch=reference_template_mismatch,
-        mode=conf_dict['analysis_mode']
-    )
     #   Determine alignment direction
     #   Need chain to flatten the list of lists
     raw_read_dict = ri.load_seqs( # type: Dict[str, List[toolpack.Read]]
         raw_reads=fastq.get_all_reads()
     ) # raw_read_dict is {unique sequences: [reads that have this sequence]}
     do_reverse, fwd_median, rev_median, score_threshold = qc.determine_alignment_direction( # type: bool, numpy.float64, numpy.float64, numpy.float64
+        fastq=fastq,
         raw_sequences=raw_read_dict, # Effectively keys (unique sequences) only
         reference=aligned_reference,
         gap_open=conf_dict['gap_opening'],
@@ -127,18 +113,19 @@ def run_qc(
         reads_dict = ri.reverse_reads(reads_dict=raw_read_dict) # type: Dict[str, List[toolpack.Read]]
     else:
         reads_dict = deepcopy(raw_read_dict) # type: Dict[str, List[toolpack.Read]]
-    logging.debug("Quality control took %s seconds", round(time.time() - qc_start, 3))
-    return reads_dict, fwd_median, rev_median, score_threshold, snp_index, reference_state, target_snp, do_reverse
+    logging.debug("FASTQ %s: Quality control took %s seconds", str(fastq), round(time.time() - qc_start, 3))
+    return reads_dict, fwd_median, rev_median, score_threshold, do_reverse
 
 
 def run_alignment(
+        fastq, # type: toolpack.FastQ
         reference, # type: str
         reads_dict, # type: Dict[str, int]
         conf_dict # type: Dict[str, Any]
 ):
     # type: (...) -> Dict[int, List[al.Alignment]]
     """Run the alignment steps"""
-    logging.info("Aliging reads")
+    logging.info("FASTQ %s: Aliging reads", str(fastq))
     alignment_start = time.time()
     sorted_reads = al.sort_reads_by_length(reads_dict=reads_dict) # type: Dict[int, List[al.ReadSummary]]
     alignments = al.align_recurse( # type: Dict[int, List[al.Alignment]]
@@ -147,8 +134,7 @@ def run_alignment(
         gap_open=conf_dict['gap_opening'],
         gap_ext=conf_dict['gap_extension']
     )
-    logging.debug("Alignment took %s seconds", round(time.time() - alignment_start, 3))
-    # return scores, aligned, sorted_reads
+    logging.debug("FASTQ %s: Alignment took %s seconds", str(fastq), round(time.time() - alignment_start, 3))
     return alignments
 
 
@@ -163,30 +149,19 @@ def make_sam_file(
 ):
     # type: (...) -> None
     """Make a SAM file"""
-    logging.info("Making SAM file")
-    sam_start = time.time() # type: float
     bit_base = 0 # type: int
     if is_reverse:
         bit_base = 16 # type: int
     #   Get CIGAR strings
-    logging.info("Creating CIGAR strings")
-    cigar_start = time.time() # type: float
     cigars = map(ws.make_cigar, alignments) # type: List[str]
-    logging.debug("Making CIGAR strings took %s seconds", round(time.time() - cigar_start, 3))
     #   Get read positions
-    logging.info("Finding read positions on aligned reference")
-    positions_start = time.time() # type: float
     positions = map(ws.calc_read_pos, alignments) # type: List[int]
-    logging.debug("Finding read positions took %s seconds", round(time.time() - positions_start, 3))
     #   Convert the aligned reads to SAM-ready reads
     #   Get the heads and tails grouped by alignment
     #   Then, unzip the heads and tails into separate tuples
-    logging.info("Creating SAM-ready sequences")
-    ready_start = time.time()
     head_tail = map(toolpack.trim_interval, (aligned.get_aligned_read() for aligned in alignments)) # type: List[Tuple[Int]]
     heads, tails = zip(*head_tail) # type: Tuple[int], Tuple[int]
     sam_seq = map(ws.make_sam_sequence, alignments, heads, tails) # type: List[str]
-    logging.debug("Creating SAM-ready sequences took %s seconds", round(time.time() - ready_start, 3))
     #   Get the number of times we're repeating our constants
     #   Apparently, Python 2 doesn't stop automatically...
     num_repeats = set(map(len, (alignments, sam_seq, cigars, positions))) # type: Set[int]
@@ -196,7 +171,6 @@ def make_sam_file(
     num_repeats = num_repeats.pop() # type: int
     #   Make the alignment lines of the SAM file
     logging.info("Creating SAM lines")
-    lines_start = time.time()
     sam_lines = map(
         ws.make_sam, # Func
         alignments, # alignment=
@@ -207,7 +181,6 @@ def make_sam_file(
         positions, # position=
         itertools.repeat(reads_dict, num_repeats) # reads_dict=
     )
-    logging.debug("Making SAM lines took %s seconds", round(time.time() - lines_start, 3))
     #   Unpack and sort our SAM lines
     #   The sort works because SAM objects have __le__ and __lt__ methods defined
     #   These definitions allow for coordinate sort based on rname and pos fields
@@ -215,14 +188,11 @@ def make_sam_file(
     sam_lines = itertools.chain.from_iterable(sam_lines) # type: itertools.chain
     sam_lines = sorted(sam_lines) # type: List[ws.SAM]
     #   Make header lines
-    logging.info("Making headers")
-    header_start = time.time() # type: float
     rg_header = ws.make_read_group(sam_lines=sam_lines, conf_dict=conf_dict) # type: Tuple[str]
     sq_header = ws.make_sequence_header( # type: Tuple[str]
         sam_lines=sam_lines,
         ref_seq_dict={reference_name: reference_seq}
     )
-    logging.debug("Making headers took %s seconds", round(time.time() - header_start, 3))
     #   Write the SAM file
     sam_name = output_prefix + '.sam' # type: str
     LOCK.acquire()
@@ -242,7 +212,6 @@ def make_sam_file(
             samfile.write('\n')
             samfile.flush()
     logging.debug("Writing SAM information to file took %s seconds", round(time.time() - write_start, 3))
-    logging.debug("Making SAM file took %s seconds", round(time.time() - sam_start, 3))
     LOCK.release()
     for line in sam_lines:
         del line
@@ -250,8 +219,7 @@ def make_sam_file(
 
 def crispr(tup_args): # type: Tuple(...) -> List[al.Alignment]
     """Run the alignment and analysis on a single FASTQ file"""
-    # LOCK.acquire()
-    fastq, suppression, conf_dict, seq_dict = tup_args # type: toolpack.FastQ, Dict[str, bool], Dict[str, Any], Dict[str, Sequence]
+    fastq, suppression, conf_dict, seq_dict, snp_info = tup_args # type: toolpack.FastQ, Dict[str, bool], Dict[str, Any], Dict[str, Sequence], Dict[str, Union[int, str]]
     logging.info("Starting alignment and analysis of %s", str(fastq))
     fastq_start = time.time()
     if str(fastq).count('.') <= 2:
@@ -266,15 +234,15 @@ def crispr(tup_args): # type: Tuple(...) -> List[al.Alignment]
         base='_'.join((fastq_base, conf_dict['project']))
     )
     #   Run through quality control steps
-    reads_dict, fwd_median, rev_median, score_threshold, snp_index, reference_state, target_snp, do_reverse = run_qc( # type: Dict[str, List[toolpack.Read]], numpy.float64, numpy.float64, numpy.float64, int, str, str, bool
+    reads_dict, fwd_median, rev_median, score_threshold, do_reverse = run_qc( # type: Dict[str, List[toolpack.Read]], numpy.float64, numpy.float64, numpy.float64, bool
         conf_dict=conf_dict,
-        reference=seq_dict['reference'].sequence,
-        template=seq_dict['template'].sequence,
+        aligned_reference=seq_dict['aligned_reference'].sequence,
         fastq=fastq
     )
     total_reads = sum((len(read_list) for read_list in reads_dict.values())) # type: int
     #   Align the reads
     alignments = run_alignment( # type: Dict[int, List[al.Alignment]]
+        fastq=fastq,
         reference=seq_dict['reference'].sequence,
         reads_dict=reads_dict,
         conf_dict=conf_dict
@@ -284,29 +252,26 @@ def crispr(tup_args): # type: Tuple(...) -> List[al.Alignment]
         reads_dict=reads_dict,
         alignments=itertools.chain.from_iterable(alignments.values()),
         score_threshold=score_threshold,
-        snp_index=snp_index,
-        target_snp=target_snp
+        snp_index=snp_info['snp_index'],
+        target_snp=snp_info['target_snp']
     )
     #   Start outputs
-    if suppression['suppress_classification'] or suppression['suppress_tables']:
-        logging.warning("Read classification suppressed, not writing classification table")
-    else:
+    if not (suppression['suppress_classification'] or suppression['suppress_tables']):
         LOCK.acquire()
         an.display_classification(
+            fastq=fastq,
             read_classification=read_classifications,
             total_reads=total_reads,
-            snp_position=snp_index,
-            ref_state=reference_state,
-            target_snp=target_snp,
+            snp_position=snp_info['snp_index'],
+            ref_state=snp_info['reference_state'],
+            target_snp=snp_info['target_snp'],
             fwd_score=fwd_median,
             rev_score=rev_median,
             score_threshold=score_threshold,
             output_prefix=output_prefix
         )
         LOCK.release()
-    if suppression['suppress_sam']:
-        logging.warning("SAM output suppressed, not writing SAM file")
-    else:
+    if not suppression['suppress_sam']:
         make_sam_file(
             conf_dict=conf_dict,
             reads_dict=reads_dict,
@@ -316,19 +281,17 @@ def crispr(tup_args): # type: Tuple(...) -> List[al.Alignment]
             is_reverse=do_reverse,
             output_prefix=output_prefix
         )
-    if suppression['suppress_events'] or suppression['suppress_tables']:
-        logging.warning("Events output suppressed, not writing events table")
-    else:
+    if not (suppression['suppress_events'] or suppression['suppress_tables']):
+        LOCK.acquire()
         an.create_report(
             reporter=report,
             reference=seq_dict['reference'].sequence,
-            snp_index=snp_index,
+            snp_index=snp_info['snp_index'],
             output_prefix=output_prefix
         )
+        LOCK.release()
     #   Plotting
-    if suppression['suppress_plots']:
-        logging.warning("Plots suppressed, not creating plots")
-    else:
+    if not suppression['suppress_plots']:
         plots.locus_plot(
             insertions=report.insertions,
             deletions=report.deletions,
@@ -338,8 +301,7 @@ def crispr(tup_args): # type: Tuple(...) -> List[al.Alignment]
             output_prefix=output_prefix
         )
     logging.debug("Alignment and analysis of %s took %s seconds", str(fastq), round(time.time() - fastq_start, 3))
-    # LOCK.release()
-    del reads_dict, fwd_median, rev_median, score_threshold, snp_index, reference_state, target_snp, do_reverse, report, read_classifications
+    del reads_dict, fwd_median, rev_median, score_threshold, do_reverse, report, read_classifications
     return alignments.values()
 
 
@@ -350,16 +312,48 @@ def main(args): # type: (Dict) -> None
             configure.write_config(args)
         elif args['subroutine'] == 'ALIGN':
             suppressions = {key: value for key, value in args.items() if 'suppress' in key} # type: Dict[str, bool]
+            if _check_suppressions(suppressions=suppressions):
+                sys.exit(logging.critical("All output suppressed, not running"))
             conf_dict = configure.read_config(args['config_file']) # type: Dict
             output_prefix = configure.make_prefix_name(directory=conf_dict['outdirectory'], base=conf_dict['project'])
             #   Load the data
             ref_name, ref_seq, temp_name, temp_seq, fastq_list = load_data( # type: str, str str, str, List[toolpack.FastQ]]
                 conf_dict=conf_dict
             )
+            #   Validate our reference and template sequences by aligning them
+            aligned_reference, aligned_template = qc.align_reference( # type: str, str
+                reference=ref_seq,
+                template=temp_seq,
+                gap_penalty=conf_dict['gap_opening']
+            )
+            reference_template_mismatch = qc.validate_reference_alignment( # type: List[List[int, Tuple[str]]]
+                reference=aligned_reference,
+                template=aligned_template,
+                snp_mode=True if conf_dict['analysis_mode'] == 'SNP' else False
+            )
+            #   Get the reference SNP state and target SNP from our aligned reference and template
+            snp_index, reference_state, target_snp = qc.get_snp_states( # type: int, str, str
+                reference=aligned_reference,
+                template=aligned_template,
+                mismatch=reference_template_mismatch,
+                mode=conf_dict['analysis_mode']
+            )
             sequences = { # type: Dict[str, NamedSequence]
                 'reference': NamedSequence(name=ref_name, sequence=ref_seq),
-                'template': NamedSequence(name=temp_name, sequence=temp_seq)
+                'template': NamedSequence(name=temp_name, sequence=temp_seq),
+                'aligned_reference': NamedSequence(name=ref_name + '_aligned', sequence=aligned_reference)
             }
+            snp_info = {
+                'snp_index': snp_index,
+                'reference_state': reference_state,
+                'target_snp': target_snp
+            }
+            if suppressions['suppress_sam']:
+                logging.warning("SAM output suppressed, not writing SAM file")
+            if suppressions['suppress_events'] or suppressions['suppress_tables']:
+                logging.warning("Events output suppressed, not writing events table")
+            if suppressions['suppress_classification'] or suppressions['suppress_tables']:
+                logging.warning("Read classification suppressed, not writing classification table")
             if args['xkcd']:
                 plots._XKCD = True
             pool = Pool() # type: multiprocessing.Pool
@@ -369,7 +363,8 @@ def main(args): # type: (Dict) -> None
                     fastq_list,
                     itertools.repeat(suppressions),
                     itertools.repeat(conf_dict),
-                    itertools.repeat(sequences)
+                    itertools.repeat(sequences),
+                    itertools.repeat(snp_info)
                 )
             )
             alignments = unpack(collection=alignments) # type: List[al.alignments]
@@ -380,10 +375,6 @@ def main(args): # type: (Dict) -> None
                     alignments=alignments,
                     output_prefix=output_prefix
                 )
-            #     plots.quality_plot(
-            #         alignments=tuple(al for al in itertools.chain.from_iterable(alignments.values())),
-            #         output_prefix=output_prefix
-            #     )
     except IOError as error:
         sys.exit(logging.critical("Cannot find file %s, exiting", error.filename))
     except:
