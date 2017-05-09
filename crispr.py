@@ -52,13 +52,24 @@ def _set_verbosity(level): # type: (str) -> int
     return log_level
 
 
+def unpack(collection):
+    """Unpack a series of nested lists, sets, or tuples"""
+    result = [] # type: List
+    for item in collection:
+        if isinstance(item, (list, set, tuple)):
+            result.extend(unpack(collection=item))
+        else:
+            result.append(item)
+    return result
+
+
 def load_data(conf_dict): # type: (Dict[Any]) -> (str, str, str, str, List[toolpack.FastQ]
     """Load our data"""
     logging.info("Loading data...")
     load_start = time.time()
     if 'sample_list' in conf_dict:
         with open(conf_dict['sample_list'], 'r') as listfile:
-            fastq_files = [line.strip() for line in listfile] # type: List[str]
+            fastq_files = [line.strip() for line in listfile if not line.startswith('#')] # type: List[str]
     elif 'input_file' in conf_dict:
         fastq_files = [conf_dict['input_file']] # type: List[str]
     else:
@@ -68,6 +79,7 @@ def load_data(conf_dict): # type: (Dict[Any]) -> (str, str, str, str, List[toolp
     logging.info("Loading %s as template", conf_dict['template'])
     temp_name, temp_seq = toolpack.load_seq(conf_dict['template']) # type: str, str
     fastq_list = [toolpack.load_fastq(f) for f in fastq_files] # type: List[toolpack.FastQ]
+    # import code; code.interact(local=locals()); sys.exit()
     logging.debug("Data load took %s seconds", round(time.time() - load_start, 3))
     return ref_name, ref_seq, temp_name, temp_seq, fastq_list
 
@@ -214,6 +226,7 @@ def make_sam_file(
     logging.debug("Making headers took %s seconds", round(time.time() - header_start, 3))
     #   Write the SAM file
     sam_name = output_prefix + '.sam' # type: str
+    LOCK.acquire()
     logging.info("Writing SAM information to %s", sam_name)
     write_start = time.time()
     with open(sam_name, 'w') as samfile:
@@ -231,11 +244,14 @@ def make_sam_file(
             samfile.flush()
     logging.debug("Writing SAM information to file took %s seconds", round(time.time() - write_start, 3))
     logging.debug("Making SAM file took %s seconds", round(time.time() - sam_start, 3))
+    LOCK.release()
+    for line in sam_lines:
+        del line
 
 
-def crispr(tup_args): # type: Tuple(...) -> None
+def crispr(tup_args): # type: Tuple(...) -> List[al.Alignment]
     """Run the alignment and analysis on a single FASTQ file"""
-    LOCK.acquire()
+    # LOCK.acquire()
     fastq, suppression, conf_dict, seq_dict = tup_args # type: toolpack.FastQ, Dict[str, bool], Dict[str, Any], Dict[str, Sequence]
     logging.info("Starting alignment and analysis of %s", str(fastq))
     fastq_start = time.time()
@@ -276,6 +292,7 @@ def crispr(tup_args): # type: Tuple(...) -> None
     if suppression['suppress_classification'] or suppression['suppress_tables']:
         logging.warning("Read classification suppressed, not writing classification table")
     else:
+        LOCK.acquire()
         an.display_classification(
             read_classification=read_classifications,
             total_reads=total_reads,
@@ -287,6 +304,7 @@ def crispr(tup_args): # type: Tuple(...) -> None
             score_threshold=score_threshold,
             output_prefix=output_prefix
         )
+        LOCK.release()
     if suppression['suppress_sam']:
         logging.warning("SAM output suppressed, not writing SAM file")
     else:
@@ -321,7 +339,9 @@ def crispr(tup_args): # type: Tuple(...) -> None
             output_prefix=output_prefix
         )
     logging.debug("Alignment and analysis of %s took %s seconds", str(fastq), round(time.time() - fastq_start, 3))
-    LOCK.release()
+    # LOCK.release()
+    del reads_dict, fwd_median, rev_median, score_threshold, snp_index, reference_state, target_snp, do_reverse, report, read_classifications
+    return alignments.values()
 
 
 def main(args): # type: (Dict) -> None
@@ -344,7 +364,7 @@ def main(args): # type: (Dict) -> None
             if args['xkcd']:
                 plots._XKCD = True
             pool = Pool() # type: multiprocessing.Pool
-            pool.map(
+            alignments = pool.map( # type: List[List[al.Alignment]]
                 crispr,
                 itertools.izip(
                     fastq_list,
@@ -353,6 +373,14 @@ def main(args): # type: (Dict) -> None
                     itertools.repeat(sequences)
                 )
             )
+            alignments = unpack(collection=alignments) # type: List[al.alignments]
+            if suppressions['suppress_plots']:
+                logging.warning("Plots suppressed, not creating plots")
+            else:
+                plots.quality_plot(
+                    alignments=alignments,
+                    output_prefix=output_prefix
+                )
             #     plots.quality_plot(
             #         alignments=tuple(al for al in itertools.chain.from_iterable(alignments.values())),
             #         output_prefix=output_prefix
@@ -364,6 +392,7 @@ def main(args): # type: (Dict) -> None
 
 
 if __name__ == '__main__':
+    freeze_support()
     PARSER = arguments.make_argument_parser() # type: argparse.ArgumentParser
     if not sys.argv[1:]:
         sys.exit(PARSER.print_help())
