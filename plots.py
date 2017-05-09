@@ -14,6 +14,13 @@ import time
 import logging
 from collections import defaultdict
 
+
+try:
+    from alignment import alignment_by_fastq
+except ImportError as error:
+    sys.exit("Please keep this module in its original directory to load custom modules: " + error.message)
+
+
 try:
     import matplotlib.pyplot as plt
     import matplotlib.patches as ptch
@@ -88,6 +95,8 @@ def locus_plot(
     ax2 = ax.twinx()
     ax2.set_ylabel('Percent')
     ax2.set_yticks(map(lambda x: round(x * 100), ax2.get_yticks()))
+    #   Adjust the plot area to ensure everything is shown
+    plt.tight_layout()
     #   Yield the plot
     # plt.show()
     logging.info("Saving plot to %s", plot_name)
@@ -101,15 +110,39 @@ def quality_plot(
 ):
     # type: (...) -> None
     """Make a violin plot of the alignment scores"""
+    logging.info("Making quality scores plot")
+    quality_start = time.time()
     if _check_fonts():
         plt.xkcd()
+    plot_name = output_prefix + '_quality.pdf'
+    alignments_by_fastq = alignment_by_fastq(alignments=alignments) # type: Dict[str, List[alignment.Alignment]]
     #   Assemble our scores
-    scores = tuple(al.get_score() for al in alignments)
+    # scores = tuple(al.get_score() for al in alignments)
+    # scores = {fastq: tuple(al.get_score() for al in al_list) for fastq, al_list in alignments_by_fastq.items()}
+    # import code; code.interact(local=locals()); sys.exit()
+    scores = dict.fromkeys(alignments_by_fastq.keys(), list())
+    for fastq, alignment_list in alignments_by_fastq.items(): # type: str, List[alignment.Alignment]
+        for alignment in alignment_list: # type: alignment.Alignment
+            scores[fastq].append(alignment.get_score())
     #   Plot the scores
-    vlnplt = plt.violinplot(scores)
+    # vlnplt = plt.violinplot(scores)
+    fix, ax = plt.subplots(nrows=1, ncols=1)
+    ax.violinplot(scores.values())
+    #   Determine rotation of xtick text
+    if len(scores) == 1:
+        rotation = 'horizontal'
+    else:
+        rotation = 45
     #   Set labels
+    plt.title("Alignment Score Distribution by FASTQ File")
     plt.ylabel('Alignment Score')
-    plt.xlabel('')
-    plt.xticks([])
+    plt.xlabel('FASTQ')
+    ax.set_xticks(range(1, len(scores) + 1))
+    ax.set_xticklabels(scores.keys(), rotation=rotation, fontsize='small')
+    #   Adjust the plot area to ensure everything is shown
+    plt.tight_layout()
     #   Yield the plot
-    plt.show()
+    # plt.show()
+    logging.info("Saving plot to %s", plot_name)
+    plt.savefig(plot_name, format='pdf')
+    logging.debug("Making quality scores plot took %s seconds", round(time.time() - quality_start, 3))
