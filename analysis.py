@@ -51,29 +51,24 @@ def summarize(data, rounding=None): # type: (Iterable[int], Optional[int]) -> Tu
 def find_insertions(
         ref_seq, # type: str
         read_seq, # type: str
-        out_idx, # type: int
         num_reads # type: int
 ):
     # type: (...) -> Dict[int, List[int]], str, str, int
     """Find and log insertions"""
-    logging.info("Looking for insertions in alignment number %s", out_idx)
     insertions = defaultdict(list)
     insertion_gap_list = toolpack.find_gaps(seq=ref_seq) # type: List?
     if insertion_gap_list:
         nm_ins = len(insertion_gap_list) # type: int
-        logging.warning("Found %s insertions in alignment number %s", nm_ins, out_idx)
         temp = 0 # type: int
         for gap in insertion_gap_list:
             position, gi_length = gap # type: int, int
             position = position - temp # type: int
             temp = temp + gi_length # type: int
             insertions[position].extend(itertools.repeat(gi_length, num_reads))
-        logging.warning("Removing insertsions from alignment number %s", out_idx)
         to_remove = {m.start() for m in re.finditer('-', ref_seq)} # type: Set[int]
         ref_no_ins = ''.join((base for index, base in enumerate(ref_seq) if index not in to_remove)) # type: str
         read_no_ins = ''.join((base for index, base in enumerate(read_seq) if index not in to_remove)) # type: str
     else:
-        logging.info("No insertions found in alignment number %s")
         nm_ins = 0 # type: int
         ref_no_ins = ref_seq # type: str
         read_no_ins = read_seq # type: str
@@ -82,24 +77,20 @@ def find_insertions(
 
 def find_deletions(
         read_seq, # type: str
-        out_idx, # type: int
         num_reads, # type: int
         head, # type: int
         tail # type: int
 ):
     # type: (...) -> Dict[int, List[int]], int
     """Find and log deletions"""
-    logging.info("Looking for deletions in alignment number %s", out_idx)
     deletions = defaultdict(list)
     deletion_gap_list = toolpack.find_gaps(seq=read_seq, head=head, tail=tail)
     if deletion_gap_list:
-        logging.warning("Found %s deletions in alignment number %s", len(deletion_gap_list), out_idx)
         nm_del = len(deletion_gap_list)
         for gap in deletion_gap_list:
             position, gd_length = gap
             deletions[position].extend(itertools.repeat(gd_length, num_reads))
     else:
-        logging.info("No deletions found in alignment number %s", out_idx)
         nm_del = 0
     return dict(deletions), nm_del
 
@@ -107,7 +98,6 @@ def find_deletions(
 def find_mismatches(
         ref_seq, # type: str
         read_seq, # type: str
-        out_idx, # type: int
         num_reads, # type: int
         read_head, # type: int
         read_tail # type: int
@@ -116,11 +106,9 @@ def find_mismatches(
     """Find and log mismatches
     'ref_seq' is the reference sequence without insertions
     'read_seq' is the aligned read sequence
-    'out_idx' is the alignment number for iterations
     'num_reads' is the number of reads supporting this alignment
     'read_head' is where the aligned read starts (end of leading '-')
     'read_tail' is where the aligned read ends (start of trailing '-')"""
-    logging.info("Looking for mismatches in alignment number %s", out_idx)
     mismatches = defaultdict(list)
     matches = Counter()
     mis_list, match_list = toolpack.get_mismatch(
@@ -184,7 +172,6 @@ def run_analysis(
         insertions, ref_no_ins, read_no_ins, nm_ins = find_insertions( # type: Dict[int, List[int]], str, str, int
             ref_seq=aligned_ref,
             read_seq=aligned_read,
-            out_idx=out_idx,
             num_reads=num_reads
         )
         for position, ins_list in insertions.items():
@@ -192,7 +179,6 @@ def run_analysis(
         #   Find deletions
         deletions, nm_del = find_deletions( # type: Dict[int, List[int]], int
             read_seq=read_no_ins,
-            out_idx=out_idx,
             num_reads=num_reads,
             head=read_head,
             tail=read_tail
@@ -203,7 +189,6 @@ def run_analysis(
         mismatches, matches, nm_mis = find_mismatches( # type: Dict[int, List[str]], collections.Counter, int
             ref_seq=ref_no_ins,
             read_seq=read_no_ins,
-            out_idx=out_idx,
             num_reads=num_reads,
             read_head=read_head,
             read_tail=read_tail
