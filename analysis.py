@@ -245,9 +245,12 @@ def display_classification(
     pre_repeat = int(floor((len(class_header) - len(name)) / 2)) # type: int
     post_repeat = int(ceil((len(class_header) - len(name)) / 2)) # type: int
     name_header = ''.join(itertools.repeat('-', pre_repeat)) + name + ''.join(itertools.repeat('-', post_repeat))
+    #   Classify warnings as errors for catching numpy stuff
     warnings.simplefilter('error')
+    #   Create an output name
     full_class_name = output_prefix + '.classifications'
     logging.info("Writing full classification breakdown to %s", full_class_name)
+    #   Display our classifications
     logging.warning(class_header)
     logging.warning("--------------Read Classifications--------------")
     logging.warning(name_header)
