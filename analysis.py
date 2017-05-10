@@ -102,7 +102,7 @@ def find_mismatches(
         read_head, # type: int
         read_tail # type: int
 ):
-    # type: (...) -> Dict[int, List[str]], collections.Counter, int
+    # type: (...) -> (Dict[int, List[str]], collections.Counter, int)
     """Find and log mismatches
     'ref_seq' is the reference sequence without insertions
     'read_seq' is the aligned read sequence
