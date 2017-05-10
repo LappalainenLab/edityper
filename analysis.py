@@ -335,8 +335,8 @@ def display_classification(
                 avg_indels = 0
             perc_count = percent(num=count, total=total_reads)
             #   Display our summaries
-            logging.warning("%s: count %s", iter_tag[index], count)
-            logging.warning("%s: avg indels %s", iter_tag[index], round(avg_indels, 3))
+            logging.warning("%s: count %s", tag, count)
+            logging.warning("%s: avg indels %s", tag, round(avg_indels, 3))
             #   Reporting for HDR and NHEJ
             if tag in {iter_tag[0], iter_tag[1]}:
                 total_ins, avg_ins, std_ins = summarize(data=event_lists['insertions'], rounding=2)
