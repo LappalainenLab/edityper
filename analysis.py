@@ -242,8 +242,6 @@ def display_classification(
     #   Make some headers for the display
     class_header = "################################################"
     name = str(fastq) # type: str
-    # pre_repeat = int(floor((len(class_header) - len(name) / 2))) # type: int
-    # post_repeat = int(ceil((len(class_header) - len(name) / 2))) # type: int
     pre_repeat = int(floor((len(class_header) - len(name)) / 2)) # type: int
     post_repeat = int(ceil((len(class_header) - len(name)) / 2)) # type: int
     name_header = ''.join(itertools.repeat('-', pre_repeat)) + name + ''.join(itertools.repeat('-', post_repeat))
