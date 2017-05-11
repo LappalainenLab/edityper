@@ -84,7 +84,6 @@ def determine_alignment_direction(
 ):
     # type: (...) -> (bool, float)
     """Determine if we're aligning our reads in the forward or reverse direction"""
-    direction_start = time.time()
     ten_percent = int(round(0.1 * len(raw_sequences)) + 1)
     sampled_reads = random.sample(raw_sequences, k=min([500, ten_percent])) # Sample at most 500 reads
     #   Set up our zip objects
