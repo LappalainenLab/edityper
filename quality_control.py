@@ -55,8 +55,7 @@ def validate_reference_alignment(reference, template, snp_mode=False): # type: (
         logging.error("There must be at least one mismatch between the template and reference sequences")
         sys.exit(1)
     if len(ref_template_mismatch) > 1 and snp_mode:
-        logging.error("There can only be one mismatch between the template and reference sequences in SNP mode")
-        sys.exit(1)
+        sys.exit(logging.error("There can only be one mismatch between the template and reference sequences in SNP mode"))
     logging.debug("Validation took %s seconds", round(time.time() - validate_start, 3))
     return ref_template_mismatch
 
