@@ -63,6 +63,7 @@ def _validate_config(conf_dict, typecheck=False): # type: (dict, bool) -> None
 
 def make_prefix_name(directory, base): # type: (str, str) -> str
     """Combine a directory and base together"""
+    directory = os.path.abspath(directory)
     if directory[-1] != '/':
         directory += '/'
     return ''.join((directory, base))
