@@ -32,6 +32,10 @@ _DISP_BREAK = '-----------------------------------------------------------------
 NA = 'NA'
 Reporter = namedtuple('Reporter', ('deletions', 'insertions', 'mismatches', 'matches'))
 
+def _filter_to_dict(filtered_dict): # type: (Iterable[Tuple[Any, Any]]) -> Dict[Any, Any]
+    return {pair[0]: pair[1] for pair in filtered_dict}
+
+
 def percent(num, total): # type: (int, int) -> float
     """Calculate a percent"""
     return round(num * 100 / total, 2)
@@ -118,11 +122,14 @@ def find_mismatches(
         tail=read_tail,
         matches=True
     )
-    nm_mis = len(mis_list)
-    for mismatch in mis_list:
-        position, perm = mismatch
-        source, snp = perm; del source
-        mismatches[position].extend(itertools.repeat(snp, num_reads))
+    if mis_list:
+        nm_mis = len(mis_list)
+        for mismatch in mis_list:
+            position, perm = mismatch
+            source, snp = perm; del source
+            mismatches[position].extend(itertools.repeat(snp, num_reads))
+    else:
+        nm_mis = 0
     for match in match_list:
         matches[match] += num_reads
     return dict(mismatches), matches, nm_mis
@@ -130,15 +137,16 @@ def find_mismatches(
 
 
 def run_analysis(
-        reads_dict, # type: Dict[str, int]
+        reads_dict, # type: Dict[str, List[toolpack.Read]]
         alignments, # type: Iterable[al.Alignment]
+        reference, # type: str
         score_threshold, # type: numpy.float64
         snp_index, # type: int
         target_snp # type: str
 ):
     # type: (...) -> (Reporter, Tuple[defaultdict[int, List[al.Alignment]]])
     """Analyze the alignment results
-    'reads_dict' is a dictionary of unique sequences and the number of times they appear
+    'reads_dict' is a dictionary of unique sequences and a list of reads supporting each sequence
     'alignments' is a diciontary where the values are lists of Alignments
     'score_threshold' is a floating point score threshold
     'snp_index', is an int representing the index where the SNP is
@@ -205,6 +213,10 @@ def run_analysis(
             no_edit[out_idx].append(alignment)
         else:
             nhej[out_idx].append(alignment)
+    total_insertions = _filter_to_dict(filtered_dict=filter(lambda tup: tup[0] < len(reference), total_insertions.items()))
+    total_deletions = _filter_to_dict(filtered_dict=filter(lambda tup: tup[0] < len(reference), total_deletions.items()))
+    total_mismatches = _filter_to_dict(filtered_dict=filter(lambda tup: tup[0] < len(reference), total_mismatches.items()))
+    total_matches = _filter_to_dict(filtered_dict=filter(lambda tup: tup[0] < len(reference), total_matches.items()))
     report = Reporter( # type: Reporter
         deletions=total_deletions,
         insertions=total_insertions,
@@ -226,7 +238,7 @@ def display_classification(
         score_threshold, # type: float
         output_prefix # type: str
 ):
-    # type: (...) -> None
+    # type: (...) -> (int, Dict[str, int])
     """Display the report of the read classifification
     'read_classification' is a tuple of four dictionaries where the values are
     lists of Alignment objects and the four dictionaries are (in order):
@@ -300,6 +312,8 @@ def display_classification(
         3: 'DISCARD'
     }
     counted_total = 0 # type: int
+    hdr_indels = 0 # type: int
+    total_counts = dict.fromkeys(iter_tag.values(), 0)
     with open(full_class_name, 'w') as cfile:
         cfile.write('\t'.join(snp_header) + '\n')
         cfile.write('\t'.join(read_header) + '\n')
@@ -352,6 +366,7 @@ def display_classification(
                 del_total, perc_del = event_counts['deletions'], percent(num=event_counts['deletions'], total=count)
                 ins_total, perc_ins = event_counts['insertions'], percent(num=event_counts['insertions'], total=count)
                 indel_total, perc_indel = event_counts['indels'], percent(num=event_counts['indels'], total=count)
+                hdr_indels = indel_total
             else:
                 none_total, perc_none = NA, NA
                 del_total, perc_del = NA, NA
@@ -383,12 +398,14 @@ def display_classification(
             out = map(str, out)
             cfile.write('\t'.join(out) + '\n')
             cfile.flush()
+            total_counts[tag] += count
             #   Write full classifications
         if counted_total == total_reads:
             logging.warning("Classified all reads")
         else:
             logging.error("%s reads missing after classification", total_reads - counted_total)
         logging.warning(class_header)
+        return hdr_indels, total_counts
 
 
 def create_report(
