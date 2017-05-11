@@ -12,10 +12,11 @@ if sys.version_info.major is not 2 and sys.version_info.minor is not 7:
 
 import os
 import time
+import signal
 import logging
 import itertools
 from copy import deepcopy
-from collections import namedtuple
+from collections import namedtuple, Counter
 from multiprocessing import freeze_support, Pool, Lock
 
 try:
@@ -92,7 +93,7 @@ def run_qc(
         aligned_reference, # type: str
         fastq, # type: toolpack.FastQ
 ):
-    # type: (...) -> (str, Dict[str, List[toolpack.Read]], numpy.float64, int, str, bool)
+    # type: (...) -> (Dict[str, List[toolpack.Read]], numpy.float64, numpy.float64, numpy.float64, bool)
     """Run the QC steps"""
     logging.info("FASTQ %s: Running quality control", str(fastq))
     qc_start = time.time()
@@ -114,6 +115,7 @@ def run_qc(
     else:
         reads_dict = deepcopy(raw_read_dict) # type: Dict[str, List[toolpack.Read]]
     logging.debug("FASTQ %s: Quality control took %s seconds", str(fastq), round(time.time() - qc_start, 3))
+    del raw_read_dict
     return reads_dict, fwd_median, rev_median, score_threshold, do_reverse
 
 
@@ -248,17 +250,20 @@ def crispr(tup_args): # type: Tuple(...) -> List[al.Alignment]
         conf_dict=conf_dict
     )
     #   Run analyses
+    logging.warning("FASTQ %s: Starting analysis", str(fastq))
     report, read_classifications = an.run_analysis( # type: an.Reporter, Tuple[defaultdict[int, List[al.Alignment]]]
         reads_dict=reads_dict,
         alignments=itertools.chain.from_iterable(alignments.values()),
+        reference=seq_dict['reference'].sequence,
         score_threshold=score_threshold,
         snp_index=snp_info['snp_index'],
         target_snp=snp_info['target_snp']
     )
     #   Start outputs
+    #   Read classifications
     if not (suppression['suppress_classification'] or suppression['suppress_tables']):
         LOCK.acquire()
-        an.display_classification(
+        hdr_indels, total_counts = an.display_classification(
             fastq=fastq,
             read_classification=read_classifications,
             total_reads=total_reads,
@@ -271,6 +276,7 @@ def crispr(tup_args): # type: Tuple(...) -> List[al.Alignment]
             output_prefix=output_prefix
         )
         LOCK.release()
+    #   SAM file
     if not suppression['suppress_sam']:
         make_sam_file(
             conf_dict=conf_dict,
@@ -281,6 +287,7 @@ def crispr(tup_args): # type: Tuple(...) -> List[al.Alignment]
             is_reverse=do_reverse,
             output_prefix=output_prefix
         )
+    #   Events summary
     if not (suppression['suppress_events'] or suppression['suppress_tables']):
         LOCK.acquire()
         an.create_report(
@@ -300,13 +307,39 @@ def crispr(tup_args): # type: Tuple(...) -> List[al.Alignment]
             fastq_name=str(fastq),
             output_prefix=output_prefix
         )
+    #   Final read summary
+    if not (suppression['suppress_events'] or suppression['suppress_classification'] or suppression['suppress_tables']):
+        mismatch_bases = Counter(itertools.chain.from_iterable(report.mismatches.values()))
+        total_mismatch = sum(mismatch_bases.values())
+        fastq_summary = { # type: Dict[str, Union[int, float, str]]
+            'filename'          :   str(fastq),
+            'total_reads'       :   total_reads,
+            'unique_reads'      :   len(reads_dict),
+            'discarded'         :   total_counts['DISCARD'],
+            'no_edit'           :   total_counts['NO_EDIT'],
+            'no_edit_perc'      :   an.percent(num=total_counts['NO_EDIT'], total=total_reads),
+            'hdr_clean'         :   total_counts['HDR'] - hdr_indels,
+            'hdr_clean_perc'    :   an.percent(num=total_counts['HDR'] - hdr_indels, total=total_counts['HDR']),
+            'hdr_gap'           :   hdr_indels,
+            'hdr_gap_perc'      :   an.percent(num=hdr_indels, total=total_counts['HDR']),
+            'nhej'              :   total_counts['NHEJ'],
+            'nhej_perc'         :   an.percent(num=total_counts['NHEJ'], total=total_reads),
+            'perc_a'            :   an.percent(num=mismatch_bases['A'], total=total_mismatch),
+            'perc_t'            :   an.percent(num=mismatch_bases['T'], total=total_mismatch),
+            'perc_c'            :   an.percent(num=mismatch_bases['C'], total=total_mismatch),
+            'perc_g'            :   an.percent(num=mismatch_bases['G'], total=total_mismatch)
+        }
+    else:
+        fastq_summary = dict() # type: Dict
     logging.debug("Alignment and analysis of %s took %s seconds", str(fastq), round(time.time() - fastq_start, 3))
     del reads_dict, fwd_median, rev_median, score_threshold, do_reverse, report, read_classifications
-    return alignments.values()
+    return alignments.values(), fastq_summary
 
 
 def main(args): # type: (Dict) -> None
     """Run the program"""
+    #   Tell worker processes to ignore SIGINT (^C)
+    sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
     try:
         if args['subroutine'] == 'CONFIG':
             configure.write_config(args)
@@ -338,43 +371,114 @@ def main(args): # type: (Dict) -> None
                 mismatch=reference_template_mismatch,
                 mode=conf_dict['analysis_mode']
             )
+            #   Collect our sequences
             sequences = { # type: Dict[str, NamedSequence]
                 'reference': NamedSequence(name=ref_name, sequence=ref_seq),
                 'template': NamedSequence(name=temp_name, sequence=temp_seq),
                 'aligned_reference': NamedSequence(name=ref_name + '_aligned', sequence=aligned_reference)
             }
+            #   Collect SNP information
             snp_info = {
                 'snp_index': snp_index,
                 'reference_state': reference_state,
                 'target_snp': target_snp
             }
+            #   Warning messages about output suppression
             if suppressions['suppress_sam']:
                 logging.warning("SAM output suppressed, not writing SAM file")
             if suppressions['suppress_events'] or suppressions['suppress_tables']:
                 logging.warning("Events output suppressed, not writing events table")
             if suppressions['suppress_classification'] or suppressions['suppress_tables']:
                 logging.warning("Read classification suppressed, not writing classification table")
+            if suppressions['suppress_sam']:
+                logging.warning("Plots suppressed, not creating plots")
             if args['xkcd']:
                 plots._XKCD = True
             pool = Pool() # type: multiprocessing.Pool
-            alignments = pool.map( # type: List[List[al.Alignment]]
-                crispr,
-                itertools.izip(
-                    fastq_list,
-                    itertools.repeat(suppressions),
-                    itertools.repeat(conf_dict),
-                    itertools.repeat(sequences),
-                    itertools.repeat(snp_info)
+            # Have worker processes ignore
+            signal.signal(signal.SIGINT, sigint_handler)
+            try:
+                #   Use map_async and get with a large timeout
+                #   to allow for KeyboardInterrupts to be caught
+                #   and handled with  the try/except
+                res = pool.map_async( # type: multiprocessing.pool.MapResult
+                    crispr,
+                    itertools.izip(
+                        fastq_list,
+                        itertools.repeat(suppressions),
+                        itertools.repeat(conf_dict),
+                        itertools.repeat(sequences),
+                        itertools.repeat(snp_info)
+                    )
                 )
-            )
-            alignments = unpack(collection=alignments) # type: List[al.alignments]
-            if suppressions['suppress_plots']:
-                logging.warning("Plots suppressed, not creating plots")
+                pool.close()
+                results = res.get(9999)
+            except (KeyboardInterrupt, SystemExit):
+                pool.terminate()
+                sys.exit('\nkilled')
             else:
-                plots.quality_plot(
-                    alignments=alignments,
-                    output_prefix=output_prefix
-                )
+                alignments, summaries = zip(*results)
+                alignments = unpack(collection=alignments) # type: List[al.alignments]
+                if not suppressions['suppress_plots']:
+                    plots.quality_plot(
+                        alignments=alignments,
+                        output_prefix=output_prefix
+                    )
+                if not (suppressions['suppress_events'] or suppressions['suppress_classification'] or suppressions['suppress_tables']):
+                    summary_name = output_prefix + '.summary'
+                    summary_header = (
+                        '#FASTQ',
+                        'TOTAL_READS',
+                        'UNIQ_READS',
+                        'DISCARDED',
+                        'SNP_POS',
+                        'REF_STATE',
+                        'TEMP_SNP',
+                        'NO_EDIT',
+                        'PERC_NO_EDIT',
+                        'HDR_CLEAN',
+                        'PERC_HDR_CLEAN',
+                        'HDR_GAP',
+                        'PERC_HDR_GAP',
+                        'NHEJ',
+                        'NHEJ_GAP',
+                        'PERC_MIS_A',
+                        'PERC_MIS_T',
+                        'PERC_MIS_C',
+                        'PERC_MIS_G'
+                    )
+                    with open(summary_name, 'w') as summfile:
+                        logging.info("Writing summary to %s", summary_name)
+                        summary_start = time.time()
+                        summfile.write('\t'.join(summary_header) + '\n')
+                        summfile.flush()
+                        for sum_dict in sorted(summaries, key=lambda d: d['filename']):
+                            out = (
+                                sum_dict['filename'],
+                                sum_dict['total_reads'],
+                                sum_dict['unique_reads'],
+                                sum_dict['discarded'],
+                                snp_info['snp_index'] + 1,
+                                snp_info['reference_state'],
+                                snp_info['target_snp'],
+                                sum_dict['no_edit'],
+                                sum_dict['no_edit_perc'],
+                                sum_dict['hdr_clean'],
+                                sum_dict['hdr_clean_perc'],
+                                sum_dict['hdr_gap'],
+                                sum_dict['hdr_gap_perc'],
+                                sum_dict['nhej'],
+                                sum_dict['nhej_perc'],
+                                sum_dict['perc_a'],
+                                sum_dict['perc_t'],
+                                sum_dict['perc_c'],
+                                sum_dict['perc_g']
+                            )
+                            out = map(str, out)
+                            summfile.write('\t'.join(out))
+                            summfile.write('\n')
+                            summfile.flush()
+                        logging.debug("Writing summary took %s seconds", round(time.time() - summary_start, 3))
     except IOError as error:
         sys.exit(logging.critical("Cannot find file %s, exiting", error.filename))
     except:
