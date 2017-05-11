@@ -103,7 +103,7 @@ def determine_alignment_direction(
     get_third = lambda iterable: iterable[2] # type: function
     fwd_median = np.median(map(get_third, norm_scores)) # type: numpy.float64
     rev_median = np.median(map(get_third, norm_scores_r)) # type: numpy.float64
-    if rev_median > fwd_median:
+    if rev_median >= fwd_median:
         reverse = True # type: bool
         use_scores = map(get_third, perm_scores_r) # type: List[int]
     else:
