@@ -250,7 +250,8 @@ def crispr(tup_args): # type: Tuple(...) -> List[al.Alignment]
         conf_dict=conf_dict
     )
     #   Run analyses
-    logging.warning("FASTQ %s: Starting analysis", str(fastq))
+    logging.info("FASTQ %s: Starting analysis", str(fastq))
+    analysis_start = time.time()
     report, read_classifications = an.run_analysis( # type: an.Reporter, Tuple[defaultdict[int, List[al.Alignment]]]
         reads_dict=reads_dict,
         alignments=itertools.chain.from_iterable(alignments.values()),
@@ -259,6 +260,7 @@ def crispr(tup_args): # type: Tuple(...) -> List[al.Alignment]
         snp_index=snp_info['snp_index'],
         target_snp=snp_info['target_snp']
     )
+    logging.debug("FASTQ %s: Analysis took %s seconds", str(fastq), round(time.time() - analysis_start, 3))
     #   Start outputs
     #   Read classifications
     if not (suppression['suppress_classification'] or suppression['suppress_tables']):
