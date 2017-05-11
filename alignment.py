@@ -164,7 +164,7 @@ def align_recurse(
                 continue
             index = toolpack.sim_seq(seq1=al_ref, seq2=al_read) # type: int
             reuse += index
-            if count is total:
+            if count == total:
                 al_ref, al_read, score = NW.align_aff_mem(reference, seq, gap_open, gap_ext, index, 1) # type: str, str, int
             else:
                 al_ref, al_read, score = NW.align_aff_mem(reference, seq, gap_open, gap_ext, index, 0) # type: str, str, int
