@@ -52,8 +52,7 @@ def validate_reference_alignment(reference, template, snp_mode=False): # type: (
     validate_start = time.time()
     ref_template_mismatch = toolpack.get_mismatch(seq_a=reference, seq_b=template) # type: List[List[int, Tuple[str]]]
     if not ref_template_mismatch:
-        logging.error("There must be at least one mismatch between the template and reference sequences")
-        sys.exit(1)
+        sys.exit(logging.error("There must be at least one mismatch between the template and reference sequences"))
     if len(ref_template_mismatch) > 1 and snp_mode:
         sys.exit(logging.error("There can only be one mismatch between the template and reference sequences in SNP mode"))
     logging.debug("Validation took %s seconds", round(time.time() - validate_start, 3))
