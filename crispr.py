@@ -141,6 +141,7 @@ def run_alignment(
 
 
 def make_sam_file(
+        fastq, # type: toolpack.FastQ
         conf_dict, # type: Dict[str, Any]
         reads_dict, # type: Dict[str, List[toolpack.Read]]
         reference_name, # type: str
@@ -151,19 +152,30 @@ def make_sam_file(
 ):
     # type: (...) -> None
     """Make a SAM file"""
+    logging.info("FASTQ %s: Starting SAM file creation", str(fastq))
+    sam_start = time.time()
     bit_base = 0 # type: int
     if is_reverse:
         bit_base = 16 # type: int
     #   Get CIGAR strings
+    logging.info("FASTQ %s: making CIGAR strings", str(fastq))
+    cigar_start = time.time()
     cigars = map(ws.make_cigar, alignments) # type: List[str]
+    logging.debug("FASTQ %s: making CIGAR strings took %s seconds", str(fastq), round(time.time() - cigar_start, 3))
     #   Get read positions
+    logging.info("FASTQ %s: Calculating read positions", str(fastq))
+    positions_start = time.time()
     positions = map(ws.calc_read_pos, alignments) # type: List[int]
+    logging.debug("FASTQ %s: Calculating read positions took %s seconds", str(fastq), round(time.time() - positions_start, 3))
     #   Convert the aligned reads to SAM-ready reads
     #   Get the heads and tails grouped by alignment
     #   Then, unzip the heads and tails into separate tuples
+    logging.info("FASTQ %s: Making SAM-ready reads", str(fastq))
+    reads_start = time.time()
     head_tail = map(toolpack.trim_interval, (aligned.get_aligned_read() for aligned in alignments)) # type: List[Tuple[Int]]
     heads, tails = zip(*head_tail) # type: Tuple[int], Tuple[int]
     sam_seq = map(ws.make_sam_sequence, alignments, heads, tails) # type: List[str]
+    logging.debug("FASTQ %s: Making SAM-ready reads took %s seconds", str(fastq), round(time.time() - reads_start, 3))
     #   Get the number of times we're repeating our constants
     #   Apparently, Python 2 doesn't stop automatically...
     num_repeats = set(map(len, (alignments, sam_seq, cigars, positions))) # type: Set[int]
@@ -172,7 +184,8 @@ def make_sam_file(
     #   Get the number of times from the set
     num_repeats = num_repeats.pop() # type: int
     #   Make the alignment lines of the SAM file
-    logging.info("Creating SAM lines")
+    # TODO change map to itertools.imap
+    logging.info("FASTQ %s: Creating SAM lines", str(fastq))
     sam_lines = map(
         ws.make_sam, # Func
         alignments, # alignment=
@@ -215,6 +228,7 @@ def make_sam_file(
             samfile.flush()
     logging.debug("Writing SAM information to file took %s seconds", round(time.time() - write_start, 3))
     LOCK.release()
+    logging.debug("FASTQ %s: making SAM file took %s seconds", str(fastq), round(time.time() - sam_start, 3))
     for line in sam_lines:
         del line
 
@@ -281,6 +295,7 @@ def crispr(tup_args): # type: Tuple(...) -> List[al.Alignment]
     #   SAM file
     if not suppression['suppress_sam']:
         make_sam_file(
+            fastq=fastq,
             conf_dict=conf_dict,
             reads_dict=reads_dict,
             reference_name=seq_dict['reference'].name,
@@ -397,6 +412,7 @@ def main(args): # type: (Dict) -> None
             if args['xkcd']:
                 plots._XKCD = True
             pool = Pool() # type: multiprocessing.Pool
+            logging.warning("Analysing %d FASTQ files", len(fastq_list))
             # Have worker processes ignore
             signal.signal(signal.SIGINT, sigint_handler)
             try:
