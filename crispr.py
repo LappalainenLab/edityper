@@ -356,6 +356,7 @@ def crispr(tup_args): # type: Tuple(...) -> List[al.Alignment]
 def main(args): # type: (Dict) -> None
     """Run the program"""
     #   Tell worker processes to ignore SIGINT (^C)
+    #   by turning INTERUPT signals into IGNORED signals
     sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
     try:
         if args['subroutine'] == 'CONFIG':
@@ -413,12 +414,12 @@ def main(args): # type: (Dict) -> None
                 plots._XKCD = True
             pool = Pool() # type: multiprocessing.Pool
             logging.warning("Analysing %d FASTQ files", len(fastq_list))
-            # Have worker processes ignore
+            # Have worker processes ignore INTERUPT signals
             signal.signal(signal.SIGINT, sigint_handler)
             try:
                 #   Use map_async and get with a large timeout
                 #   to allow for KeyboardInterrupts to be caught
-                #   and handled with  the try/except
+                #   and handled with the try/except
                 res = pool.map_async( # type: multiprocessing.pool.MapResult
                     crispr,
                     itertools.izip(
@@ -431,72 +432,74 @@ def main(args): # type: (Dict) -> None
                 )
                 pool.close()
                 results = res.get(9999)
-            except (KeyboardInterrupt, SystemExit):
+            except KeyboardInterrupt:
                 pool.terminate()
                 sys.exit('\nkilled')
-            else:
-                alignments, summaries = zip(*results)
-                alignments = unpack(collection=alignments) # type: List[al.alignments]
-                if not suppressions['suppress_plots']:
-                    plots.quality_plot(
-                        alignments=alignments,
-                        output_prefix=output_prefix
-                    )
-                if not (suppressions['suppress_events'] or suppressions['suppress_classification'] or suppressions['suppress_tables']):
-                    summary_name = output_prefix + '.summary'
-                    summary_header = (
-                        '#FASTQ',
-                        'TOTAL_READS',
-                        'UNIQ_READS',
-                        'DISCARDED',
-                        'SNP_POS',
-                        'REF_STATE',
-                        'TEMP_SNP',
-                        'NO_EDIT',
-                        'PERC_NO_EDIT',
-                        'HDR_CLEAN',
-                        'PERC_HDR_CLEAN',
-                        'HDR_GAP',
-                        'PERC_HDR_GAP',
-                        'NHEJ',
-                        'NHEJ_GAP',
-                        'PERC_MIS_A',
-                        'PERC_MIS_T',
-                        'PERC_MIS_C',
-                        'PERC_MIS_G'
-                    )
-                    with open(summary_name, 'w') as summfile:
-                        logging.info("Writing summary to %s", summary_name)
-                        summary_start = time.time()
-                        summfile.write('\t'.join(summary_header) + '\n')
+            except SystemExit:
+                pool.terminate()
+                raise
+            alignments, summaries = zip(*results) # type: Tuple[List[alignment.Alignment]], Tuple[Dict[str, Any]]
+            alignments = unpack(collection=alignments) # type: List[alignment.Alignment]
+            if not suppressions['suppress_plots']:
+                plots.quality_plot(
+                    alignments=alignments,
+                    output_prefix=output_prefix
+                )
+            if not (suppressions['suppress_events'] or suppressions['suppress_classification'] or suppressions['suppress_tables']):
+                summary_name = output_prefix + '.summary'
+                summary_header = (
+                    '#FASTQ',
+                    'TOTAL_READS',
+                    'UNIQ_READS',
+                    'DISCARDED',
+                    'SNP_POS',
+                    'REF_STATE',
+                    'TEMP_SNP',
+                    'NO_EDIT',
+                    'PERC_NO_EDIT',
+                    'HDR_CLEAN',
+                    'PERC_HDR_CLEAN',
+                    'HDR_GAP',
+                    'PERC_HDR_GAP',
+                    'NHEJ',
+                    'NHEJ_GAP',
+                    'PERC_MIS_A',
+                    'PERC_MIS_T',
+                    'PERC_MIS_C',
+                    'PERC_MIS_G'
+                )
+                logging.info("Writing summary to %s", summary_name)
+                summary_start = time.time()
+                with open(summary_name, 'w') as summfile:
+                    summfile.write('\t'.join(summary_header) + '\n')
+                    summfile.flush()
+                    for sum_dict in sorted(summaries, key=lambda d: d['filename']):
+                        out = (
+                            sum_dict['filename'],
+                            sum_dict['total_reads'],
+                            sum_dict['unique_reads'],
+                            sum_dict['discarded'],
+                            snp_info['snp_index'] + 1,
+                            snp_info['reference_state'],
+                            snp_info['target_snp'],
+                            sum_dict['no_edit'],
+                            sum_dict['no_edit_perc'],
+                            sum_dict['hdr_clean'],
+                            sum_dict['hdr_clean_perc'],
+                            sum_dict['hdr_gap'],
+                            sum_dict['hdr_gap_perc'],
+                            sum_dict['nhej'],
+                            sum_dict['nhej_perc'],
+                            sum_dict['perc_a'],
+                            sum_dict['perc_t'],
+                            sum_dict['perc_c'],
+                            sum_dict['perc_g']
+                        )
+                        out = map(str, out)
+                        summfile.write('\t'.join(out))
+                        summfile.write('\n')
                         summfile.flush()
-                        for sum_dict in sorted(summaries, key=lambda d: d['filename']):
-                            out = (
-                                sum_dict['filename'],
-                                sum_dict['total_reads'],
-                                sum_dict['unique_reads'],
-                                sum_dict['discarded'],
-                                snp_info['snp_index'] + 1,
-                                snp_info['reference_state'],
-                                snp_info['target_snp'],
-                                sum_dict['no_edit'],
-                                sum_dict['no_edit_perc'],
-                                sum_dict['hdr_clean'],
-                                sum_dict['hdr_clean_perc'],
-                                sum_dict['hdr_gap'],
-                                sum_dict['hdr_gap_perc'],
-                                sum_dict['nhej'],
-                                sum_dict['nhej_perc'],
-                                sum_dict['perc_a'],
-                                sum_dict['perc_t'],
-                                sum_dict['perc_c'],
-                                sum_dict['perc_g']
-                            )
-                            out = map(str, out)
-                            summfile.write('\t'.join(out))
-                            summfile.write('\n')
-                            summfile.flush()
-                        logging.debug("Writing summary took %s seconds", round(time.time() - summary_start, 3))
+                logging.debug("Writing summary took %s seconds", round(time.time() - summary_start, 3))
     except IOError as error:
         sys.exit(logging.critical("Cannot find file %s, exiting", error.filename))
     except:
