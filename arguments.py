@@ -88,10 +88,10 @@ def make_argument_parser():
         '--pvalue-threshold',
         dest='pvalue_threshold',
         type=float,
-        default=1e3,
+        default=1e-3,
         required=False,
         metavar='PVALUE THRESHOLD',
-        help="Set the p-value threshold, defaults to '1e3'"
+        help="Set the p-value threshold, defaults to '1e-3'"
     )
     align_opts.add_argument( # Gap opening penaltiy
         '-g',
