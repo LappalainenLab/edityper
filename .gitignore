@@ -17,6 +17,7 @@
 *.bam
 *.classifications
 *.events
+*.summary
 *.pdf
 *.ini
 *.txt
