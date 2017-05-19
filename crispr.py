@@ -408,7 +408,7 @@ def main(args): # type: (Dict) -> None
                 logging.warning("Events output suppressed, not writing events table")
             if suppressions['suppress_classification'] or suppressions['suppress_tables']:
                 logging.warning("Read classification suppressed, not writing classification table")
-            if suppressions['suppress_sam']:
+            if suppressions['suppress_plots']:
                 logging.warning("Plots suppressed, not creating plots")
             if args['xkcd']:
                 plots._XKCD = True
