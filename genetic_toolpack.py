@@ -117,7 +117,7 @@ class FastQ(object):
 
 def load_fastq(fastq_file): # type: (str) -> FastQ
     '''Loading reads from a fastq file, list of lists including the +'''
-    fastq, temp = FastQ(os.path.basename(fastq_file)), list()
+    fastq, temp = FastQ(fastq_file=os.path.basename(fastq_file)), list()
     if 'gz' in fastq_file:
         fastq_handle = gzip.open(fastq_file, 'rb')
     else:
@@ -179,7 +179,7 @@ def get_mismatch(seq_a, seq_b, head=None, tail=None, matches=False):
             #   If neither a gap nor a match, it's a mismatch
             mis_list.append((index, (seq_a[index], seq_b[index])))
         except IndexError:
-            logging.error("No sequence found at base %i", index)
+            logging.error("No sequence found at base %i, no more mismatches%s", index, ' or matches' if matches else '')
             break
     if matches:
         return mis_list, match_list
@@ -190,20 +190,21 @@ def get_mismatch(seq_a, seq_b, head=None, tail=None, matches=False):
 def trim_interval(seq): # type: (str) -> (int, int)
     '''Define the interval discarding head/tail gaps caused by alignment'''
     # HEAD TRIMMING
-    head = 0
+    head = 0 # type: int
     while seq[head] == '-':
         head += 1
-    tail = -1
+    #   Tail trimming
+    tail = -1 # type: int
     while seq[tail] == '-':
         tail -= 1
-    tail = len(seq) + tail
+    tail = len(seq) + tail # type: int
     return head, tail
 
 
 def side_trimmer(seq): # type: (str) -> str
     '''Trim only side gaps of an aligned sequence, return trimmed aligned sequence'''
     trimmed_seq = str() # type: str
-    head, tail = trim_interval(seq) # type: int, int
+    head, tail = trim_interval(seq=seq) # type: int, int
     if tail == -1:
         trimmed_seq = seq[head:]
     else:
@@ -211,12 +212,12 @@ def side_trimmer(seq): # type: (str) -> str
     return trimmed_seq
 
 
-def find_gaps(seq, head=None, tail=None): # type: (str, Optional[int], Optional[int]) -> List[List[int]]
+def find_gaps(seq, head=None, tail=None): # type: (str, Optional[int], Optional[int]) -> List[Tuple[int]]
     '''Return absolute position and length of all the gaps in a sequence
     Use known head and tail, or optionally find head and tail'''
     #Adjust the interval of study to discard head/tail gaps due to alignment
     if not (head and tail):
-        head, tail = trim_interval(seq) # type: int, int
+        head, tail = trim_interval(seq=seq) # type: int, int
     gap_list = list() # type: List
     gap_open = False # type: bool
     # Temporary values
@@ -238,7 +239,7 @@ def find_gaps(seq, head=None, tail=None): # type: (str, Optional[int], Optional[
                 else: # Move along
                     continue
         except IndexError:
-            logging.error("No sequence at %s", i)
+            logging.error("No sequence at %s, no more gaps", i)
             break
     return gap_list # type: List(Tuple[int])
 
