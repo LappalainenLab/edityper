@@ -1,6 +1,6 @@
 # crispr.py
 
-A python program for aligning CRISPR-edited RNA-seq data
+A python program for aligning CRISPR-edited RNA-seq data. Written by Alexandre Yahi and Paul Hoffman.
 
 ## Basic Usage
 
@@ -89,7 +89,5 @@ The `ALIGN` subroutine aligns CRISPR-edited RNA-seq data using the parameters st
 
 Any combination of these outputs can be suppressed, please see the help message for more information.
 
-
-
-
+[<img src='.nygc.jpeg' alt='New York Genome Center' height='100' width='100'>](http://www.nygenome.org/)
 
