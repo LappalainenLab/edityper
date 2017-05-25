@@ -41,7 +41,7 @@ def percent(num, total): # type: (int, int) -> float
     return round(num * 100 / total, 2)
 
 
-def summarize(data, rounding=None): # type: (Iterable[int], Optional[int]) -> Tuple[int, float, float]
+def summarize(data, rounding=None): # type: (Iterable[Union[int, float]], Optional[int]) -> Union[int, float], float, float
     '''Get the sum, mean, and standard deviation of a collection of data'''
     total = sum(data)
     avg = np.mean(data)
@@ -60,11 +60,11 @@ def find_insertions(
     # type: (...) -> Dict[int, List[int]], str, str, int
     """Find and log insertions"""
     insertions = defaultdict(list)
-    insertion_gap_list = toolpack.find_gaps(seq=ref_seq) # type: List?
+    insertion_gap_list = toolpack.find_gaps(seq=ref_seq) # type: List[Tuple[int]]
     if insertion_gap_list:
         nm_ins = len(insertion_gap_list) # type: int
         temp = 0 # type: int
-        for gap in insertion_gap_list:
+        for gap in insertion_gap_list: # type: Tuple[int, int]
             position, gi_length = gap # type: int, int
             position = position - temp # type: int
             temp = temp + gi_length # type: int
@@ -88,14 +88,14 @@ def find_deletions(
     # type: (...) -> Dict[int, List[int]], int
     """Find and log deletions"""
     deletions = defaultdict(list)
-    deletion_gap_list = toolpack.find_gaps(seq=read_seq, head=head, tail=tail)
+    deletion_gap_list = toolpack.find_gaps(seq=read_seq, head=head, tail=tail) # type: List[Tuple[int]]
     if deletion_gap_list:
-        nm_del = len(deletion_gap_list)
-        for gap in deletion_gap_list:
-            position, gd_length = gap
+        nm_del = len(deletion_gap_list) # type: int
+        for gap in deletion_gap_list: # type: Tuple[int, int]
+            position, gd_length = gap # type: int, int
             deletions[position].extend(itertools.repeat(gd_length, num_reads))
     else:
-        nm_del = 0
+        nm_del = 0 # type: int
     return dict(deletions), nm_del
 
 
@@ -133,7 +133,6 @@ def find_mismatches(
     for match in match_list:
         matches[match] += num_reads
     return dict(mismatches), matches, nm_mis
-
 
 
 def run_analysis(
@@ -181,7 +180,7 @@ def run_analysis(
             read_seq=aligned_read,
             num_reads=num_reads
         )
-        for position, ins_list in insertions.items():
+        for position, ins_list in insertions.items(): # type: int, List[int]
             total_insertions[position].extend(ins_list)
         #   Find deletions
         deletions, nm_del = find_deletions( # type: Dict[int, List[int]], int
@@ -190,7 +189,7 @@ def run_analysis(
             head=read_head,
             tail=read_tail
         )
-        for position, del_list in deletions.items():
+        for position, del_list in deletions.items(): # type: int, List[int]
             total_deletions[position].extend(del_list)
         #   Find matches and mismatches
         mismatches, matches, nm_mis = find_mismatches( # type: Dict[int, List[str]], collections.Counter, int
@@ -200,9 +199,9 @@ def run_analysis(
             read_head=read_head,
             read_tail=read_tail
         )
-        for position, mis_list in mismatches.items():
+        for position, mis_list in mismatches.items(): # type: int, List[str]
             total_mismatches[position].extend(mis_list)
-        for position, count in matches.items():
+        for position, count in matches.items(): # type: int, int
             total_matches[position] += count
         #   Classification
         #   Yay tuple unpacking!
