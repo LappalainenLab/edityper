@@ -126,7 +126,7 @@ def quality_plot(
             scores[fastq].append(alignment.get_score())
     #   Plot the scores
     # vlnplt = plt.violinplot(scores)
-    fix, ax = plt.subplots(nrows=1, ncols=1)
+    fig, ax = plt.subplots(nrows=1, ncols=1)
     ax.violinplot(scores.values())
     #   Determine rotation of xtick text
     if len(scores) == 1:
