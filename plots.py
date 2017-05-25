@@ -98,7 +98,6 @@ def locus_plot(
     #   Adjust the plot area to ensure everything is shown
     plt.tight_layout()
     #   Yield the plot
-    # plt.show()
     logging.info("Saving plot to %s", plot_name)
     plt.savefig(plot_name, format='pdf')
     logging.debug("Making locus plot took %s seconds", round(time.time() - locus_start, 3))
