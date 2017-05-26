@@ -107,6 +107,7 @@ def locus_plot(
     ins_patch = ptch.Patch(color=_INS_COLOR, label='Insertions')
     del_patch = ptch.Patch(color=_DEL_COLOR, label='Deletions')
     mismatch_patch = ptch.Patch(color=_MISMATCH_COLOR, label='Mismatches')
+    plt.legend(handles=(ins_patch, del_patch, mismatch_patch))
     # plt.legend(handles=(indel_patch, mismatch_patch))
     #   Set the y limits and labels
     plt.ylim(0, num_reads)
