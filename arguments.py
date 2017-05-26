@@ -238,6 +238,7 @@ def make_argument_parser():
         '-c',
         '--config-file',
         dest='config_file',
+        type=str,
         default=None,
         required=True,
         metavar='CONFIG FILE',
@@ -281,6 +282,16 @@ def make_argument_parser():
         action='store_true',
         required=False,
         help="Suppress plots"
+    )
+    align.add_argument(
+        '-n',
+        '--num-cores',
+        dest='num_cores',
+        type=int,
+        default=None,
+        required=False,
+        metavar='NUM CORES',
+        help="How many cores should we use for multiprocessing? Defaults to the number of FASTQ files provided or the number of cores available on the system, whichever is lower"
     )
     align.add_argument(
         '--xkcd',
