@@ -31,6 +31,8 @@ except ImportError as error:
 
 _LOCUS_WIDTH = 0.5
 _INDEL_COLOR = 'r'
+_INS_COLOR = 'r'
+_DEL_COLOR = 'g'
 _MISMATCH_COLOR = 'b'
 _XKCD = False
 
@@ -63,31 +65,49 @@ def locus_plot(
     fig, ax = plt.subplots()
     #   Get our data ready for plotting
     mis_dict = {position: len(bases) for position, bases in mismatches.items()} # type: Dict[int, int]
-    indels = defaultdict(int) # type: Mapping[int, int]
-    for this_dict in (insertions, deletions): # type: Mapping[int, List[int]]
-        for position, lengths in this_dict.items(): # type: int, List[int]
-            indels[position] += len(lengths)
+    ins_dict = {position: len(counts) for position, counts in insertions.items()} # type: Dict[int, int]
+    del_dict = {position: len(counts) for position, counts in deletions.items()} # type: Dict[int, int]
+    # indels = defaultdict(int) # type: Mapping[int, int]
+    # for this_dict in (insertions, deletions): # type: Mapping[int, List[int]]
+    #     for position, lengths in this_dict.items(): # type: int, List[int]
+    #         indels[position] += len(lengths)
     #   Sort our data
-    indel_counts = map(lambda tup: tup[1], sorted(indels.items())) # type: List[int]
+    # indel_counts = map(lambda tup: tup[1], sorted(indels.items())) # type: List[int]
     mis_counts = map(lambda tup: tup[1], sorted(mis_dict.items())) # type: List[int]
+    ins_counts = map(lambda tup: tup[1], sorted(ins_dict.items())) # type: List[int]
+    del_counts = map(lambda tup: tup[1], sorted(del_dict.items())) # type: List[int]
     #   Create the bar graphs
-    indel_bars = ax.bar(
-        left=sorted(indels),
-        height=indel_counts,
+    # indel_bars = ax.bar(
+    #     left=sorted(indels),
+    #     height=indel_counts,
+    #     width=_LOCUS_WIDTH,
+    #     color=_INDEL_COLOR
+    # )
+    ins_bars = ax.bar(
+        left=sorted(insertions),
+        height=ins_counts,
         width=_LOCUS_WIDTH,
-        color=_INDEL_COLOR
+        color=_INS_COLOR
+    )
+    del_bars = ax.bar(
+        left=map(lambda x: x + _LOCUS_WIDTH, sorted(deletions)),
+        height=del_counts,
+        width=_LOCUS_WIDTH,
+        color=_DEL_COLOR
     )
     mis_bars = ax.bar(
-        left=map(lambda x: x + _LOCUS_WIDTH, sorted(mismatches)),
+        left=map(lambda x: x + (_LOCUS_WIDTH * 2), sorted(mismatches)),
         height=mis_counts,
         width=_LOCUS_WIDTH,
         color=_MISMATCH_COLOR
     )
     #   Add title and legend
     plt.title(fastq_name)
-    indel_patch = ptch.Patch(color=_INDEL_COLOR, label='Indels')
+    # indel_patch = ptch.Patch(color=_INDEL_COLOR, label='Indels')
+    ins_patch = ptch.Patch(color=_INS_COLOR, label='Insertions')
+    del_patch = ptch.Patch(color=_DEL_COLOR, label='Deletions')
     mismatch_patch = ptch.Patch(color=_MISMATCH_COLOR, label='Mismatches')
-    plt.legend(handles=(indel_patch, mismatch_patch))
+    # plt.legend(handles=(indel_patch, mismatch_patch))
     #   Set the y limits and labels
     plt.ylim(0, num_reads)
     plt.ylabel('Number of Reads')
