@@ -9,8 +9,6 @@
 
 '''CRISPR gene editing results analysis'''
 
-from __future__ import division
-
 import os
 from os import listdir
 from os.path import isfile, join, isdir
@@ -35,7 +33,7 @@ import multiprocessing as mp
 #C++ ALIGNMENT FUNCTION
 from NW_py import align_glocal, align_freetrail, align_mem, align_aff, align_aff_mem
 # PLOTING packages
-from genetic_plotpack import violin_quality, locus_map#, violin_matplot
+from genetic_plotpack import violin_quality, locus_map, violin_matplot
 
 
 # RELATIVE PATH
@@ -159,26 +157,21 @@ def CRISPR_analysis(analysisMode, inputFile, inputReference, inputTemplate, file
 ########################  ISOLATE THE READS  ########################
 	display('READS PRE-PROCESSING...')
 
-	# reads_raw = [elem[1] for elem in loaded_fastq]	# Isolate the raw reads in one list
-	# num_reads = len(reads_raw) 						# Total number of raw reads
+	reads_raw = [elem[1] for elem in loaded_fastq]	# Isolate the raw reads in one list
+	num_reads = len(reads_raw) 						# Total number of raw reads
 
-	# if num_reads == 0:
-	# 	return ''
-	# # LOOKING FOR READS DUPLICATES
+	if num_reads == 0:
+		return ''
+	# LOOKING FOR READS DUPLICATES
 
-	# reads_dict = defaultdict(int)					# Dictionary of reads -> [read] = count
-	# for seq in reads_raw:
-	# 	reads_dict[seq] += 1
+	reads_dict = defaultdict(int)					# Dictionary of reads -> [read] = count
+	for seq in reads_raw:
+		reads_dict[seq] += 1
 
-    #   Moved to read_isolation.load_seqs()
-    # raw_seqs = [read.get_sequence() for read in loaded_fastq] # Use FastQ class
-    # reads_dict = Counter(raw_seqs) # Counter
-    # uniq_perc = round((len(reads_dict) / len(raw_seqs)) * 100, 2)
+	reads_uniq = reads_dict.keys() 					# List of uniques read
+	uniq_perc = round(float(len(reads_uniq)/float(num_reads))*100,2)
 
-	# reads_uniq = reads_dict.keys() 					# List of uniques read
-	# uniq_perc = round(float(len(reads_uniq)/float(num_reads))*100,2)
-
-	# display('READS PRE-PROCESSING... %s reads - %s unique reads (%s %%)\n' % (num_reads, len(reads_uniq),uniq_perc))
+	display('READS PRE-PROCESSING... %s reads - %s unique reads (%s %%)\n' % (num_reads, len(reads_uniq),uniq_perc))
 ########################  FIND HOW TO ALIGN THE READS  ########################
 	display('FIND HOW TO ALIGN...')
 
@@ -191,12 +184,10 @@ def CRISPR_analysis(analysisMode, inputFile, inputReference, inputTemplate, file
 
 	to_sample = int(round(0.1*num_reads,0)+1)
 
-    sampled_reads = reads_raw[:min(to_sample, 500)] # replaces below
-
-	# if to_sample < 500:
-	# 	sampled_reads = reads_raw[:to_sample]
-	# else:
-	# 	sampled_reads = reads_raw[:500]					# Randomly sample 500 reads
+	if to_sample < 500:
+		sampled_reads = reads_raw[:to_sample]
+	else:
+		sampled_reads = reads_raw[:500]					# Randomly sample 500 reads
 
 	for s_read in sampled_reads:
 		_, _, score = align_aff(ref, s_read, gap_open, gap_ext)
@@ -256,13 +247,11 @@ def CRISPR_analysis(analysisMode, inputFile, inputReference, inputTemplate, file
 	for u_read in reads_uniq:
 		length = len(u_read)
 		len2uniq_temp[length].append(u_read)
-        # len2uniq = {length: [reads]}
 
 	# Sort the unique reads - doesn't matter if several lengths
 	len2uniq = dict()
 	for length in len2uniq_temp.keys():
 		read_batch = len2uniq_temp[length]
-        # read_batch = [reads]
 		read_batch.sort()							# Sorting the unique reads
 		len2uniq[length] = read_batch
 
@@ -281,21 +270,26 @@ def CRISPR_analysis(analysisMode, inputFile, inputReference, inputTemplate, file
 				count += 1
 				if temp == str():
 					al1, al2, score = align_aff_mem(ref, sample, gap_open, gap_ext, 0, 0)
-					al1_temp = al1 # never use
-					al2_temp = al2 # never use
+
+					al1_temp = al1
+					al2_temp = al2
 					temp = sample
 					Align_li[length].append([al1,al2])
 					Scores_li[length].append(score)
 					continue
+
 				index = sim_seq(temp,sample)
 				reuse_lines += index
+
 				if count == total:
 					al1, al2, score = align_aff_mem(ref, sample, gap_open, gap_ext, index, 1) # de-allocate memory - delete the alignment matrix
 				else:
 					al1, al2, score = align_aff_mem(ref, sample, gap_open, gap_ext, index, 0)
+
 				# Store the aligned sequences and score
 				Align_li[length].append([al1,al2])
 				Scores_li[length].append(score)
+
 				temp = sample
 
 	else:	#Not keeping memory
@@ -324,41 +318,46 @@ def CRISPR_analysis(analysisMode, inputFile, inputReference, inputTemplate, file
 	#############
 
 	for category in ['HDR', 'NHEJ', 'NO_EDIT', 'Disc']:
-		class_reads[category] = defaultdict(list) # Duct[str, [Dict[, List]]]
+		class_reads[category] = defaultdict(list)
 
-    # Why these things?
 	out_idx = int() # Index to reference final results - different from index per length category
 	super_check = int()
-    #   For length (cat?) in Dict[int, List[str]]
 	for length_cat in len2uniq.keys():
-        #   For list index, sequence in List[str]
 		for idx,read_seq in enumerate(len2uniq[length_cat]):							# Number of total unique reads
-			out_idx += 1 # Okay?
+			out_idx += 1
 			tag = str()
 			nm_del = int()
 			nm_ins = int()
 			nm_mis = int()
-            #   reads_dict = Dict[str, int]
 			multi = reads_dict[read_seq] # Get multiplicity of the read
-			super_check += multi # Kay?
-            #   Scores = Dict[int, List[int]]
+			super_check += multi
 			if Scores_li[length_cat][idx] < ScoreTHR:
 				class_reads['Disc'][out_idx] = [multi, 0, 0, 0]
 				continue
 
 			#LOAD THE ALIGNMENTS
-            #   alignments = Dict[int, List[List[str]]]
 			al_ref = Align_li[length_cat][idx][0] #Aligned reference
 			al_read = Align_li[length_cat][idx][1] #Aligned read
 
 			#TRIM INTERVAL OF THE READ
 			# use head-tail of trimmed aligned ref to trim al_read
-			ref_head, ref_tail = trim_interval(al_ref) # PAY ATTENTION I CHANGED THIS
+			ref_head, ref_tail = trim_interval(al_ref)
 			# Trimming aligned sequences
 			al_ref = al_ref[ref_head:ref_tail]
 			al_read = al_read[ref_head:ref_tail]
 			# Get head and tail of the newly trimmed al_read
-			head, tail = trim_interval(al_read) # PAY ATTENION I CHANGED THIS
+			head, tail = trim_interval(al_read)
+
+			# #############
+			# ## TEST ###
+			# ##########
+
+			# head_ref, tail_ref = trim_interval(al_ref)
+			# al_ref = al_ref[head_ref:]
+			# al_read = al_read[head_ref:]
+			# #############
+			# ## TEST END###
+			# ##########
 
 			#COUNT INSERTIONS and POSITIONS
 			ins_gap_list = find_gaps(al_ref)
@@ -705,7 +704,7 @@ def main():
 		else:
 			template = settings_dict['template']
 
-		inputReference = amplicon_directory + [ f for f in listdir(amplicon_directory) if isfile(join(amplicon_directory,f)) and '%s.ref' % reference in f][0] # Only one reference and template
+		inputReference = amplicon_directory + [ f for f in listdir(amplicon_directory) if isfile(join(amplicon_directory,f)) and '%s.ref' % reference in f][0]
 		inputTemplate = amplicon_directory + [ f for f in listdir(amplicon_directory) if isfile(join(amplicon_directory,f)) and '%s.template' % template in f][0]
 		if settings_dict['mode'] == 'batch':
 			inputFile = batch_directory + filename
