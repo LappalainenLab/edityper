@@ -176,25 +176,25 @@ def make_sam_file(
     heads, tails = zip(*head_tail) # type: Tuple[int], Tuple[int]
     sam_seq = map(ws.make_sam_sequence, alignments, heads, tails) # type: List[str]
     logging.debug("FASTQ %s: Making SAM-ready reads took %s seconds", str(fastq), round(time.time() - reads_start, 3))
-    #   Get the number of times we're repeating our constants
-    #   Apparently, Python 2 doesn't stop automatically...
-    num_repeats = set(map(len, (alignments, sam_seq, cigars, positions))) # type: Set[int]
-    if len(num_repeats) != 1:
-        sys.exit(logging.critical("Unequal numbers of alignments, sequences, CIGAR strings, and positions; exiting..."))
-    #   Get the number of times from the set
-    num_repeats = num_repeats.pop() # type: int
+    # #   Get the number of times we're repeating our constants
+    # #   Apparently, Python 2 doesn't stop automatically...
+    # num_repeats = set(map(len, (alignments, sam_seq, cigars, positions))) # type: Set[int]
+    # if len(num_repeats) != 1:
+    #     sys.exit(logging.critical("Unequal numbers of alignments, sequences, CIGAR strings, and positions; exiting..."))
+    # #   Get the number of times from the set
+    # num_repeats = num_repeats.pop() # type: int
     #   Make the alignment lines of the SAM file
     # TODO change map to itertools.imap
     logging.info("FASTQ %s: Creating SAM lines", str(fastq))
-    sam_lines = map(
+    sam_lines = itertools.imap(
         ws.make_sam, # Func
         alignments, # alignment=
         sam_seq, # sam_seq=
         cigars, # cigar=
-        itertools.repeat(bit_base, num_repeats), # bit_flag=
-        itertools.repeat(reference_name, num_repeats), # ref_name=
+        itertools.repeat(bit_base),#, num_repeats), # bit_flag=
+        itertools.repeat(reference_name),#, num_repeats), # ref_name=
         positions, # position=
-        itertools.repeat(reads_dict, num_repeats) # reads_dict=
+        itertools.repeat(reads_dict)#, num_repeats) # reads_dict=
     )
     #   Unpack and sort our SAM lines
     #   The sort works because SAM objects have __le__ and __lt__ methods defined
