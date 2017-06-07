@@ -184,7 +184,6 @@ def make_sam_file(
     # #   Get the number of times from the set
     # num_repeats = num_repeats.pop() # type: int
     #   Make the alignment lines of the SAM file
-    # TODO change map to itertools.imap
     logging.info("FASTQ %s: Creating SAM lines", str(fastq))
     sam_lines = itertools.imap(
         ws.make_sam, # Func
