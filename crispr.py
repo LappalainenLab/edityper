@@ -255,7 +255,8 @@ def crispr(tup_args): # type: Tuple(...) -> List[al.Alignment]
         aligned_reference=seq_dict['aligned_reference'].sequence,
         fastq=fastq
     )
-    total_reads = sum((len(read_list) for read_list in reads_dict.values())) # type: int
+    # total_reads = sum((len(read_list) for read_list in reads_dict.values())) # type: int
+    total_reads = len(fastq) # type: int
     #   Align the reads
     alignments = run_alignment( # type: Dict[int, List[al.Alignment]]
         fastq=fastq,
@@ -267,7 +268,6 @@ def crispr(tup_args): # type: Tuple(...) -> List[al.Alignment]
     logging.info("FASTQ %s: Starting analysis", str(fastq))
     analysis_start = time.time()
     report, read_classifications = an.run_analysis( # type: an.Reporter, Tuple[defaultdict[int, List[al.Alignment]]]
-        reads_dict=reads_dict,
         alignments=itertools.chain.from_iterable(alignments.values()),
         reference=seq_dict['reference'].sequence,
         score_threshold=score_threshold,
@@ -412,32 +412,41 @@ def main(args): # type: (Dict) -> None
                 logging.warning("Plots suppressed, not creating plots")
             if args['xkcd']:
                 plots._XKCD = True
-            pool = Pool() # type: multiprocessing.Pool
+            #   Allow the user to specify the number of jobs to run at once
+            #   If not specified, let multiprocessing figure it out
+            try:
+                pool = Pool(processes=args['num_cores'])
+            except KeyError:
+                pool = Pool() # type: multiprocessing.Pool
             logging.warning("Analysing %d FASTQ files", len(fastq_list))
             # Have worker processes ignore INTERUPT signals
             signal.signal(signal.SIGINT, sigint_handler)
-            try:
-                #   Use map_async and get with a large timeout
-                #   to allow for KeyboardInterrupts to be caught
-                #   and handled with the try/except
-                res = pool.map_async( # type: multiprocessing.pool.MapResult
-                    crispr,
-                    itertools.izip(
-                        fastq_list,
-                        itertools.repeat(suppressions),
-                        itertools.repeat(conf_dict),
-                        itertools.repeat(sequences),
-                        itertools.repeat(snp_info)
-                    )
-                )
-                pool.close()
-                results = res.get(9999)
-            except KeyboardInterrupt:
-                pool.terminate()
-                sys.exit('\nkilled')
-            except SystemExit:
-                pool.terminate()
-                raise
+            zipped_args = itertools.izip(
+                fastq_list,
+                itertools.repeat(suppressions),
+                itertools.repeat(conf_dict),
+                itertools.repeat(sequences),
+                itertools.repeat(snp_info)
+            )
+            #   If we have multiple FASTQ files AND multiple processes running
+            #   use pool.map_async; else use generic map to avoid timeout issues
+            if all(itertools.imap(lambda i: i > 1, (len(fastq_list), getattr(pool, '_processes')))):
+                try:
+                    #   Use map_async and get with a large timeout
+                    #   to allow for KeyboardInterrupts to be caught
+                    #   and handled with the try/except
+                    res = pool.map_async(crispr, zipped_args) # type: multiprocessing.pool.MapResult
+                    pool.close()
+                    results = res.get(9999)
+                except KeyboardInterrupt:
+                    pool.terminate()
+                    sys.exit('\nkilled')
+                except SystemExit:
+                    pool.terminate()
+                    raise
+            else:
+                pool.close(); pool.terminate()
+                results = map(crispr, zipped_args)
             alignments, summaries = zip(*results) # type: Tuple[List[alignment.Alignment]], Tuple[Dict[str, Any]]
             alignments = unpack(collection=alignments) # type: List[alignment.Alignment]
             if not suppressions['suppress_plots']:
