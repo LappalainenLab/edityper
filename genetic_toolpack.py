@@ -16,6 +16,7 @@ if sys.version_info.major is not 2 and sys.version_info.minor is not 7:
 
 
 import os
+import re
 import gzip
 import logging
 from string import maketrans
@@ -168,19 +169,15 @@ def get_mismatch(seq_a, seq_b, head=None, tail=None, matches=False):
     else:
         seq_range = xrange(len(seq_a)) # type: xrange
     for index in seq_range: # type: int
-        try:
-            if seq_a[index] == '-' or seq_b[index] == '-':
-                #   Gap, not mismatch, continue
-                continue
-            if seq_a[index] == seq_b[index]:
-                #   Match, not mismatch
-                match_list.append(index)
-                continue
-            #   If neither a gap nor a match, it's a mismatch
-            mis_list.append((index, (seq_a[index], seq_b[index])))
-        except IndexError:
-            logging.error("No sequence found at base %i, no more mismatches%s", index, ' or matches' if matches else '')
-            break
+        if seq_a[index] == '-' or seq_b[index] == '-':
+            #   Gap, not mismatch, continue
+            continue
+        if seq_a[index] == seq_b[index]:
+            #   Match, not mismatch
+            match_list.append(index)
+            continue
+        #   If neither a gap nor a match, it's a mismatch
+        mis_list.append((index, (seq_a[index], seq_b[index])))
     if matches:
         return mis_list, match_list
     else:
@@ -197,7 +194,7 @@ def trim_interval(seq): # type: (str) -> (int, int)
     tail = -1 # type: int
     while seq[tail] == '-':
         tail -= 1
-    tail = len(seq) + tail # type: int
+    tail = (len(seq) + 1) + tail # type: int
     return head, tail
 
 
@@ -218,29 +215,33 @@ def find_gaps(seq, head=None, tail=None): # type: (str, Optional[int], Optional[
     #Adjust the interval of study to discard head/tail gaps due to alignment
     if not (head and tail):
         head, tail = trim_interval(seq=seq) # type: int, int
-    gap_list = list() # type: List
-    gap_open = False # type: bool
-    # Temporary values
-    index, length = 0, 0 # type: int, int
-    for i in range(head, tail + 1):
-        try:
-            if seq[i] == '-': # GAP
-                if not gap_open: # Open the gap
-                    gap_open = True # type: bool
-                    length = 1 # type: int
-                    index = i # type: int
-                else: #continue previous gap
-                    length += 1
-            else:
-                if gap_open: # Close the gap
-                    gap_list.append((index, length))
-                    index, length = 0, 0 # type: int, int
-                    gap_open = False # type: bool
-                else: # Move along
-                    continue
-        except IndexError:
-            logging.error("No sequence at %s, no more gaps", i)
-            break
+    head = max(0, head)
+    tail = min(tail, len(seq))
+    spans = (m.span() for m in re.finditer(r'(-+)', seq[head:tail]))
+    gap_list = [(span[0] + head, span[1] - span[0]) for span in spans]
+    # gap_list = list() # type: List
+    # gap_open = False # type: bool
+    # # Temporary values
+    # index, length = 0, 0 # type: int, int
+    # for i in range(head, tail):
+    #     try:
+    #         if seq[i] == '-': # GAP
+    #             if not gap_open: # Open the gap
+    #                 gap_open = True # type: bool
+    #                 length = 1 # type: int
+    #                 index = i # type: int
+    #             else: #continue previous gap
+    #                 length += 1
+    #         else:
+    #             if gap_open: # Close the gap
+    #                 gap_list.append((index, length))
+    #                 index, length = 0, 0 # type: int, int
+    #                 gap_open = False # type: bool
+    #             else: # Move along
+    #                 continue
+    #     except IndexError:
+    #         logging.error("No sequence at %s, no more gaps", i)
+    #         break
     return gap_list # type: List(Tuple[int])
 
 
