@@ -442,7 +442,7 @@ def calc_read_pos(alignment): # type: alignment.Alignment -> int
         possible_references = tuple(itertools.chain.from_iterable(possible_references)) # type: Tuple[str]
         if len(possible_references) == 1:
             break
-        elif len(possible_references) == 0:
+        elif not possible_references:
             raise ValueError("Something happened")
     if len(possible_references) > 1:
         logging.error("Multiple mapping is currently not supported, setting position to '-8' for fixing later")
