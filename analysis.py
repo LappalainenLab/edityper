@@ -136,7 +136,6 @@ def find_mismatches(
 
 
 def run_analysis(
-        reads_dict, # type: Dict[str, List[toolpack.Read]]
         alignments, # type: Iterable[al.Alignment]
         reference, # type: str
         score_threshold, # type: numpy.float64
@@ -145,7 +144,6 @@ def run_analysis(
 ):
     # type: (...) -> (Reporter, Tuple[defaultdict[int, List[al.Alignment]]])
     """Analyze the alignment results
-    'reads_dict' is a dictionary of unique sequences and a list of reads supporting each sequence
     'alignments' is a diciontary where the values are lists of Alignments
     'score_threshold' is a floating point score threshold
     'snp_index', is an int representing the index where the SNP is
@@ -163,7 +161,8 @@ def run_analysis(
     #   Start doing things
     for alignment in alignments: # type: al.Alignment
         out_idx += 1
-        num_reads = len(reads_dict[alignment.get_unaligned()]) # type: int
+        # num_reads = len(reads_dict[alignment.get_unaligned()]) # type: int
+        num_reads = len(alignment.get_names())
         #   Alignment is below score threshold, discard it
         if alignment.get_score() < score_threshold:
             alignment.set_stats(num_reads=num_reads, nm_del=0, nm_ins=0, nm_mis=0)
@@ -173,7 +172,7 @@ def run_analysis(
         ref_head, ref_tail = toolpack.trim_interval(seq=alignment.get_aligned_reference()) # type: int, int
         aligned_ref = alignment.get_aligned_reference()[ref_head:ref_tail] # type: str
         aligned_read = alignment.get_aligned_read()[ref_head:ref_tail] # type: str
-        read_head, read_tail = toolpack.trim_interval(aligned_read) # type: int, int
+        # read_head, read_tail = toolpack.trim_interval(aligned_read) # type: int, int
         #   Find insertions
         insertions, ref_no_ins, read_no_ins, nm_ins = find_insertions( # type: Dict[int, List[int]], str, str, int
             ref_seq=aligned_ref,
@@ -183,6 +182,7 @@ def run_analysis(
         for position, ins_list in insertions.items(): # type: int, List[int]
             total_insertions[position].extend(ins_list)
         #   Find deletions
+        read_head, read_tail = toolpack.trim_interval(seq=read_no_ins)
         deletions, nm_del = find_deletions( # type: Dict[int, List[int]], int
             read_seq=read_no_ins,
             num_reads=num_reads,
