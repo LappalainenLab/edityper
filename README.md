@@ -1,6 +1,6 @@
 # crispr.py
 
-A python program for aligning CRISPR-edited RNA-seq data. Written by Alexandre Yahi and Paul Hoffman.
+A python program for aligning CRISPR-edited RNA-seq data. Written by Alexandre Yahi.
 
 ## Basic Usage
 
