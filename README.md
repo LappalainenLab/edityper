@@ -4,7 +4,9 @@ A python program for aligning CRISPR-edited RNA-seq data. Written by Alexandre Y
 
 ## Basic Usage
 
-To get a basic help message, simply run
+TBA
+
+<!-- To get a basic help message, simply run
 
 ```bash
 ./crispr.py
@@ -16,7 +18,7 @@ There are two subroutines as part of crispr.py: `CONFIG` and `ALIGN`. To view de
 ./crispr.py CONFIG -h
 ```
 
-for viewing help information about the `CONFIG` subroutine.
+for viewing help information about the `CONFIG` subroutine. -->
 
 ## Dependencies
 

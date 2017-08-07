@@ -29,9 +29,21 @@ class install(_install):
 EXT_MODULES = [
     Extension(
         name='NW_py',
-        sources=['NW_py.pyx', 'py_align.cpp'],
+        sources=['src/NW_py.pyx', 'src/py_align.cpp'],
         language='c++'
     )
+]
+
+#   Dependencies
+INSTALL_REQUIRES = [
+    'numpy',
+    'scipy',
+    'matplotlib'
+]
+
+#   Modules
+PY_MODULES = [
+    'scripts.crispronto'
 ]
 
 #   Commands available for setup.py
@@ -43,7 +55,7 @@ CMD_CLASS = {
 #   Entry points into the program
 ENTRY_POINTS = {
     'console_scripts': [
-        '%s = test:main' % NAME
+        '%s = scripts.crispronto:main' % NAME
     ]
 }
 
@@ -55,6 +67,9 @@ setup(
     description=DESCRIPTION,
     license=LICENSE,
     url=URL,
+    # package_dir={'crispronto': 'scripts'},
+    # packages=['crispronto'],
+    packages=['scripts'],
     ext_modules=EXT_MODULES,
     entry_points=ENTRY_POINTS,
     cmdclass=CMD_CLASS

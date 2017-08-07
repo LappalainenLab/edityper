@@ -11,6 +11,10 @@
 ###########################
 *.so
 
+# Ignore NW_py.cpp
+##################
+NW_py.cpp
+
 # Ignore output files and lists
 ###############################
 *.sam
@@ -21,3 +25,10 @@
 *.pdf
 *.ini
 *.txt
+
+# Ignore build directories
+##########################
+bin/
+build/
+lib/
+*.egg-info/

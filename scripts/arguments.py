@@ -1,17 +1,18 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 
 '''Set the arguments for the CRISPR alingment and analysis pipeline'''
 
 import sys
-if sys.version_info.major is not 2 and sys.version_info.minor is not 7:
-    sys.exit("Please use Python 2.7 for this module: " + __name__)
+# if sys.version_info.major is not 2 and sys.version_info.minor is not 7:
+#     sys.exit("Please use Python 2.7 for this module: " + __name__)
 
 
 import os
 import argparse
 
 _OUTDIR_DEFAULT = os.path.join(os.getcwd(), 'output')
-_PROJECT_DEFAULT = 'crispr'
+_MODE_DEFAULT = 'SNP'
+_PROJECT_DEFAULT = 'crispronto'
 _VERBOSITY_DEFAULT = 'info'
 _VERBOSITY_LEVELS = (
     'debug',
@@ -34,7 +35,7 @@ _VALID_PLATFORMS = (
 def make_argument_parser():
     """Create an argument parser"""
     parser = argparse.ArgumentParser(
-        add_help=True
+        add_help=False
     )
     #   Arguments for verbosity and logging
     parser.add_argument( # Verbosity
@@ -49,7 +50,7 @@ def make_argument_parser():
         help="Set the verbosity level, choose from '%s'; defaults to '%s'" % ("', '".join(_VERBOSITY_LEVELS), _VERBOSITY_DEFAULT)
     )
     parser.add_argument( # Log file
-        '-l',
+        '-f',
         '--logfile',
         dest='logfile',
         type=argparse.FileType(mode='a'),
@@ -58,16 +59,7 @@ def make_argument_parser():
         metavar='LOG FILE',
         help="Specify a file for the log messages, defaults to stderr"
     )
-    #   Set up subparsers
-    subparsers = parser.add_subparsers(
-        title='Subroutine',
-        description='Choose a subroutine',
-        dest='subroutine',
-        help="'CONFIG' configures the program, 'ALIGN' runs the alignment program"
-    )
-    #   Configure subroutine
-    configure = subparsers.add_parser('CONFIG')
-    align_opts = configure.add_argument_group(
+    align_opts = parser.add_argument_group(
         title='alignment arguments',
         description='Set parameters for alignment'
     )
@@ -77,10 +69,10 @@ def make_argument_parser():
         dest='analysis_mode',
         type=str,
         choices=('SNP', 'SNP+PAM'),
-        default='SNP',
+        default=_MODE_DEFAULT,
         required=False,
         metavar='ANALYSIS MODE',
-        # help="Set the analysis mode, choose from 'SNP' or 'SNP+PAM', defaults to 'SNP'"
+        # help="Set the analysis mode, choose from 'SNP' or 'SNP+PAM', defaults to '%s'" % _MODE_DEFAULT
         help=argparse.SUPPRESS
     )
     align_opts.add_argument( # p-value threshold
@@ -113,7 +105,17 @@ def make_argument_parser():
         metavar='GAP EXTENSION PENALTY',
         help="Set the gap extension penalty, defaults to '1'"
     )
-    ref_opts = configure.add_argument_group(
+    align_opts.add_argument(
+        '-n',
+        '--num-cores',
+        dest='num_cores',
+        type=int,
+        default=None,
+        required=False,
+        metavar='NUM CORES',
+        help="How many cores should we use for multiprocessing? Defaults to the number of FASTQ files provided or the number of cores available on the system, whichever is lower"
+    )
+    ref_opts = parser.add_argument_group(
         title='reference arguments',
         description='Provide FASTA files for the reference and template sequences'
     )
@@ -137,7 +139,7 @@ def make_argument_parser():
         metavar='TEMPLATE SEQUENCE',
         help="Choose a template FASTA file"
     )
-    in_opts = configure.add_argument_group(
+    in_opts = parser.add_argument_group(
         title='input arguments',
         description='Provide either a single FASTQ file or a list of FASTQ files. Note: we currently do NOT support paired-end FASTQ files'
     )
@@ -160,7 +162,7 @@ def make_argument_parser():
         metavar='SAMPLE LIST',
         help="Provdide a sample list, with each sample on its own line, mutually exclusive with '-i | --input-file'"
     )
-    out_opts = configure.add_argument_group(
+    out_opts = parser.add_argument_group(
         title='output arguments',
         description='Provide an output directory and project name. All files, including the configuration file, will be placed in the output directory with a basename of the project name.'
     )
@@ -184,7 +186,7 @@ def make_argument_parser():
         metavar='PROJECT',
         help="Provide a project name to be used as the basename for all output files; defaults to '%s'" % _PROJECT_DEFAULT
     )
-    rg_opts = configure.add_argument_group(
+    rg_opts = parser.add_argument_group(
         title='read group arguments',
         description="Provide extra read group information. Note: this information will be applied to ALL read groups"
     )
@@ -229,22 +231,7 @@ def make_argument_parser():
         metavar='READ SAMPLE',
         help="Sample, use pool name when a pool is being sequenced (@RG SM)"
     )
-    #   Alignment subroutine
-    align = subparsers.add_parser('ALIGN')
-    required = align.add_argument_group(
-        title='required arguments',
-    )
-    required.add_argument( # Where is our configuration file?
-        '-c',
-        '--config-file',
-        dest='config_file',
-        type=str,
-        default=None,
-        required=True,
-        metavar='CONFIG FILE',
-        help="Specify the path to the config file"
-    )
-    suppression = align.add_argument_group(
+    suppression = parser.add_argument_group(
         title='suppression arguments',
         description="Choose to suppress some or all of the output files"
     )
@@ -283,19 +270,16 @@ def make_argument_parser():
         required=False,
         help="Suppress plots"
     )
-    align.add_argument(
-        '-n',
-        '--num-cores',
-        dest='num_cores',
-        type=int,
-        default=None,
-        required=False,
-        metavar='NUM CORES',
-        help="How many cores should we use for multiprocessing? Defaults to the number of FASTQ files provided or the number of cores available on the system, whichever is lower"
-    )
-    align.add_argument(
+    parser.add_argument(
         '--xkcd',
         dest='xkcd',
+        action='store_true',
+        required=False,
+        help=argparse.SUPPRESS
+    )
+    parser.add_argument(
+        '-h',
+        '--help',
         action='store_true',
         required=False,
         help=argparse.SUPPRESS
