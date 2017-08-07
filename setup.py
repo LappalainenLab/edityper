@@ -41,9 +41,9 @@ INSTALL_REQUIRES = [
     'matplotlib'
 ]
 
-#   Modules
-PY_MODULES = [
-    'scripts.crispronto'
+#   Packages
+PACKAGES = [
+    'scripts'
 ]
 
 #   Commands available for setup.py
@@ -67,9 +67,7 @@ setup(
     description=DESCRIPTION,
     license=LICENSE,
     url=URL,
-    # package_dir={'crispronto': 'scripts'},
-    # packages=['crispronto'],
-    packages=['scripts'],
+    packages=PACKAGES,
     ext_modules=EXT_MODULES,
     entry_points=ENTRY_POINTS,
     cmdclass=CMD_CLASS
