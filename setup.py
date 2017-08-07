@@ -42,8 +42,9 @@ INSTALL_REQUIRES = [
 ]
 
 #   Packages
+PACKAGE_DIR = 'crispronto'
 PACKAGES = [
-    'scripts'
+    PACKAGE_DIR
 ]
 
 #   Commands available for setup.py
@@ -55,7 +56,7 @@ CMD_CLASS = {
 #   Entry points into the program
 ENTRY_POINTS = {
     'console_scripts': [
-        '%s = scripts.crispronto:main' % NAME
+        '%(name)s = %(package)s.crispronto:main' % {'name': NAME, 'package': PACKAGE_DIR}
     ]
 }
 
