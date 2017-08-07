@@ -10,7 +10,7 @@ if sys.version_info.major is not 2 and sys.version_info.minor is not 7:
 import os
 import argparse
 
-_OUTDIR_DEFAULT = '/'.join((os.getcwd(), 'output'))
+_OUTDIR_DEFAULT = os.path.join(os.getcwd(), 'output')
 _PROJECT_DEFAULT = 'crispr'
 _VERBOSITY_DEFAULT = 'info'
 _VERBOSITY_LEVELS = (
@@ -41,7 +41,7 @@ def make_argument_parser():
         '-v',
         '--verbosity',
         dest='verbosity',
-        type=str,
+        type=str.lower,
         choices=_VERBOSITY_LEVELS,
         default=_VERBOSITY_DEFAULT,
         required=False,
