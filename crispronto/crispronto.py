@@ -4,28 +4,18 @@ from __future__ import print_function
 from __future__ import division
 
 import sys
+PYTHON_VERSION = sys.version_info.major
 
 try:
-    from arguments import make_argument_parser
+    if PYTHON_VERSION is 3:
+        from crispronto.arguments import make_argument_parser
+    elif PYTHON_VERSION is 2:
+        from arguments import make_argument_parser
+    else:
+        sys.exit('WTF MATE')
 except ImportError:
     sys.exit("FAIL")
 
-# try:
-#     import argparse
-# except ImportError:
-#     sys.exit("Please use Python 2.7 or 3.X")
-
-
-# try:
-#     range = xrange
-# except NameError:
-#     pass
-
-
-# try:
-#     import ConfigParser as configparser
-# except ImportError:
-#     import configparser
 
 def main():
     """CRISPronto"""
