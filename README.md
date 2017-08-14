@@ -1,4 +1,4 @@
-# crispr.py
+# CRISPRonto
 
 A python program for aligning CRISPR-edited RNA-seq data. Written by Alexandre Yahi.
 
@@ -22,16 +22,18 @@ for viewing help information about the `CONFIG` subroutine. -->
 
 ## Dependencies
 
-crispr.py is compatible with Python 2.7 only. It also depends on the following Python modules:
+CRISPRonto is compatible with Python 2.7+ and 3.5+; tt also depends on the following Python packages:
+ - [Cython](http://cython.org/)
  - [matplotlib](http://matplotlib.org/)
  - [NumPy](http://www.numpy.org/)
  - [SciPy](https://www.scipy.org/)
+ - [Biopython](http://biopython.org/)
 
 Each of these modules is available on [PyPi](https://pypi.python.org/) and installable using [pip](https://pip.pypa.io/en/stable/)
 
-## `CONFIG`
+## Arguments
 
-The `CONFIG` subroutine creates a configuration file for the `ALIGN` subroutine. Using the `CONFIG` subroutine, one can provide alignment parameters, set reference and template arguments, choose an input FASTQ file or a sample list, set the output directory and project name, and provide extra read group information for SAM output. The configuration file is stored in [INI](https://en.wikipedia.org/wiki/INI_file) format. Please see the help information for more information
+<!-- The `CONFIG` subroutine creates a configuration file for the `ALIGN` subroutine. Using the `CONFIG` subroutine, one can provide alignment parameters, set reference and template arguments, choose an input FASTQ file or a sample list, set the output directory and project name, and provide extra read group information for SAM output. The configuration file is stored in [INI](https://en.wikipedia.org/wiki/INI_file) format. Please see the help information for more information -->
 
 ### Alignment Arguments
 
@@ -40,6 +42,7 @@ The `CONFIG` subroutine creates a configuration file for the `ALIGN` subroutine.
 | `-p | --pvalue-threshold` | Set the p-value threshold for the alignment | No | 1 * 10<sup>-3</sup> |
 | `-g | --gap-opening` | Set the gap opening penalty | No | 8 |
 | `-e | --gap-extension` | Set the gap extension penalty | No | 1 |
+| `-n | --num-cores` | Set the number of cores for multiprocessing | No | Number of cores available or number of FASTQ files provided, whichever is lower |
 
 ### Reference Arguments
 
@@ -64,7 +67,7 @@ The `CONFIG` subroutine creates a configuration file for the `ALIGN` subroutine.
 | Parameter | Definition | Required? | Default |
 | --------- | ---------- | --------- | ------- |
 | `-d | --output-directory` | Choose where to put all output files | No | 'output' |
-| `-j | --project` | Give this project a name, will be used as the basename for output files | No | 'crispr'
+| `-j | --project` | Give this project a name, will be used as the basename for output files | No | 'crispronto'
 
 ### Read Group Arguments
 
@@ -77,9 +80,17 @@ The `CONFIG` subroutine creates a configuration file for the `ALIGN` subroutine.
 | `-rp | --read-platform` | Platform used for sequencing | No | None |
 | `-rs | --read-sample` | Sample being sequenced | No | None |
 
-## `ALIGN`
+### Suppression Arguments
 
-The `ALIGN` subroutine aligns CRISPR-edited RNA-seq data using the parameters stored in a configuration file. This file is easily generated using the `CONFIG` subroutine. It will generate several output files:
+| Parameter | Definition |
+| --------- | ---------- |
+| `--suppress-sam` | Suppress SAM output |
+| `--suppress-events` | Suppress events table output |
+| `--suppress-classification` | Suppress read classification output |
+| `--suppress-tables` | Suppress both events and read classification |
+| `--suppress-plots` | Suppress quality plots |
+
+## Output Files
 
 | Output file | Extension |
 | ----------- | --------- |
@@ -89,7 +100,4 @@ The `ALIGN` subroutine aligns CRISPR-edited RNA-seq data using the parameters st
 | Locus and alignment quality plots | `.pdf` |
 | Summary of read classifications per input FASTQ file | `.summary` |
 
-Any combination of these outputs can be suppressed, please see the help message for more information.
-
 <img src='.nygc.jpeg' alt='New York Genome Center' height='100' width='100'>
-
