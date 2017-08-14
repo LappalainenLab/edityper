@@ -1,9 +1,10 @@
 # Ignore Python byte code
 #########################
+__pycache__/
 *.pyc
 
-# Ignore system directories
-###########################
+# Ignore system files and directories
+#####################################
 .vscode
 .DS_Store
 
