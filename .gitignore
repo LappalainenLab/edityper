@@ -11,9 +11,9 @@
 ###########################
 *.so
 
-# Ignore NW_py.cpp
+# Ignore nw_align.cpp
 ##################
-NW_py.cpp
+nw_align.cpp
 
 # Ignore output files and lists
 ###############################

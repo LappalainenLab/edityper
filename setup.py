@@ -1,6 +1,6 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 
-"""Setup CRISPronto"""
+"""Setup CRISPRonto"""
 
 from setuptools import setup
 from setuptools.extension import Extension
@@ -8,7 +8,7 @@ from setuptools.command.install import install as _install
 from Cython.Distutils import build_ext
 
 #   Some basic information
-NAME = 'CRISPronto'
+NAME = 'CRISPRonto'
 VERSION = '1.0'
 AUTHOR = 'Alexandre Yahi'
 DESCRIPTION = ''
@@ -28,17 +28,19 @@ class install(_install):
 #   Set up the extension
 EXT_MODULES = [
     Extension(
-        name='NW_py',
-        sources=['src/NW_py.pyx', 'src/py_align.cpp'],
+        name='crispronto.nw_align',
+        sources=['src/nw_align.pyx', 'src/py_align.cpp'],
         language='c++'
     )
 ]
 
 #   Dependencies
 INSTALL_REQUIRES = [
+    'cython',
     'numpy',
     'scipy',
-    'matplotlib'
+    'matplotlib',
+    'biopython'
 ]
 
 #   Packages
@@ -69,6 +71,7 @@ setup(
     license=LICENSE,
     url=URL,
     packages=PACKAGES,
+    install_requires=INSTALL_REQUIRES,
     ext_modules=EXT_MODULES,
     entry_points=ENTRY_POINTS,
     cmdclass=CMD_CLASS

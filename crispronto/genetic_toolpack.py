@@ -11,15 +11,22 @@
 from __future__ import print_function
 
 import sys
-if sys.version_info.major is not 2 and sys.version_info.minor is not 7:
-    sys.exit("Please use Python 2.7 for this module: " + __name__)
+PYTHON_VERSION = sys.version_info.major
+# if sys.version_info.major is not 2 and sys.version_info.minor is not 7:
+#     sys.exit("Please use Python 2.7 for this module: " + __name__)
 
 
 import os
 import re
 import gzip
 import logging
-from string import maketrans
+
+if PYTHON_VERSION is 2:
+    from string import maketrans
+elif PYTHON_VERSION is 3:
+    maketrans = str.maketrans
+else:
+    sys.exit("WTF MATE")
 
 def rvcomplement(seq): # type: (str) -> str
     '''Produces the reverse complement of a nucleotide sequence'''
@@ -29,6 +36,12 @@ def rvcomplement(seq): # type: (str) -> str
 
 class Read(object):
     """A FastQ read"""
+
+    @staticmethod
+    def reverse_complement(seq): # type: (str) -> str
+        """RC a sequence"""
+        table = maketrans('ACGT', 'TGCA') # type: str
+        return seq.translate(table)[::-1]
 
     def __init__(self, readid, sequence, quality): # type: (str, str, str) -> None
         self._readid = str(readid)
