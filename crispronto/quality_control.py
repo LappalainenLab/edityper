@@ -1,42 +1,52 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 
-'''Quality control for the CRISPR program'''
+"""Quality control for CRIPRonto"""
 
 from __future__ import print_function
+from __future__ import division
 
 import sys
-if sys.version_info.major is not 2 and sys.version_info.minor is not 7:
-    sys.exit("Please use Python 2.7 for this module: " + __name__)
-
+PYTHON_VERSION = sys.version_info.major
 
 import time
 import random
 import logging
 
-from itertools import repeat
-
 try:
-    import numpy as np
+    import numpy
     from scipy.stats import norm
 except ImportError as error:
     sys.exit("Please install Numpy and SciPy for this module")
 
 try:
-    import genetic_toolpack as toolpack
-    import NW_py as NW
-except ImportError as error:
-    sys.exit("Please keep this program in it's directory to load custom modules: " + error.message)
+    if PYTHON_VERSION is 3:
+        from crispronto import toolkit
+        from crispronto import nw_align
+    elif PYTHON_VERSION is 2:
+        import toolkit
+        import nw_align
+    else:
+        sys.exit("Please use Python 2 or 3 for this module: " + __name__)
+except ImportError:
+    sys.exit("FAIL")
 
 
 random.seed(a=time.time())
-
 
 def align_reference(reference, template, gap_penalty): # type: (str, str, int) -> (str, str)
     """Align our template to our reference"""
     logging.info("Aligning reference and template sequences")
     align_start = time.time()
-    fwd_ref, fwd_template, fwd_qual_score = NW.align_glocal(reference, template, gap_penalty)
-    rev_ref, rev_template, rev_qual_score = NW.align_glocal(reference, toolpack.rvcomplement(seq=template), gap_penalty)
+    fwd_ref, fwd_template, fwd_qual_score = nw_align.align_glocal(
+        seq_1=reference,
+        seq_2=template,
+        gap_penalty=gap_penalty
+    )
+    rev_ref, rev_template, rev_qual_score = nw_align.align_glocal(
+        seq_1=reference,
+        seq_2=toolkit.reverse_complement(sequence=template),
+        gap_penalty=gap_penalty
+    )
     logging.debug("Alignment took %s seconds", round(time.time() - align_start, 3))
     if rev_qual_score > fwd_qual_score:
         logging.warning("Using reverse alignment as it had higher quality")
@@ -44,19 +54,6 @@ def align_reference(reference, template, gap_penalty): # type: (str, str, int) -
     else:
         logging.warning("Using forward alignment as it had higher quality")
         return fwd_ref, fwd_template
-
-
-def validate_reference_alignment(reference, template, snp_mode=False): # type: (str, str, bool) -> List[List[int, Tuple[str]]]
-    """Validate our reference/template alignment and find mismatches"""
-    logging.info("Validating reference/template alignment")
-    validate_start = time.time()
-    ref_template_mismatch = toolpack.get_mismatch(seq_a=reference, seq_b=template) # type: List[List[int, Tuple[str]]]
-    if not ref_template_mismatch:
-        sys.exit(logging.error("There must be at least one mismatch between the template and reference sequences"))
-    if len(ref_template_mismatch) > 1 and snp_mode:
-        sys.exit(logging.error("There can only be one mismatch between the template and reference sequences in SNP mode"))
-    logging.debug("Validation took %s seconds", round(time.time() - validate_start, 3))
-    return ref_template_mismatch
 
 
 def get_snp_states(reference, template, mismatch, mode): # type: (str, str, List, str) -> (int, str, str)
@@ -74,42 +71,41 @@ def get_snp_states(reference, template, mismatch, mode): # type: (str, str, List
 
 
 def determine_alignment_direction(
-        fastq, # type: toolpack.FastQ
-        raw_sequences, # type: List[str]
-        reference, # type: str
+        fastq_name, # type: str
+        unique_reads, # type: Iterable[str]
+        reference, # type: str,
         gap_open, # type: int
         gap_extension, # type: int
         pvalue_threshold # type: float
 ):
-    # type: (...) -> (bool, float)
-    """Determine if we're aligning our reads in the forward or reverse direction"""
-    ten_percent = int(round(0.1 * len(raw_sequences)) + 1)
-    sampled_reads = random.sample(raw_sequences, k=min([500, ten_percent])) # Sample at most 500 reads
-    #   Set up our zip objects
-    perm_reads = map(lambda read: ''.join(random.sample(read, k=len(read))), sampled_reads) # Permutate our reads
-    ref_rc = toolpack.rvcomplement(reference) # Reverse complement our reference sequence
-    norm_f = zip(repeat(reference), sampled_reads, repeat(gap_open), repeat(gap_extension)) # type: List
-    perm_f = zip(repeat(reference), perm_reads, repeat(gap_open), repeat(gap_extension)) # type: List
-    norm_r = zip(repeat(ref_rc), sampled_reads, repeat(gap_open), repeat(gap_extension)) # type: List
-    perm_r = zip(repeat(ref_rc), perm_reads, repeat(gap_open), repeat(gap_extension)) # type: List
-    #   Get our alignment scores
-    align = lambda tup: NW.align_aff(tup[0], tup[1], tup[2], tup[3]) # type: function
-    norm_scores = map(align, norm_f) # type: List[Tuple]
-    perm_scores = map(align, perm_f) # type: List
-    norm_scores_r = map(align, norm_r) # type: List
-    perm_scores_r = map(align, perm_r) # type: List
-    #   Analyze our alignment scores
-    get_third = lambda iterable: iterable[2] # type: function
-    fwd_median = np.median(map(get_third, norm_scores)) # type: numpy.float64
-    rev_median = np.median(map(get_third, norm_scores_r)) # type: numpy.float64
-    if rev_median >= fwd_median:
-        reverse = True # type: bool
-        use_scores = map(get_third, perm_scores_r) # type: List[int]
+    # type: (...) -> None
+    """Deterime if we're aligning our reads in the forward or reverse direction"""
+    logging.info("FASTQ %s: determining alignment direction", fastq_name)
+    determine_start = time.time()
+    ten_percent = int(round(0.1 * len(unique_reads)) + 1)
+    sampled_reads = random.sample(unique_reads, k=min((500, ten_percent))) # Sample at most 500 reads
+    permutate = lambda read: ''.join(random.sample(read, k=len(read)))
+    ref_rc = toolkit.reverse_complement(sequence=reference)
+    norm_scores, perm_scores, rev_scores, perm_rev = list(), list(), list(), list()
+    for read in sampled_reads:
+        perm_read = permutate(read)
+        _, _, score = nw_align.align_aff(seq_1=reference, seq_2=read, gap_op=gap_open, gap_ext=gap_extension)
+        _, _, rev_score = nw_align.align_aff(seq_1=ref_rc, seq_2=read, gap_op=gap_open, gap_ext=gap_extension)
+        _, _, perm_score = nw_align.align_aff(seq_1=reference, seq_2=perm_read, gap_op=gap_open, gap_ext=gap_extension)
+        _, _, rev_perm = nw_align.align_aff(seq_1=ref_rc, seq_2=perm_read, gap_op=gap_open, gap_ext=gap_extension)
+        norm_scores.append(score)
+        perm_scores.append(perm_score)
+        rev_scores.append(rev_score)
+        perm_rev.append(rev_perm)
+    norm_median = numpy.median(norm_scores)
+    rev_median = numpy.median(rev_scores)
+    do_reverse = rev_median > norm_median
+    if do_reverse:
+        threshold = numpy.std(perm_rev) * norm.pdf(1 - pvalue_threshold) + numpy.median(perm_rev)
     else:
-        reverse = False # type: bool
-        use_scores = map(get_third, perm_scores) # type: List[int]
-    msg = "Aligning in the %s direction" % ('reverse' if reverse else 'forward') # type: str
-    score_threshold = np.std(use_scores) * norm.pdf(1 - pvalue_threshold) + np.median(use_scores) # type: numpy.float64
-    logging.warning("FASTQ %s: %s", str(fastq), msg)
-    logging.warning("FASTQ %s: %s vs %s (norm vs reverse) - threshold: %s", str(fastq), fwd_median, rev_median, score_threshold)
-    return reverse, fwd_median, rev_median, score_threshold
+        threshold = numpy.std(perm_scores) * norm.pdf(1 - pvalue_threshold) + numpy.median(perm_scores)
+    msg = 'Aligning in the %s direction' % ('reverse' if do_reverse else 'forward')
+    logging.warning("FASTQ %s: %s", fastq_name, msg)
+    logging.warning("FASTQ %s: %s vs %s (norm vs reverse) - threshold: %s", fastq_name, norm_median, rev_median, threshold)
+    logging.debug("FASTQ %s: Determinging alignment direction took %s seconds", fastq_name, round(time.time() - determine_start, 3))
+    return do_reverse, threshold

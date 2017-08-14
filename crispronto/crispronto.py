@@ -8,21 +8,25 @@ from __future__ import division
 import sys
 PYTHON_VERSION = sys.version_info.major
 
+import os
 import time
 import logging
 import signal
 import itertools
+from collections import Counter
 from multiprocessing import Lock
 
 try:
     if PYTHON_VERSION is 3:
         from crispronto import toolkit
         from crispronto import nw_align
+        from crispronto import quality_control
         from crispronto.arguments import make_argument_parser
         from multiprocessing import pool as Pool
     elif PYTHON_VERSION is 2:
         import toolkit
         import nw_align
+        import quality_control
         from arguments import make_argument_parser
         from multiprocessing import Pool
         from itertools import izip as zip
@@ -54,6 +58,27 @@ def _set_verbosity(level): # type: (str) -> int
 def _check_suppressions(suppressions): # type: (Dict[str, bool]) -> bool
     suppress_tables = suppressions['suppress_events'] and suppressions['suppress_classification']
     return suppressions['suppress_plots'] and suppressions['suppress_sam'] and (suppressions['suppress_tables'] or suppress_tables)
+
+
+def crispr_analysis(tup_args):
+    """Do the CRISPR analysis"""
+    fastq_file, aligned_reference, args_dict = tup_args
+    fastq_name = os.path.basename(fastq_file) # type: str
+    if fastq_name.count('.') == 2:
+        fastq_name = fastq_name.split('.')[0]
+    else:
+        fastq_name = os.path.splitext(fastq_name)[0]
+    reads = toolkit.load_fastq(fastq_file=fastq_file) # type: Tuple[toolpack.Read]
+    unique_reads = Counter(map(lambda read: read.seq, reads)) # type: Counter
+    do_reverse, score_threshold = quality_control.determine_alignment_direction(
+        fastq_name=fastq_name,
+        unique_reads=unique_reads.keys(),
+        reference=aligned_reference.sequence,
+        gap_open=args_dict['gap_opening'],
+        gap_extension=args_dict['gap_extension'],
+        pvalue_threshold=args_dict['pvalue_threshold']
+    )
+    sys.exit(print(do_reverse, score_threshold))
 
 
 def main():
@@ -91,9 +116,40 @@ def main():
     sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
     signal.signal(signal.SIGINT, sigint_handler)
     #   Read in reference and template sequences
+    logging.info("Quality control")
+    qc_start = time.time()
     reference = toolkit.load_seq(args['reference'])
     template = toolkit.load_seq(args['template'])
-    sys.exit((reference, template))
+    #   Align template and reference sequences to determine alignment direction
+    al_ref_seq, al_temp_seq = quality_control.align_reference(
+        reference=reference.sequence,
+        template=template.sequence,
+        gap_penalty=args['gap_opening']
+    )
+    aligned_reference = toolkit.NamedSequence(name=reference.name, sequence=al_ref_seq)
+    aligned_template = toolkit.NamedSequence(name=template.name, sequence=al_temp_seq)
+    #   QC the alignments
+    logging.info("Validating reference/template alignment")
+    alignment_validation = time.time()
+    if '-' in set(aligned_reference.sequence):
+        raise ValueError(logging.error("Cannot have insertions in the reference"))
+    if '-' in set(toolkit.side_trimmer(seq=aligned_template.sequence)):
+        raise ValueError(logging.error("Cannot have deletions in the template sequence"))
+    template_reference_mismatch = toolkit.get_mismatch(seq_a=aligned_reference.sequence, seq_b=aligned_template.sequence)
+    if not template_reference_mismatch:
+        raise ValueError(logging.error("There must be at least one mismatch between the template and reference sequences"))
+    if len(template_reference_mismatch) > 1 and args['analysis_mode'] == 'SNP':
+        raise ValueError(logging.error("There can only be one mismatch between the template and reference sequences in SNP mode"))
+    logging.debug("Reference/template aligmnent validation took %s seconds", round(time.time() - alignment_validation, 3))
+    #   Get SNP information
+    snp_index, reference_state, target_snp = quality_control.get_snp_states(
+        reference=aligned_reference.sequence,
+        template=aligned_template.sequence,
+        mismatch=template_reference_mismatch,
+        mode=args['analysis_mode']
+    )
+    logging.debug("Quality control took %s seconds", round(time.time() - qc_start, 3))
+    crispr_analysis(tup_args=(args['input_file'], aligned_reference, args))
     #   Setup our multiprocessing pool
     #   Allow the user to specify the number of jobs to run at once
     #   If not specified, let multiprocessing figure it out
@@ -101,8 +157,8 @@ def main():
         pool = Pool(processes=args['num_cores']) # type: multiprocessing.Pool
     except KeyError:
         pool = Pool() # type: multiprocessing.Pool
-    if all(map(lambda i: i > 1, (len(fastq_list), getattr(pool, '_processes')))):
-        pass
+    # if all(map(lambda i: i > 1, (len(fastq_list), getattr(pool, '_processes')))):
+    #     pass
     #   Close logfile
     args['logfile'].close()
 

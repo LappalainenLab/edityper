@@ -10,7 +10,9 @@ import sys
 PYTHON_VERSION = sys.version_info.major
 
 import os
+import time
 import gzip
+import logging
 from collections import namedtuple
 
 if PYTHON_VERSION is 2:
@@ -29,33 +31,44 @@ except ImportError as error:
 Read = namedtuple('Read', ('name', 'seq', 'qual'))
 NamedSequence = namedtuple('NamedSequence', ('name', 'sequence'))
 
-def load_fastq(fastq_file): # type: (str) -> Tuple[Read]:
+def load_fastq(fastq_file): # type: (str, Optional[str]) -> Tuple[Read]:
     """Load a FASTQ file"""
+    logging.info("Reading in FASTQ file '%s'", fastq_file)
+    read_start = time.time()
     reads = [] # type: List[Read]
     if os.path.splitext(fastq_file)[-1] == '.gz':
         my_open = gzip.open
     else:
         my_open = open
-    with my_open(fastq_file, 'rt') as ffile:
-        for read in FastqGeneralIterator(ffile):
-            name, seq, qual = read
-            reads.append(Read(name=name, seq=seq, qual=qual))
+    try:
+        with my_open(fastq_file, 'rt') as ffile:
+            for read in FastqGeneralIterator(ffile):
+                name, seq, qual = read
+                reads.append(Read(name=name, seq=seq, qual=qual))
+    except:
+        sys.exit(logging.critical("Cannot find or read FASTQ file '%s'", fastq_file))
+    logging.debug("Reading in FASTQ file '%s' took %s seconds", fastq_file, round(time.time() - read_start, 3))
     return tuple(reads)
 
 
 def load_seq(seq_file): # type: (str) -> (str, str)
     """Load reference and template"""
+    logging.info("Loading sequence file '%s'", seq_file)
+    load_start = time.time()
     output, name = str(), str() # type: str, str
     if os.path.splitext(seq_file)[-1] == '.gz':
         my_open = gzip.open
     else:
         my_open = open
-    with my_open(seq_file, 'rt') as sfile:
-        for line in sfile:
-            if line.startswith('>'):
-                name += line.strip()
-                continue
-            output += line.strip().replace(' ', '').upper()
+    try:
+        with my_open(seq_file, 'rt') as sfile:
+            for line in sfile:
+                if line.startswith('>'):
+                    name += line.strip()
+                    continue
+                output += line.strip().replace(' ', '').upper()
+    except:
+        sys.exit(logging.critical("Cannot find or read sequence file '%s'", seq_file))
     if not name:
         name = os.path.basename(seq_file) # type:str
         if name.count('.') == 2:
@@ -63,6 +76,7 @@ def load_seq(seq_file): # type: (str) -> (str, str)
         else:
             name = os.path.splitext(name)[0] # type: str
     name = name.split(' ')[0].replace('>', '')
+    logging.debug("Loading sequence took %s seconds", round(time.time() - load_start, 3))
     return NamedSequence(name=name, sequence=output)
 
 
@@ -139,3 +153,14 @@ def trim_interval(seq): # type: (str) -> (int, int)
         tail -= 1
     tail = (len(seq) + 1) + tail # type: int
     return head, tail
+
+
+def side_trimmer(seq): # type: (str) -> str
+    '''Trim only side gaps of an aligned sequence, return trimmed aligned sequence'''
+    trimmed_seq = str() # type: str
+    head, tail = trim_interval(seq=seq) # type: int, int
+    if tail == -1:
+        trimmed_seq = seq[head:]
+    else:
+        trimmed_seq = seq[head:tail]
+    return trimmed_seq
