@@ -106,7 +106,7 @@ def anys(*args): # type: (Any) -> bool
 def reverse_complement(sequence): # type: (str) -> str
     """Reverse complement a nucleotide sequence"""
     table = maketrans('ACGT', 'TGCA')
-    return sequence.translate(table)
+    return sequence.translate(table)[::-1]
 
 
 def get_mismatch(
@@ -164,3 +164,11 @@ def side_trimmer(seq): # type: (str) -> str
     else:
         trimmed_seq = seq[head:tail]
     return trimmed_seq
+
+
+def sim_seq(seq1, seq2): # type: (Iterable, Iterable) -> int
+    '''Find up to which index seq2 is similar to seq1'''
+    sim_index = 0 # type: int
+    while seq1[sim_index] == seq2[sim_index]:
+        sim_index += 1
+    return sim_index

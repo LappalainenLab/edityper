@@ -13,19 +13,21 @@ import time
 import logging
 import signal
 import itertools
-from collections import Counter
 from multiprocessing import Lock
+from collections import Counter, defaultdict
 
 try:
     if PYTHON_VERSION is 3:
         from crispronto import toolkit
         from crispronto import nw_align
+        from crispronto import alignment
         from crispronto import quality_control
         from crispronto.arguments import make_argument_parser
         from multiprocessing import pool as Pool
     elif PYTHON_VERSION is 2:
         import toolkit
         import nw_align
+        import alignment
         import quality_control
         from arguments import make_argument_parser
         from multiprocessing import Pool
@@ -63,12 +65,17 @@ def _check_suppressions(suppressions): # type: (Dict[str, bool]) -> bool
 def crispr_analysis(tup_args):
     """Do the CRISPR analysis"""
     fastq_file, aligned_reference, args_dict = tup_args
+    #   Make a name for our FASTQ file
     fastq_name = os.path.basename(fastq_file) # type: str
     if fastq_name.count('.') == 2:
         fastq_name = fastq_name.split('.')[0]
     else:
         fastq_name = os.path.splitext(fastq_name)[0]
+    logging.info("FASTQ %s: Starting analysis", fastq_name)
+    analysis_start = time.time()
+    #   Load the reads
     reads = toolkit.load_fastq(fastq_file=fastq_file) # type: Tuple[toolpack.Read]
+    #   Determine the alignment direction for our reads
     unique_reads = Counter(map(lambda read: read.seq, reads)) # type: Counter
     do_reverse, score_threshold = quality_control.determine_alignment_direction(
         fastq_name=fastq_name,
@@ -78,7 +85,19 @@ def crispr_analysis(tup_args):
         gap_extension=args_dict['gap_extension'],
         pvalue_threshold=args_dict['pvalue_threshold']
     )
-    sys.exit(print(do_reverse, score_threshold))
+    if do_reverse:
+        unique_reads = {toolkit.reverse_complement(sequence=read): count for read, count in unique_reads.items()}
+    #   Sort the reads by length
+    reads_by_length = alignment.sort_reads_by_length(reads=unique_reads.keys(), fastq_name=fastq_name)
+    alignments = alignment.align_recurse( # type: Dict[int, List[alignment.Alignment]]
+        fastq_name=fastq_name,
+        reads_by_length=reads_by_length,
+        reference=aligned_reference.sequence,
+        gap_open=args_dict['gap_opening'],
+        gap_extension=args_dict['gap_extension']
+    )
+    logging.info("Collecting alignment scores")
+    logging.debug("FASTQ %s: Analysis took %s seconds", fastq_name, round(time.time() - analysis_start, 3))
 
 
 def main():
