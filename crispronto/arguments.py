@@ -3,9 +3,6 @@
 '''Set the arguments for the CRISPR alingment and analysis pipeline'''
 
 import sys
-# if sys.version_info.major is not 2 and sys.version_info.minor is not 7:
-#     sys.exit("Please use Python 2.7 for this module: " + __name__)
-
 
 import os
 import argparse
@@ -59,7 +56,7 @@ def make_argument_parser():
         metavar='LOG FILE',
         help="Specify a file for the log messages, defaults to stderr"
     )
-    align_opts = parser.add_argument_group(
+    align_opts = parser.add_argument_group( # Alignment options
         title='alignment arguments',
         description='Set parameters for alignment'
     )
@@ -115,7 +112,7 @@ def make_argument_parser():
         metavar='NUM CORES',
         help="How many cores should we use for multiprocessing? Defaults to the number of FASTQ files provided or the number of cores available on the system, whichever is lower"
     )
-    ref_opts = parser.add_argument_group(
+    ref_opts = parser.add_argument_group( # Reference and template sequences
         title='reference arguments',
         description='Provide FASTA files for the reference and template sequences'
     )
@@ -139,7 +136,7 @@ def make_argument_parser():
         metavar='TEMPLATE SEQUENCE',
         help="Choose a template FASTA file"
     )
-    in_opts = parser.add_argument_group(
+    in_opts = parser.add_argument_group( # Input FASTQ options
         title='input arguments',
         description='Provide either a single FASTQ file or a list of FASTQ files. Note: we currently do NOT support paired-end FASTQ files'
     )
@@ -162,7 +159,7 @@ def make_argument_parser():
         metavar='SAMPLE LIST',
         help="Provdide a sample list, with each sample on its own line, mutually exclusive with '-i | --input-file'"
     )
-    out_opts = parser.add_argument_group(
+    out_opts = parser.add_argument_group( # Output options
         title='output arguments',
         description='Provide an output directory and project name. All files, including the configuration file, will be placed in the output directory with a basename of the project name.'
     )
@@ -186,7 +183,7 @@ def make_argument_parser():
         metavar='PROJECT',
         help="Provide a project name to be used as the basename for all output files; defaults to '%s'" % _PROJECT_DEFAULT
     )
-    rg_opts = parser.add_argument_group(
+    rg_opts = parser.add_argument_group( # Arguments for read groups
         title='read group arguments',
         description="Provide extra read group information. Note: this information will be applied to ALL read groups"
     )
@@ -231,7 +228,7 @@ def make_argument_parser():
         metavar='READ SAMPLE',
         help="Sample, use pool name when a pool is being sequenced (@RG SM)"
     )
-    suppression = parser.add_argument_group(
+    suppression = parser.add_argument_group( # Arguments for suppressing outputs
         title='suppression arguments',
         description="Choose to suppress some or all of the output files"
     )
