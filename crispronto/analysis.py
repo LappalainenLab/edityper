@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 
 """Analysis of alignments for the CRISPR program"""
 
@@ -6,8 +6,7 @@ from __future__ import division
 from __future__ import print_function
 
 import sys
-if sys.version_info.major is not 2 and sys.version_info.minor is not 7:
-    sys.exit("Please use Python 2.7 for this module: " + __name__)
+PYTHON_VERSION = sys.version_info.major
 
 
 import re
@@ -17,13 +16,16 @@ import itertools
 from math import floor, ceil
 from collections import Counter, defaultdict, namedtuple
 
-try:
-    import genetic_toolpack as toolpack
-except ImportError as error:
-    sys.exit("Please keep this program in it's directory to load custom modules: " + error.message)
+if PYTHON_VERSION is 2:
+    import itertools.imap as map
+    range = xrange
+elif PYTHON_VERSION is 3:
+    pass
+else:
+    sys.exit("Please use Python 2 or 3 for this module: " + __name__)
 
 try:
-    import numpy as np
+    import numpy
 except ImportError:
     sys.exit("Please install Numpy for this module: " + __name__)
 
@@ -44,185 +46,12 @@ def percent(num, total): # type: (int, int) -> float
 def summarize(data, rounding=None): # type: (Iterable[Union[int, float]], Optional[int]) -> Union[int, float], float, float
     '''Get the sum, mean, and standard deviation of a collection of data'''
     total = sum(data)
-    avg = np.mean(data)
-    std = np.std(data)
+    avg = numpy.mean(data)
+    std = numpy.std(data)
     if rounding:
         avg = round(avg, rounding)
         std = round(std, rounding)
     return total, float(avg), float(std)
-
-
-def find_insertions(
-        ref_seq, # type: str
-        read_seq, # type: str
-        num_reads # type: int
-):
-    # type: (...) -> Dict[int, List[int]], str, str, int
-    """Find and log insertions"""
-    insertions = defaultdict(list)
-    insertion_gap_list = toolpack.find_gaps(seq=ref_seq) # type: List[Tuple[int]]
-    if insertion_gap_list:
-        nm_ins = len(insertion_gap_list) # type: int
-        temp = 0 # type: int
-        for gap in insertion_gap_list: # type: Tuple[int, int]
-            position, gi_length = gap # type: int, int
-            position = position - temp # type: int
-            temp = temp + gi_length # type: int
-            insertions[position].extend(itertools.repeat(gi_length, num_reads))
-        to_remove = {m.start() for m in re.finditer('-', ref_seq)} # type: Set[int]
-        ref_no_ins = ''.join((base for index, base in enumerate(ref_seq) if index not in to_remove)) # type: str
-        read_no_ins = ''.join((base for index, base in enumerate(read_seq) if index not in to_remove)) # type: str
-    else:
-        nm_ins = 0 # type: int
-        ref_no_ins = ref_seq # type: str
-        read_no_ins = read_seq # type: str
-    return dict(insertions), ref_no_ins, read_no_ins, nm_ins
-
-
-def find_deletions(
-        read_seq, # type: str
-        num_reads, # type: int
-        head, # type: int
-        tail # type: int
-):
-    # type: (...) -> Dict[int, List[int]], int
-    """Find and log deletions"""
-    deletions = defaultdict(list)
-    deletion_gap_list = toolpack.find_gaps(seq=read_seq, head=head, tail=tail) # type: List[Tuple[int]]
-    if deletion_gap_list:
-        nm_del = len(deletion_gap_list) # type: int
-        for gap in deletion_gap_list: # type: Tuple[int, int]
-            position, gd_length = gap # type: int, int
-            deletions[position].extend(itertools.repeat(gd_length, num_reads))
-    else:
-        nm_del = 0 # type: int
-    return dict(deletions), nm_del
-
-
-def find_mismatches(
-        ref_seq, # type: str
-        read_seq, # type: str
-        num_reads, # type: int
-        read_head, # type: int
-        read_tail # type: int
-):
-    # type: (...) -> (Dict[int, List[str]], collections.Counter, int)
-    """Find and log mismatches
-    'ref_seq' is the reference sequence without insertions
-    'read_seq' is the aligned read sequence
-    'num_reads' is the number of reads supporting this alignment
-    'read_head' is where the aligned read starts (end of leading '-')
-    'read_tail' is where the aligned read ends (start of trailing '-')"""
-    mismatches = defaultdict(list)
-    matches = Counter()
-    mis_list, match_list = toolpack.get_mismatch(
-        seq_a=ref_seq,
-        seq_b=read_seq,
-        head=read_head,
-        tail=read_tail,
-        matches=True
-    )
-    if mis_list:
-        nm_mis = len(mis_list)
-        for mismatch in mis_list:
-            position, perm = mismatch
-            source, snp = perm; del source
-            mismatches[position].extend(itertools.repeat(snp, num_reads))
-    else:
-        nm_mis = 0
-    for match in match_list:
-        matches[match] += num_reads
-    return dict(mismatches), matches, nm_mis
-
-
-def run_analysis(
-        alignments, # type: Iterable[al.Alignment]
-        reference, # type: str
-        score_threshold, # type: numpy.float64
-        snp_index, # type: int
-        target_snp # type: str
-):
-    # type: (...) -> (Reporter, Tuple[defaultdict[int, List[al.Alignment]]])
-    """Analyze the alignment results
-    'alignments' is a diciontary where the values are lists of Alignments
-    'score_threshold' is a floating point score threshold
-    'snp_index', is an int representing the index where the SNP is
-    'target_snp' is a signle character str reperesenting the target SNP for this experiment"""
-    #   Create some holding dicts
-    total_deletions = defaultdict(list)
-    total_insertions = defaultdict(list)
-    total_mismatches = defaultdict(list)
-    total_matches = defaultdict(int)
-    #   A tuple of results
-    #   Unpack so I never have to refer to indecies
-    class_reads = (defaultdict(list), defaultdict(list), defaultdict(list), defaultdict(list))
-    hdr, nhej, no_edit, disc = class_reads
-    out_idx = 0 # type: int
-    #   Start doing things
-    for alignment in alignments: # type: al.Alignment
-        out_idx += 1
-        # num_reads = len(reads_dict[alignment.get_unaligned()]) # type: int
-        num_reads = len(alignment.get_names())
-        #   Alignment is below score threshold, discard it
-        if alignment.get_score() < score_threshold:
-            alignment.set_stats(num_reads=num_reads, nm_del=0, nm_ins=0, nm_mis=0)
-            disc[out_idx].append(alignment)
-            continue
-        #   Get get rid of head/tail gaps to better find indels and mismatches
-        ref_head, ref_tail = toolpack.trim_interval(seq=alignment.get_aligned_reference()) # type: int, int
-        aligned_ref = alignment.get_aligned_reference()[ref_head:ref_tail] # type: str
-        aligned_read = alignment.get_aligned_read()[ref_head:ref_tail] # type: str
-        # read_head, read_tail = toolpack.trim_interval(aligned_read) # type: int, int
-        #   Find insertions
-        insertions, ref_no_ins, read_no_ins, nm_ins = find_insertions( # type: Dict[int, List[int]], str, str, int
-            ref_seq=aligned_ref,
-            read_seq=aligned_read,
-            num_reads=num_reads
-        )
-        for position, ins_list in insertions.items(): # type: int, List[int]
-            total_insertions[position].extend(ins_list)
-        #   Find deletions
-        read_head, read_tail = toolpack.trim_interval(seq=read_no_ins)
-        deletions, nm_del = find_deletions( # type: Dict[int, List[int]], int
-            read_seq=read_no_ins,
-            num_reads=num_reads,
-            head=read_head,
-            tail=read_tail
-        )
-        for position, del_list in deletions.items(): # type: int, List[int]
-            total_deletions[position].extend(del_list)
-        #   Find matches and mismatches
-        mismatches, matches, nm_mis = find_mismatches( # type: Dict[int, List[str]], collections.Counter, int
-            ref_seq=ref_no_ins,
-            read_seq=read_no_ins,
-            num_reads=num_reads,
-            read_head=read_head,
-            read_tail=read_tail
-        )
-        for position, mis_list in mismatches.items(): # type: int, List[str]
-            total_mismatches[position].extend(mis_list)
-        for position, count in matches.items(): # type: int, int
-            total_matches[position] += count
-        #   Classification
-        #   Yay tuple unpacking!
-        alignment.set_stats(num_reads=num_reads, nm_del=nm_del, nm_ins=nm_ins, nm_mis=nm_mis)
-        if read_no_ins[snp_index] == target_snp:
-            hdr[out_idx].append(alignment)
-        elif not (nm_del and nm_ins and nm_mis):
-            no_edit[out_idx].append(alignment)
-        else:
-            nhej[out_idx].append(alignment)
-    total_insertions = _filter_to_dict(filtered_dict=filter(lambda tup: tup[0] < len(reference), total_insertions.items()))
-    total_deletions = _filter_to_dict(filtered_dict=filter(lambda tup: tup[0] < len(reference), total_deletions.items()))
-    total_mismatches = _filter_to_dict(filtered_dict=filter(lambda tup: tup[0] < len(reference), total_mismatches.items()))
-    total_matches = _filter_to_dict(filtered_dict=filter(lambda tup: tup[0] < len(reference), total_matches.items()))
-    report = Reporter( # type: Reporter
-        deletions=total_deletions,
-        insertions=total_insertions,
-        mismatches=total_mismatches,
-        matches=total_matches
-    )
-    return report, class_reads
 
 
 def display_classification(
@@ -441,7 +270,7 @@ def create_report(
     cumulative_deletions = Counter() # type: collections.Counter
     for position, dist in deletions.items(): # type: int, List[int]
         for length in dist: # type: int
-            for index in xrange(length): # type: int
+            for index in range(length): # type: int
                 cumulative_deletions[position + index] += 1
     #   Prepare output file
     events_name = output_prefix + '.events'
