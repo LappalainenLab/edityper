@@ -56,13 +56,6 @@ class Alignment(object):
         args = toolkit.unpack(collection=args)
         self._names = args
 
-    # def set_stats(self, num_reads, nm_del, nm_ins, nm_mis):  # type: (int, int, int, int) -> None
-    #     """Set the stats"""
-    #     self._num_reads = num_reads
-    #     self._nmdel = nm_del
-    #     self._nmins = nm_ins
-    #     self._nmmis = nm_mis
-
     def _get_aligned_reference(self): # type: (None) -> str
         return self._ref
 
@@ -74,10 +67,6 @@ class Alignment(object):
 
     def _get_names(self): # type: (None) -> Tuple[str]
         return tuple(self._names)
-
-    # def get_stats(self): # type: (None) -> (int, int, int, int)
-    #     """Get the stats for this alignment"""
-    #     return self._num_reads, self._nmdel, self._nmins, self._nmmis
 
     def _get_unaligned(self): # type: (None) -> str
         return self._unaligned
@@ -164,15 +153,3 @@ def align_recurse(
             temp = read # type: str
     logging.debug("FASTQ %s: Alignment took %s seconds", fastq_name, round(time.time() - alignment_start, 3))
     return dict(alignments)
-
-
-def alignment_by_fastq(
-        alignments, # type: Iterable[alignment.Alignment]
-):
-    # type: (...) -> Dict[str, List[alignment.Alignment]]
-    """Organize alignments by the FASTQ files that contained the reads supporting each alignment"""
-    sorted_alignments = defaultdict(list)
-    for aligned in alignments:
-        for source in aligned.get_sources():
-            sorted_alignments[source].append(aligned)
-    return sorted_alignments
