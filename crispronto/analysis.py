@@ -8,8 +8,9 @@ from __future__ import print_function
 import sys
 PYTHON_VERSION = sys.version_info.major
 
-
+import os
 import re
+import time
 import logging
 import warnings
 import itertools
@@ -17,7 +18,7 @@ from math import floor, ceil
 from collections import Counter, defaultdict, namedtuple
 
 if PYTHON_VERSION is 2:
-    import itertools.imap as map
+    from itertools import imap as map
     range = xrange
 elif PYTHON_VERSION is 3:
     pass
@@ -54,54 +55,125 @@ def summarize(data, rounding=None): # type: (Iterable[Union[int, float]], Option
     return total, float(avg), float(std)
 
 
+def events_report(
+        fastq_name, # type: str
+        events, # type: Dict[str, defaultdict]
+        reference, # type: str
+        snp_index, # type: int
+        output_prefix # type: str
+):
+    # type: (...) -> None
+    """Create the events table"""
+    logging.info("FASTQ %s: Creating events table...", fastq_name)
+    events_start = time.time() # type: float
+    #   Header information
+    header = ( # type: Tuple[str]
+        '#POS',
+        'REF',
+        'COV',
+        'DEL',
+        'AVG_DEL',
+        'DCOUNT',
+        'INS',
+        'AVG_INS',
+        'A',
+        'T',
+        'C',
+        'G'
+    )
+    #   Calculate cumulative deletions
+    cummulative_deletions = defaultdict(int) # type: defaultdict
+    for position, dist in events['deletions'].items():
+        for length in dist:
+            for i in range(length):
+                cummulative_deletions[position + i] += 1
+    #   Create output file
+    output_name = os.path.join(output_prefix, fastq_name + '.events')
+    with open(output_name, 'w') as efile:
+        logging.info("FASTQ %s: Writing events table to %s", fastq_name, output_name)
+        efile.write('\t'.join(header))
+        efile.write('\n')
+        efile.flush()
+        for index, base in enumerate(reference):
+            #   Get the mismatches
+            try:
+                nucleotides = Counter(events['mismatches'][index])
+            except KeyError:
+                nucleotides = dict.fromkeys(('A', 'C', 'G', 'T'), 0)
+            #   Get deletions
+            deletions = events['deletions'].get(index, [])
+            deletion_count = len(deletions)
+            avg_deletion = numpy.mean(deletions) if deletion_count else 0
+            # Get insertions
+            insertions = events['insertions'].get(index, [])
+            insertion_count = len(insertions)
+            avg_insertion = numpy.mean(insertions) if insertion_count else 0
+            #   Matches
+            nucleotides[base] = events['matches'].get(index, 0)
+            #   Coverage
+            covered = cummulative_deletions.get(index, 0)
+            covered += sum(nucleotides.values())
+            #   Assemble and write
+            results = ( # type: Tuple[Any]
+                index + 1,
+                base,
+                covered,
+                deletion_count,
+                avg_deletion,
+                cummulative_deletions.get(index, 0),
+                insertion_count,
+                avg_insertion,
+                nucleotides['A'],
+                nucleotides['T'],
+                nucleotides['C'],
+                nucleotides['G']
+            )
+            results = map(str, results) # type: Tuple[str]
+            if index == snp_index:
+                efile.write(_DISP_BREAK + '\n')
+            efile.write('\t'.join(results))
+            efile.write('\n')
+            if index == snp_index:
+                efile.write(_DISP_BREAK + '\n')
+            efile.flush()
+    logging.debug("FASTQ %s: Creating events table took %s seconds", fastq_name, round(time.time() - events_start, 3))
+
+
 def display_classification(
-        fastq, # type: toolpack.FastQ
-        read_classification, # type: Tuple[defaultdict[int, List[Alignment]]]
-        total_reads, # type: int
-        snp_position, # type: int
-        ref_state, # type: str
-        target_snp, # type: str
+        fastq_name, # type: str
+        classifications, # type: Tuple[Dict[str, Events]]
+        unique_reads, # type: Mapping[str, int]
+        snp_info, # type: SNP
         fwd_score, # type: float
         rev_score, # type: float
         score_threshold, # type: float
         output_prefix # type: str
 ):
     # type: (...) -> (int, Dict[str, int])
-    """Display the report of the read classifification
-    'read_classification' is a tuple of four dictionaries where the values are
-    lists of Alignment objects and the four dictionaries are (in order):
-    'HDR', 'NHEJ', 'NO EDIT', and 'DISCARD' read classifications;
-    'total_reads' is the total number of reads for the entire sample
-    'snp_position' is the position of the SNP
-    'ref_state' is the state of the reference sequence at 'snp_position'
-    'target_snp' is the ideal SNP state
-    'fwd_score' is the score of the forward alignment (from QC steps)
-    'rev_score' is the score of the reverse alignment (from QC steps)
-    'score_threshold' is the score threshold (from QC steps)
-    'output_prefix' is the output directory + basename for the events report"""
+    """Display the report of the read classifification"""
     #   Make some headers for the display
     class_header = "################################################"
-    name = str(fastq) # type: str
-    pre_repeat = int(floor((len(class_header) - len(name)) / 2)) # type: int
-    post_repeat = int(ceil((len(class_header) - len(name)) / 2)) # type: int
-    name_header = ''.join(itertools.repeat('-', pre_repeat)) + name + ''.join(itertools.repeat('-', post_repeat))
-    #   Classify warnings as errors for catching numpy stuff
-    warnings.simplefilter('error')
+    pre_repeat = int(floor((len(class_header) - len(fastq_name)) / 2)) # type: int
+    post_repeat = int(ceil((len(class_header) - len(fastq_name)) / 2)) # type: int
+    name_header = ''.join(itertools.repeat('-', pre_repeat)) + fastq_name + ''.join(itertools.repeat('-', post_repeat))
+    # #   Classify warnings as errors for catching numpy stuff
+    # warnings.simplefilter('error')
     #   Create an output name
-    full_class_name = output_prefix + '.classifications'
-    logging.info("Writing full classification breakdown to %s", full_class_name)
+    output_name = os.path.join(output_prefix, fastq_name + '.classifications')
+    logging.info("FASTQ %s: Writing full classification breakdown to %s", fastq_name, output_name)
+    #   Quick statistics
+    num_unique = len(unique_reads)
+    total_reads = sum(unique_reads.values())
     #   Display our classifications
     logging.warning(class_header)
     logging.warning("--------------Read Classifications--------------")
     logging.warning(name_header)
-    num_unique = len( # type: int
-        tuple(
-            itertools.chain.from_iterable(
-                (alignment_list for class_dict in read_classification for alignment_list in class_dict.values())
-            )
-        )
+    snp_header = ( # type: Tuple[str]
+        '##SNP',
+        'POS:%s' % (snp_info.position + 1),
+        'REF:%s' % snp_info.reference,
+        'TEMPLATE:%s' % snp_info.target
     )
-    snp_header = ('##SNP', 'POS:%s' % (snp_position + 1), 'REF:%s' % ref_state, 'TEMPLATE:%s' % target_snp) # type: Tuple[str]
     read_header = ( # type: Tuple[str]
         '##READS',
         'TOTAL:%s' % total_reads,
@@ -142,7 +214,7 @@ def display_classification(
     counted_total = 0 # type: int
     hdr_indels = 0 # type: int
     total_counts = dict.fromkeys(iter_tag.values(), 0)
-    with open(full_class_name, 'w') as cfile:
+    with open(output_name, 'w') as cfile:
         cfile.write('\t'.join(snp_header) + '\n')
         cfile.write('\t'.join(read_header) + '\n')
         cfile.write('\t'.join(score_header) + '\n')
@@ -151,30 +223,25 @@ def display_classification(
         for index, tag in sorted(iter_tag.items(), key=lambda tup: tup[0]): # type: int, str
             #   Some holding values
             count = 0 # type: int
-            event_lists = dict.fromkeys(('indels', 'insertions', 'deletions', 'mismatches'), list()) # type: Dict[str, List[int]]
+            event_lists = defaultdict(list) # type: defaultdict[List]
             event_counts = dict.fromkeys(('none', 'deletions', 'insertions', 'indels'), 0) # type: Dict[str, int]
-            for alignment in itertools.chain.from_iterable(read_classification[index].values()): # type: al.Alignment
+            for event in classifications[index].values(): # type: Event
                 #   Create summaries
-                num_reads, nm_del, nm_ins, nm_mis = alignment.get_stats()#; del nm_mis
-                event_lists['indels'].append(nm_ins + nm_del)
-                event_lists['insertions'].extend([nm_ins] * num_reads)
-                event_lists['deletions'].extend([nm_del] * num_reads)
-                event_lists['mismatches'].extend([nm_mis] * num_reads)
-                if nm_ins > 0 and nm_del > 0:
-                    event_counts['indels'] += num_reads
-                elif nm_ins > 0 and nm_del <= 0:
-                    event_counts['insertions'] += num_reads
-                elif nm_del > 0 and nm_ins <= 0:
-                    event_counts['deletions'] += num_reads
+                event_lists['indels'].append(event.num_ins + event.num_del)
+                event_lists['insertions'].extend([event.num_ins] * event.num_reads)
+                event_lists['deletions'].extend([event.num_del] * event.num_reads)
+                event_lists['mismatches'].extend([event.num_mis] * event.num_reads)
+                if event.num_ins > 0 and event.num_del > 0:
+                    event_counts['indels'] += event.num_reads
+                elif event.num_ins > 0 and event.num_del <= 0:
+                    event_counts['insertions'] += event.num_reads
+                elif event.num_del > 0 and event.num_ins <= 0:
+                    event_counts['deletions'] += event.num_reads
                 else:
-                    event_counts['none'] += num_reads
-                count += num_reads
-                counted_total += num_reads
-            #   Do this to avoid Numpy warnings
-            try:
-                avg_indels = np.mean(event_lists['indels']) # type: numpy.float64
-            except RuntimeWarning:
-                avg_indels = 0
+                    event_counts['none'] += event.num_reads
+                count += event.num_reads
+                counted_total += event.num_reads
+            avg_indels = numpy.mean(event_lists['indels']) if event_lists['indels'] else 0
             perc_count = percent(num=count, total=total_reads)
             #   Display our summaries
             logging.warning("%s: count %s", tag, count)
@@ -234,96 +301,3 @@ def display_classification(
             logging.error("%s reads missing after classification", total_reads - counted_total)
         logging.warning(class_header)
         return hdr_indels, total_counts
-
-
-def create_report(
-        reporter, # type: Reporter
-        reference, # type: str
-        snp_index, # type: int
-        output_prefix, # type: str
-        interesting_only=True # type: bool
-):
-    # type: (...) -> None
-    """Create the events report for the CRISPR program
-    'reporter' is a namedtuple with four dictionaries of lists of alignments in the following order:
-        'deletions', 'insertions', 'mismatches', 'matches'
-    'reference' is the reference sequence
-    'snp_index' is the position of the SNP
-    'output_prefix' is the output directory + basename for the events report
-    'interesting_only' tells us to report bases in the reference sequence where an event happens"""
-    events_header = ( # type: Tuple[str]
-        '#POS',
-        'BASE',
-        'COV',
-        'DEL',
-        'AVG_DEL',
-        'INS',
-        'AVG_INS',
-        'A_MIS',
-        'T_MIS',
-        'C_MIS',
-        'G_MIS'
-    )
-    #   Unpack our report
-    deletions, insertions, mismatches, matches = reporter
-    #   Start counting coverage
-    cumulative_deletions = Counter() # type: collections.Counter
-    for position, dist in deletions.items(): # type: int, List[int]
-        for length in dist: # type: int
-            for index in range(length): # type: int
-                cumulative_deletions[position + index] += 1
-    #   Prepare output file
-    events_name = output_prefix + '.events'
-    #   Start classifying events
-    logging.info('Writing events log to %s', events_name)
-    with open(events_name, 'w') as efile:
-        efile.write('\t'.join(events_header) + '\n')
-        for position, base in enumerate(reference): # type: int, str
-            if position in insertions:
-                count_ins = len(insertions[position]) # type: int
-                mean_ins = round(np.mean(insertions[position]), 2) # type: float
-            else:
-                count_ins, mean_ins = 0, 0 # type: int, int
-            if position in mismatches:
-                nuc_counter = Counter(mismatches[position]) # type: collections.Counter
-            else:
-                nuc_counter = {base: 0 for base in 'ACGT'} # type: Dict[str, int]
-            if position in deletions:
-                count_del = len(deletions[position]) # type: int
-                mean_del = round(np.mean(deletions[position]), 2) # type: float
-            else:
-                count_del, mean_del = 0, 0 # type: int, int
-            covered = cumulative_deletions[position] + sum(nuc_counter.values()) # type: int
-            if position in matches:
-                covered += matches[position]
-            if interesting_only:
-                check = [ # type: List[int]
-                    covered,
-                    count_ins,
-                    mean_ins,
-                    count_del,
-                    mean_del
-                ]
-                check.extend(nuc_counter.values())
-                if sum(check) == 0:
-                    continue
-            msg = (
-                position + 1,
-                base,
-                covered,
-                count_del,
-                mean_del,
-                count_ins,
-                mean_ins,
-                nuc_counter['A'],
-                nuc_counter['T'],
-                nuc_counter['C'],
-                nuc_counter['G']
-            )
-            if position == snp_index:
-                efile.write(_DISP_BREAK + '\n')
-            msg = map(str, msg) # type: Iterable[str]
-            msg = '\t'.join(msg) # type: str
-            efile.write(msg + '\n')
-            if position == snp_index:
-                efile.write(_DISP_BREAK + '\n')

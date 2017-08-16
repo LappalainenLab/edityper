@@ -108,4 +108,4 @@ def determine_alignment_direction(
     logging.warning("FASTQ %s: %s", fastq_name, msg)
     logging.warning("FASTQ %s: %s vs %s (norm vs reverse) - threshold: %s", fastq_name, norm_median, rev_median, threshold)
     logging.debug("FASTQ %s: Determinging alignment direction took %s seconds", fastq_name, round(time.time() - determine_start, 3))
-    return do_reverse, threshold
+    return do_reverse, norm_median, rev_median, threshold

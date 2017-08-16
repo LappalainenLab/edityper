@@ -2,11 +2,11 @@
 
 """Plotting utilities for the CRISPR program"""
 
+from __future__ import print_function
 from __future__ import division
 
 import sys
-if sys.version_info.major != 2 and sys.version_info.minor != 7:
-    sys.exit("Please use Python 2.7 for this module: " + __name__)
+PYTHON_VERSION = sys.version_info.major
 
 
 import os
@@ -14,19 +14,12 @@ import time
 import logging
 from collections import defaultdict
 
-
-try:
-    from alignment import alignment_by_fastq
-except ImportError as error:
-    sys.exit("Please keep this module in its original directory to load custom modules: " + error.message)
-
-
 try:
     import matplotlib.pyplot as plt
     import matplotlib.patches as ptch
     import matplotlib.font_manager as fm
 except ImportError as error:
-    sys.exit("Please install Numpy and Matplotlib for this module: " + error.message)
+    sys.exit("Please install Numpy and Matplotlib for this module: " + error)
 
 
 _LOCUS_WIDTH = 0.5
@@ -60,13 +53,14 @@ def locus_plot(
     if _check_fonts():
         plt.xkcd()
     #   Make a name for our locus plot
-    plot_name = output_prefix + '_locus.pdf'
+    plot_name = os.path.join(output_prefix, fastq_name + '_locus.pdf')
     #   Create our subplots
     fig, ax = plt.subplots()
     #   Get our data ready for plotting
     mis_dict = {position: len(bases) for position, bases in mismatches.items()} # type: Dict[int, int]
     ins_dict = {position: len(counts) for position, counts in insertions.items()} # type: Dict[int, int]
     del_dict = {position: len(counts) for position, counts in deletions.items()} # type: Dict[int, int]
+    # del_dict = deletions
     # indels = defaultdict(int) # type: Mapping[int, int]
     # for this_dict in (insertions, deletions): # type: Mapping[int, List[int]]
     #     for position, lengths in this_dict.items(): # type: int, List[int]
@@ -124,45 +118,45 @@ def locus_plot(
     logging.debug("Making locus plot took %s seconds", round(time.time() - locus_start, 3))
 
 
-def quality_plot(
-        alignments, # type: Iterable[alignment.Alignment]
-        output_prefix # type: str
-):
-    # type: (...) -> None
-    """Make a violin plot of the alignment scores"""
-    logging.info("Making quality scores plot")
-    quality_start = time.time()
-    if _check_fonts():
-        plt.xkcd()
-    plot_name = output_prefix + '_quality.pdf'
-    alignments_by_fastq = alignment_by_fastq(alignments=alignments) # type: Dict[str, List[alignment.Alignment]]
-    #   Assemble our scores
-    # scores = tuple(al.get_score() for al in alignments)
-    # scores = {fastq: tuple(al.get_score() for al in al_list) for fastq, al_list in alignments_by_fastq.items()}
-    # import code; code.interact(local=locals()); sys.exit()
-    scores = dict.fromkeys(alignments_by_fastq.keys(), list())
-    for fastq, alignment_list in alignments_by_fastq.items(): # type: str, List[alignment.Alignment]
-        for alignment in alignment_list: # type: alignment.Alignment
-            scores[fastq].append(alignment.get_score())
-    #   Plot the scores
-    # vlnplt = plt.violinplot(scores)
-    fig, ax = plt.subplots(nrows=1, ncols=1)
-    ax.violinplot(scores.values())
-    #   Determine rotation of xtick text
-    if len(scores) == 1:
-        rotation = 'horizontal'
-    else:
-        rotation = 45
-    #   Set labels
-    plt.title("Alignment Score Distribution by FASTQ File")
-    plt.ylabel('Alignment Score')
-    plt.xlabel('FASTQ')
-    ax.set_xticks(range(1, len(scores) + 1))
-    ax.set_xticklabels(scores.keys(), rotation=rotation, fontsize='small')
-    #   Adjust the plot area to ensure everything is shown
-    plt.tight_layout()
-    #   Yield the plot
-    # plt.show()
-    logging.info("Saving plot to %s", plot_name)
-    plt.savefig(plot_name, format='pdf')
-    logging.debug("Making quality scores plot took %s seconds", round(time.time() - quality_start, 3))
+# def quality_plot(
+#         alignments, # type: Iterable[alignment.Alignment]
+#         output_prefix # type: str
+# ):
+#     # type: (...) -> None
+#     """Make a violin plot of the alignment scores"""
+#     logging.info("Making quality scores plot")
+#     quality_start = time.time()
+#     if _check_fonts():
+#         plt.xkcd()
+#     plot_name = output_prefix + '_quality.pdf'
+#     alignments_by_fastq = alignment_by_fastq(alignments=alignments) # type: Dict[str, List[alignment.Alignment]]
+#     #   Assemble our scores
+#     # scores = tuple(al.get_score() for al in alignments)
+#     # scores = {fastq: tuple(al.get_score() for al in al_list) for fastq, al_list in alignments_by_fastq.items()}
+#     # import code; code.interact(local=locals()); sys.exit()
+#     scores = dict.fromkeys(alignments_by_fastq.keys(), list())
+#     for fastq, alignment_list in alignments_by_fastq.items(): # type: str, List[alignment.Alignment]
+#         for alignment in alignment_list: # type: alignment.Alignment
+#             scores[fastq].append(alignment.get_score())
+#     #   Plot the scores
+#     # vlnplt = plt.violinplot(scores)
+#     fig, ax = plt.subplots(nrows=1, ncols=1)
+#     ax.violinplot(scores.values())
+#     #   Determine rotation of xtick text
+#     if len(scores) == 1:
+#         rotation = 'horizontal'
+#     else:
+#         rotation = 45
+#     #   Set labels
+#     plt.title("Alignment Score Distribution by FASTQ File")
+#     plt.ylabel('Alignment Score')
+#     plt.xlabel('FASTQ')
+#     ax.set_xticks(range(1, len(scores) + 1))
+#     ax.set_xticklabels(scores.keys(), rotation=rotation, fontsize='small')
+#     #   Adjust the plot area to ensure everything is shown
+#     plt.tight_layout()
+#     #   Yield the plot
+#     # plt.show()
+#     logging.info("Saving plot to %s", plot_name)
+#     plt.savefig(plot_name, format='pdf')
+#     logging.debug("Making quality scores plot took %s seconds", round(time.time() - quality_start, 3))

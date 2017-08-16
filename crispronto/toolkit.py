@@ -116,15 +116,18 @@ def get_mismatch(
     else:
         seq_range = range(len(seq_a))
     for index in seq_range: # type: int
-        if seq_a[index] == '-' or seq_b[index] == '-':
-            #   Gap, not mismatch, continue
-            continue
-        if seq_a[index] == seq_b[index]:
-            #   Match, not mismatch
-            match_list.append(index)
-            continue
-        #   If neither a gap nor a match, it's a mismatch
-        mis_list.append((index, (seq_a[index], seq_b[index])))
+        try:
+            if seq_a[index] == '-' or seq_b[index] == '-':
+                #   Gap, not mismatch, continue
+                continue
+            if seq_a[index] == seq_b[index]:
+                #   Match, not mismatch
+                match_list.append(index)
+                continue
+            #   If neither a gap nor a match, it's a mismatch
+            mis_list.append((index, (seq_a[index], seq_b[index])))
+        except IndexError:
+            break
     if matches:
         return mis_list, match_list
     else:

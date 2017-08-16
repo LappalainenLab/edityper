@@ -18,15 +18,19 @@ from collections import Counter, defaultdict, namedtuple
 
 try:
     if PYTHON_VERSION is 3:
+        from crispronto import plots
         from crispronto import toolkit
         from crispronto import nw_align
+        from crispronto import analysis
         from crispronto import alignment
         from crispronto import quality_control
         from crispronto.arguments import make_argument_parser
         from multiprocessing import pool as Pool
     elif PYTHON_VERSION is 2:
+        import plots
         import toolkit
         import nw_align
+        import analysis
         import alignment
         import quality_control
         from arguments import make_argument_parser
@@ -35,9 +39,9 @@ try:
         from itertools import imap as map
         range = xrange
     else:
-        sys.exit('WTF MATE')
+        sys.exit('Please use Python 2.7, 3.3, or higher')
 except ImportError as error:
-    sys.exit("FAIL")
+    sys.exit(error)
 
 
 SNP = namedtuple('SNP', ('reference', 'target', 'position'))
@@ -67,20 +71,23 @@ def _check_suppressions(suppressions): # type: (Dict[str, bool]) -> bool
 
 def crispr_analysis(tup_args):
     """Do the CRISPR analysis"""
-    fastq_file, aligned_reference, args_dict, snp_info = tup_args # type: str, toolkit.NamedSequence, Dict[str, Any], SNP
+    fastq_file, reference, aligned_reference, args_dict, snp_info, output_directory = tup_args # type: str, toolkit.NamedSequence, toolkit.NamedSequence, Dict[str, Any], SNP, str
     #   Make a name for our FASTQ file
     fastq_name = os.path.basename(fastq_file) # type: str
     if fastq_name.count('.') == 2:
         fastq_name = fastq_name.split('.')[0]
     else:
         fastq_name = os.path.splitext(fastq_name)[0]
+    output_prefix = os.path.join(output_directory, fastq_name)
+    if not os.path.exists(output_prefix):
+        os.makedirs(output_prefix)
     logging.info("FASTQ %s: Starting analysis...", fastq_name)
     analysis_start = time.time() # type: float
     #   Load the reads
     reads = toolkit.load_fastq(fastq_file=fastq_file) # type: Tuple[toolpack.Read]
     #   Determine the alignment direction for our reads
     unique_reads = Counter(map(lambda read: read.seq, reads)) # type: Counter
-    do_reverse, score_threshold = quality_control.determine_alignment_direction( # type: bool, float
+    do_reverse, fwd_score, rev_score, score_threshold = quality_control.determine_alignment_direction( # type: bool, float, float, float
         fastq_name=fastq_name,
         unique_reads=unique_reads.keys(),
         reference=aligned_reference.sequence,
@@ -108,13 +115,13 @@ def crispr_analysis(tup_args):
         'matches': defaultdict(int)
     }
     classifications = (dict(), dict(), dict(), dict()) # type: Tuple[Dict[str, Events]]
-    discard, nhej, hdr, no_edit = classifications # type: Dict[str, Events]
+    hdr, nhej, no_edit, discard = classifications # type: Dict[str, Events]
     for length, alignment_list in alignments.items(): # type: int, List[alignment.Alignment]
         for aligned in alignment_list: # type: alignment.Alignment
             num_ins, num_del, num_mis = 0, 0, 0 # type: int, int, int
             num_reads = unique_reads[str(aligned)] # type: int
             if aligned.score < score_threshold:
-                discard[str(aligned)] = (num_reads, 0, 0, 0)
+                discard[str(aligned)] = Events(num_reads=num_reads, num_ins=0, num_del=0, num_mis=0)
                 continue
             ref_head, ref_tail = toolkit.trim_interval(seq=aligned.reference) # type: int, int
             al_ref_seq = aligned.reference[ref_head:ref_tail] # type: str
@@ -166,6 +173,33 @@ def crispr_analysis(tup_args):
             else:
                 nhej[str(aligned)] = results
     logging.debug("FASTQ %s: Read classifcation took %s seconds", fastq_name, round(time.time() - classifcation_start, 3))
+    cummulative_deletions = analysis.events_report(
+        fastq_name=fastq_name,
+        events=counts,
+        reference=reference.sequence,
+        snp_index=snp_info.position,
+        output_prefix=output_prefix
+    )
+    analysis.display_classification(
+        fastq_name=fastq_name,
+        classifications=classifications,
+        unique_reads=unique_reads,
+        snp_info=snp_info,
+        fwd_score=fwd_score,
+        rev_score=rev_score,
+        score_threshold=score_threshold,
+        output_prefix=output_prefix
+    )
+    plots.locus_plot(
+        insertions=counts['insertions'],
+        deletions=counts['deletions'],
+        # deletions=cummulative_deletions,
+        mismatches=counts['mismatches'],
+        num_reads=len(reads),
+        # num_reads=len(unique_reads),
+        fastq_name=fastq_name,
+        output_prefix=output_prefix
+    )
     logging.debug("FASTQ %s: Analysis took %s seconds", fastq_name, round(time.time() - analysis_start, 3))
 
 
@@ -242,7 +276,7 @@ def main():
     )
     snp = SNP(reference=reference_state, target=target_snp, position=snp_index) # type: SNP
     logging.debug("Quality control took %s seconds", round(time.time() - qc_start, 3))
-    crispr_analysis(tup_args=(args['input_file'], aligned_reference, args, snp))
+    crispr_analysis(tup_args=(args['input_file'], reference, aligned_reference, args, snp, output_directory))
     #   Setup our multiprocessing pool
     #   Allow the user to specify the number of jobs to run at once
     #   If not specified, let multiprocessing figure it out
