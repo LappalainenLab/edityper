@@ -2,9 +2,8 @@
 
 '''Set the arguments for the CRISPR alingment and analysis pipeline'''
 
-import sys
-
 import os
+import sys
 import argparse
 
 _OUTDIR_DEFAULT = os.path.join(os.getcwd(), 'output')
