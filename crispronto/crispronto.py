@@ -259,7 +259,6 @@ def crispr_analysis(
             ref_seq_dict={reference.name: reference.sequence}
         )
         #   Write the SAM file
-        LOCK.acquire()
         with open(sam_name, 'w') as sfile:
             logging.info("FASTQ %s: Writing %s SAM lines to %s", fastq_name, len(sam_lines), sam_name)
             headers = itertools.chain({sam.HD_HEADER}, sq_header, rg_header) # type: itertools.chain[str]
@@ -271,7 +270,6 @@ def crispr_analysis(
                 sfile.write(str(samline))
                 sfile.write('\n')
                 sfile.flush()
-        LOCK.release()
         logging.debug("FASTQ %s: Making SAM file took %s seconds", fastq_name, round(time.time() - sam_start, 3))
         for samline in sam_lines:
             del samline
