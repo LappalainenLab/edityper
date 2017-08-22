@@ -2,27 +2,19 @@
 
 A python program for aligning CRISPR-edited RNA-seq data. Written by Alexandre Yahi.
 
-## Basic Usage
+## Installation
 
-TBA
-
-<!-- To get a basic help message, simply run
+To install, run the following command
 
 ```bash
-./crispr.py
+python setup.py install
 ```
 
-There are two subroutines as part of crispr.py: `CONFIG` and `ALIGN`. To view detailed help information about either subroutine, simply tell crispr.py to run the desired subroutine and pass the `-h` flag. For example:
-
-```bash
-./crispr.py CONFIG -h
-```
-
-for viewing help information about the `CONFIG` subroutine. -->
+Please note, to install system-wide, you must have sudo acces. If you are not installing system-wide, please install within your `$PYTHONPATH`.
 
 ## Dependencies
 
-CRISPRonto is compatible with Python 2.7+ and 3.5+; tt also depends on the following Python packages:
+CRISPRonto is compatible with Python 2.7+ and 3.3+; tt also depends on the following Python modules:
  - [Cython](http://cython.org/)
  - [matplotlib](http://matplotlib.org/)
  - [NumPy](http://www.numpy.org/)
@@ -31,9 +23,15 @@ CRISPRonto is compatible with Python 2.7+ and 3.5+; tt also depends on the follo
 
 Each of these modules is available on [PyPi](https://pypi.python.org/) and installable using [pip](https://pip.pypa.io/en/stable/)
 
-## Arguments
+## Basic Usage
 
-<!-- The `CONFIG` subroutine creates a configuration file for the `ALIGN` subroutine. Using the `CONFIG` subroutine, one can provide alignment parameters, set reference and template arguments, choose an input FASTQ file or a sample list, set the output directory and project name, and provide extra read group information for SAM output. The configuration file is stored in [INI](https://en.wikipedia.org/wiki/INI_file) format. Please see the help information for more information -->
+To get a basic help message, simply run
+
+```bash
+CRISPRonto
+```
+
+## Arguments
 
 ### Alignment Arguments
 
@@ -51,7 +49,7 @@ Each of these modules is available on [PyPi](https://pypi.python.org/) and insta
 | `-r | --reference-sequence` | Reference FASTA for alignment | **Yes** |
 | `-t | --template-sequence` | Template sequence for CRISPR editing | **Yes** |
 
-### Alignment Arguments
+### Input Arguments
 
 > **NOTE**: These arguments are mutually exclusive
 >
@@ -88,16 +86,30 @@ Each of these modules is available on [PyPi](https://pypi.python.org/) and insta
 | `--suppress-events` | Suppress events table output |
 | `--suppress-classification` | Suppress read classification output |
 | `--suppress-tables` | Suppress both events and read classification |
-| `--suppress-plots` | Suppress quality plots |
+| `--suppress-plots` | Suppress locus and quality plots |
 
 ## Output Files
+
+For each output table, all lines starting with `#` are header lines. All lines starting with `##` are extra information.
 
 | Output file | Extension |
 | ----------- | --------- |
 | Alignments in SAM format | `.sam` |
-| Table of insertion, deletion, and mismatch events | `.events` |
+| Table of events by base | `.events` |
 | Classification of reads in tabular format | `.classification` |
 | Locus and alignment quality plots | `.pdf` |
 | Summary of read classifications per input FASTQ file | `.summary` |
+
+SAM alignments are standard SAM files. They have been presorted in coordinate order with read groups attached.
+
+The `.events` table shows reference state, coverage, number of deletions, average deletion length, number of insertions, average insertion length, and base counts at each position in reference sequence.
+
+The `.classifications` table shows counts, indels, and mismatches for HDR, NHEJ, no editing, and discarded reads. In addition, this file shows SNP state and position, read counts, and alignment scoring information.
+
+The `.summary` table shows total reads, unique reads, discarded reads, SNP information, no editing, HDR, NHEJ, and mismatch percentages by base per FASTQ file.
+
+The locus plot shows events at each base along the reference and the number of supporting reads for each event.
+
+The quality plot shows the distribution of alignment quality scores for each FASTQ file.
 
 <img src='.nygc.jpeg' alt='New York Genome Center' height='100' width='100'>
