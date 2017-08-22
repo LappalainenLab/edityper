@@ -16,6 +16,8 @@ import itertools
 from multiprocessing import Lock
 from collections import Counter, defaultdict, namedtuple
 
+LOCK = Lock()
+
 try:
     if PYTHON_VERSION is 3:
         from crispronto import plots
@@ -23,6 +25,7 @@ try:
         from crispronto import nw_align
         from crispronto import analysis
         from crispronto import alignment
+        from crispronto import sam
         from crispronto import quality_control
         from crispronto.arguments import make_argument_parser
         from multiprocessing import pool as Pool
@@ -32,6 +35,7 @@ try:
         import nw_align
         import analysis
         import alignment
+        import sam
         import quality_control
         from arguments import make_argument_parser
         from multiprocessing import Pool
@@ -106,100 +110,166 @@ def crispr_analysis(tup_args):
         gap_open=args_dict['gap_opening'],
         gap_extension=args_dict['gap_extension']
     )
-    logging.info("FASTQ %s: Starting read classifcation...", fastq_name)
-    classifcation_start = time.time() # type: float
-    counts = { # type: Dict[str, defaultdict]
-        'deletions': defaultdict(list),
-        'insertions': defaultdict(list),
-        'mismatches': defaultdict(list),
-        'matches': defaultdict(int)
-    }
-    classifications = (dict(), dict(), dict(), dict()) # type: Tuple[Dict[str, Events]]
-    hdr, nhej, no_edit, discard = classifications # type: Dict[str, Events]
-    for length, alignment_list in alignments.items(): # type: int, List[alignment.Alignment]
-        for aligned in alignment_list: # type: alignment.Alignment
-            num_ins, num_del, num_mis = 0, 0, 0 # type: int, int, int
-            num_reads = unique_reads[str(aligned)] # type: int
-            if aligned.score < score_threshold:
-                discard[str(aligned)] = Events(num_reads=num_reads, num_ins=0, num_del=0, num_mis=0)
-                continue
-            ref_head, ref_tail = toolkit.trim_interval(seq=aligned.reference) # type: int, int
-            al_ref_seq = aligned.reference[ref_head:ref_tail] # type: str
-            al_read_seq = aligned.read[ref_head:ref_tail] # type: str
-            read_head, read_tail = toolkit.trim_interval(seq=al_read_seq) # type: int, int
-            insertion_list = toolkit.find_gaps(seq=al_ref_seq) # type: List
-            if insertion_list:
-                num_ins = len(insertion_list)
-                temp = 0
-                for gap in insertion_list:
-                    position, gi_length = gap
-                    position = position - temp
-                    temp = temp + gi_length
-                    counts['insertions'][position].extend([gi_length] * num_reads)
-            if num_ins:
-                ref_no_ins, read_no_ins = str(), str() # type: str, str
-                for index in range(len(al_ref_seq)): # type: int
-                    if al_ref_seq[index] == '-':
-                        continue
-                    else:
-                        ref_no_ins = ref_no_ins + al_ref_seq[index] # type: str
-                        read_no_ins = read_no_ins + al_read_seq[index] # type: str
-                al_ref_seq = ref_no_ins # type: str
-                al_read_seq = read_no_ins # type: str
-            deletion_list = toolkit.find_gaps(seq=al_read_seq, head=read_head, tail=read_tail) # type: List
-            if deletion_list:
-                num_del = len(deletion_list)
-                for gap in deletion_list:
-                    position, gd_length = gap
-                    counts['deletions'][position].extend([gd_length] * num_reads)
-            mismatches, matches = toolkit.get_mismatch(
-                seq_a=al_ref_seq,
-                seq_b=al_read_seq,
-                head=read_head,
-                tail=read_tail,
-                matches=True
+    #   Classify the reads
+    if not (args_dict['suppress_classification'] or args_dict['suppress_tables']):
+        logging.info("FASTQ %s: Starting read classifcation...", fastq_name)
+        classifcation_start = time.time() # type: float
+        counts = { # type: Dict[str, defaultdict]
+            'deletions': defaultdict(list),
+            'insertions': defaultdict(list),
+            'mismatches': defaultdict(list),
+            'matches': defaultdict(int)
+        }
+        classifications = (dict(), dict(), dict(), dict()) # type: Tuple[Dict[str, Events]]
+        hdr, nhej, no_edit, discard = classifications # type: Dict[str, Events]
+        for length, alignment_list in alignments.items(): # type: int, List[alignment.Alignment]
+            for aligned in alignment_list: # type: alignment.Alignment
+                num_ins, num_del, num_mis = 0, 0, 0 # type: int, int, int
+                num_reads = unique_reads[str(aligned)] # type: int
+                if aligned.score < score_threshold:
+                    discard[str(aligned)] = Events(num_reads=num_reads, num_ins=0, num_del=0, num_mis=0)
+                    continue
+                ref_head, ref_tail = toolkit.trim_interval(seq=aligned.reference) # type: int, int
+                al_ref_seq = aligned.reference[ref_head:ref_tail] # type: str
+                al_read_seq = aligned.read[ref_head:ref_tail] # type: str
+                read_head, read_tail = toolkit.trim_interval(seq=al_read_seq) # type: int, int
+                insertion_list = toolkit.find_gaps(seq=al_ref_seq) # type: List
+                if insertion_list:
+                    num_ins = len(insertion_list)
+                    temp = 0
+                    for gap in insertion_list:
+                        position, gi_length = gap
+                        position = position - temp
+                        temp = temp + gi_length
+                        counts['insertions'][position].extend([gi_length] * num_reads)
+                if num_ins:
+                    ref_no_ins, read_no_ins = str(), str() # type: str, str
+                    for index in range(len(al_ref_seq)): # type: int
+                        if al_ref_seq[index] == '-':
+                            continue
+                        else:
+                            ref_no_ins = ref_no_ins + al_ref_seq[index] # type: str
+                            read_no_ins = read_no_ins + al_read_seq[index] # type: str
+                    al_ref_seq = ref_no_ins # type: str
+                    al_read_seq = read_no_ins # type: str
+                deletion_list = toolkit.find_gaps(seq=al_read_seq, head=read_head, tail=read_tail) # type: List
+                if deletion_list:
+                    num_del = len(deletion_list)
+                    for gap in deletion_list:
+                        position, gd_length = gap
+                        counts['deletions'][position].extend([gd_length] * num_reads)
+                mismatches, matches = toolkit.get_mismatch(
+                    seq_a=al_ref_seq,
+                    seq_b=al_read_seq,
+                    head=read_head,
+                    tail=read_tail,
+                    matches=True
+                )
+                for mis in mismatches:
+                    position, perm = mis
+                    source, snp = perm
+                    counts['mismatches'][position].extend([snp] * num_reads)
+                for match_position in matches:
+                    counts['matches'][match_position] += num_reads
+                results = Events(num_reads=num_reads, num_ins=num_ins, num_del=num_del, num_mis=num_mis) # type: Events
+                if al_read_seq[snp_info.position] == snp_info.target:
+                    hdr[str(aligned)] = results
+                elif all(map(lambda x: not x, (num_del, num_ins, num_mis))):
+                    no_edit[str(aligned)] = results
+                else:
+                    nhej[str(aligned)] = results
+        logging.debug("FASTQ %s: Read classifcation took %s seconds", fastq_name, round(time.time() - classifcation_start, 3))
+        analysis.display_classification(
+            fastq_name=fastq_name,
+            classifications=classifications,
+            unique_reads=unique_reads,
+            snp_info=snp_info,
+            fwd_score=fwd_score,
+            rev_score=rev_score,
+            score_threshold=score_threshold,
+            output_prefix=output_prefix
+        )
+    #   Count events
+    if not (args_dict['suppress_events'] or args_dict['suppress_tables']):
+        analysis.events_report(
+            fastq_name=fastq_name,
+            events=counts,
+            reference=reference.sequence,
+            snp_index=snp_info.position,
+            output_prefix=output_prefix
+        )
+    #   Make the locus plot
+    if not args_dict['suppress_plots']:
+        plots.locus_plot(
+            insertions=counts['insertions'],
+            deletions=counts['deletions'],
+            mismatches=counts['mismatches'],
+            num_reads=len(reads),
+            fastq_name=fastq_name,
+            output_prefix=output_prefix
+        )
+    #   Make a SAM file
+    if not args_dict['suppress_sam']:
+        logging.info("FASTQ %s: Making SAM file...", fastq_name)
+        sam_start = time.time()
+        sam_name = os.path.join(output_prefix, fastq_name + '.sam')
+        count = 1 # type: int
+        sam_lines = list() # type: List[write_sam.SAM]
+        bit_base = 16 if do_reverse else 0 # type: int
+        reads_dict = defaultdict(list) # type: Mapping[str, List[toolkit.Read]]
+        for read in reads:
+            reads_dict[read.seq].append(read)
+        for aligned in itertools.chain.from_iterable(alignments.values()): # type: alignment.Alignment
+            head, tail = toolkit.trim_interval(seq=aligned.read) # type: int, int
+            unaligned = toolkit.reverse_complement(sequence=aligned.unaligned) if do_reverse else aligned.unaligned # type: str
+            supporting_reads = tuple(reads_dict.pop(unaligned)) # type: Tuple[toolkit.Read]
+            position = sam.calc_read_pos(alignment=aligned) # type: int
+            cigar = sam.make_cigar(alignment=aligned) # type: str
+            sam_seq = sam.make_sam_sequence(alignment=aligned, head=head, tail=tail) # type: str
+            read_count = 1 # type: int
+            sams = map( # type: Map[write_sam.SAM]
+                sam.SAM,
+                (read.name for read in supporting_reads), # qname=
+                itertools.repeat(bit_base), # flag=
+                itertools.repeat(reference.name), # rname=
+                itertools.repeat(position), # pos=
+                itertools.repeat(255), # mapq=
+                itertools.repeat(cigar), # cigar=
+                itertools.repeat('*'), # rnex=
+                itertools.repeat(0), # pnex=
+                itertools.repeat(0), # tlen=
+                itertools.repeat(sam_seq), # seq=
+                (read.qual for read in supporting_reads) # qual=
             )
-            for mis in mismatches:
-                position, perm = mis
-                source, snp = perm
-                counts['mismatches'][position].extend([snp] * num_reads)
-            for match_position in matches:
-                counts['matches'][match_position] += num_reads
-            results = Events(num_reads=num_reads, num_ins=num_ins, num_del=num_del, num_mis=num_mis) # type: Events
-            if al_read_seq[snp_info.position] == snp_info.target:
-                hdr[str(aligned)] = results
-            elif all(map(lambda x: not x, (num_del, num_ins, num_mis))):
-                no_edit[str(aligned)] = results
-            else:
-                nhej[str(aligned)] = results
-    logging.debug("FASTQ %s: Read classifcation took %s seconds", fastq_name, round(time.time() - classifcation_start, 3))
-    cummulative_deletions = analysis.events_report(
-        fastq_name=fastq_name,
-        events=counts,
-        reference=reference.sequence,
-        snp_index=snp_info.position,
-        output_prefix=output_prefix
-    )
-    analysis.display_classification(
-        fastq_name=fastq_name,
-        classifications=classifications,
-        unique_reads=unique_reads,
-        snp_info=snp_info,
-        fwd_score=fwd_score,
-        rev_score=rev_score,
-        score_threshold=score_threshold,
-        output_prefix=output_prefix
-    )
-    plots.locus_plot(
-        insertions=counts['insertions'],
-        deletions=counts['deletions'],
-        # deletions=cummulative_deletions,
-        mismatches=counts['mismatches'],
-        num_reads=len(reads),
-        # num_reads=len(unique_reads),
-        fastq_name=fastq_name,
-        output_prefix=output_prefix
-    )
+            sam_lines.extend(sams)
+            count += 1
+        if reads_dict:
+            unaligned_reads = tuple(itertools.chain.from_iterable(reads_dict.values())) # type: Tuple[toolkit.Read]
+            logging.warning("FASTQ %s: %s reads unaligned...", fastq_name, len(unaligned_reads))
+        sam_lines = tuple(sorted(sam_lines))
+        #   Make the header
+        rg_header = sam.make_read_group(sam_lines=sam_lines, conf_dict=args_dict) # type: Tuple[str]
+        sq_header = sam.make_sequence_header(
+            sam_lines=sam_lines,
+            ref_seq_dict={reference.name: reference.sequence}
+        )
+        #   Write the SAM file
+        LOCK.acquire()
+        with open(sam_name, 'w') as sfile:
+            logging.info("FASTQ %s: Writing %s SAM lines to %s", fastq_name, len(sam_lines), sam_name)
+            headers = itertools.chain((sam.HD_HEADER), sq_header, rg_header) # type: itertools.chain[str]
+            for header_line in headers: # type: str
+                sfile.write(header_line)
+                sfile.write('\n')
+                sfile.flush()
+            for samline in sam_lines: # type: write_sam.SAM
+                sfile.write(str(samline))
+                sfile.write('\n')
+                sfile.flush()
+        LOCK.release()
+        logging.debug("FASTQ %s: Making SAM file took %s seconds", fastq_name, round(time.time() - sam_start, 3))
+        for samline in sam_lines:
+            del samline
     logging.debug("FASTQ %s: Analysis took %s seconds", fastq_name, round(time.time() - analysis_start, 3))
 
 
@@ -223,16 +293,15 @@ def main():
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
     #   Check suppression values
-    suppressions = {key: value for key, value in args.items() if 'suppress' in key} # type: Dict[str, bool]
-    if _check_suppressions(suppressions=suppressions): # All output suppressed? Error
+    if _check_suppressions(suppressions=args): # All output suppressed? Error
         sys.exit(logging.critical("All output suppressed, not running"))
-    if suppressions['suppress_sam']: # Suppressed SAM output?
+    if args['suppress_sam']: # Suppressed SAM output?
         logging.warning("SAM output suppressed, not writing SAM file")
-    if suppressions['suppress_events'] or suppressions['suppress_tables']: # Suppressed events table?
+    if args['suppress_events'] or args['suppress_tables']: # Suppressed events table?
         logging.warning("Events output suppressed, not writing events table")
-    if suppressions['suppress_classification'] or suppressions['suppress_tables']: # Suppressed classification table?
+    if args['suppress_classification'] or args['suppress_tables']: # Suppressed classification table?
         logging.warning("Read classification suppressed, not writing classification table")
-    if suppressions['suppress_plots']: # Suppressed plots?
+    if args['suppress_plots']: # Suppressed plots?
         logging.warning("Plots suppressed, not creating plots")
     if args['xkcd']:
         # plots._XKCD = True
