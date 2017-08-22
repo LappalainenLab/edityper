@@ -82,7 +82,7 @@ def load_seq(seq_file): # type: (str) -> NamedSequence
     return NamedSequence(name=name, sequence=output)
 
 
-def unpack(collection): # type: (Iterable[Any]) -> List[Any]
+def unpack(collection): # type: (Iterable[Any]) -> Tuple[Any]
     """Unpack a series of nested lists, sets, or tuples"""
     result = [] # type: List
     for item in collection: # type: Any
@@ -90,7 +90,7 @@ def unpack(collection): # type: (Iterable[Any]) -> List[Any]
             result.extend(unpack(collection=item))
         else:
             result.append(item)
-    return result
+    return tuple(result)
 
 def reverse_complement(sequence): # type: (str) -> str
     """Reverse complement a nucleotide sequence"""

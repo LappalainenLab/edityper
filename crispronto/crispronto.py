@@ -73,7 +73,10 @@ def _check_suppressions(suppressions): # type: (Dict[str, bool]) -> bool
     return suppressions['suppress_plots'] and suppressions['suppress_sam'] and (suppressions['suppress_tables'] or suppress_tables)
 
 
-def crispr_analysis(tup_args):
+def crispr_analysis(
+        tup_args # type: Tuple[str, toolkit.NamedSequence, toolkit.NamedSequence, Dict[str, Any], SNP, str]
+):
+    # type: (...) -> (Tuple[alignment.Alignment], Dict[str, Any])
     """Do the CRISPR analysis"""
     fastq_file, reference, aligned_reference, args_dict, snp_info, output_directory = tup_args # type: str, toolkit.NamedSequence, toolkit.NamedSequence, Dict[str, Any], SNP, str
     #   Make a name for our FASTQ file
@@ -111,75 +114,76 @@ def crispr_analysis(tup_args):
         gap_extension=args_dict['gap_extension']
     )
     #   Classify the reads
+    logging.info("FASTQ %s: Starting read classifcation...", fastq_name)
+    classifcation_start = time.time() # type: float
+    counts = { # type: Dict[str, defaultdict]
+        'deletions': defaultdict(list),
+        'insertions': defaultdict(list),
+        'mismatches': defaultdict(list),
+        'matches': defaultdict(int)
+    }
+    classifications = (dict(), dict(), dict(), dict()) # type: Tuple[Dict[str, Events]]
+    hdr, nhej, no_edit, discard = classifications # type: Dict[str, Events]
+    for length, alignment_list in alignments.items(): # type: int, List[alignment.Alignment]
+        for aligned in alignment_list: # type: alignment.Alignment
+            num_ins, num_del, num_mis = 0, 0, 0 # type: int, int, int
+            num_reads = unique_reads[str(aligned)] # type: int
+            if aligned.score < score_threshold:
+                discard[str(aligned)] = Events(num_reads=num_reads, num_ins=0, num_del=0, num_mis=0)
+                continue
+            ref_head, ref_tail = toolkit.trim_interval(seq=aligned.reference) # type: int, int
+            al_ref_seq = aligned.reference[ref_head:ref_tail] # type: str
+            al_read_seq = aligned.read[ref_head:ref_tail] # type: str
+            read_head, read_tail = toolkit.trim_interval(seq=al_read_seq) # type: int, int
+            insertion_list = toolkit.find_gaps(seq=al_ref_seq) # type: List
+            if insertion_list:
+                num_ins = len(insertion_list)
+                temp = 0
+                for gap in insertion_list:
+                    position, gi_length = gap
+                    position = position - temp
+                    temp = temp + gi_length
+                    counts['insertions'][position].extend([gi_length] * num_reads)
+            if num_ins:
+                ref_no_ins, read_no_ins = str(), str() # type: str, str
+                for index in range(len(al_ref_seq)): # type: int
+                    if al_ref_seq[index] == '-':
+                        continue
+                    else:
+                        ref_no_ins = ref_no_ins + al_ref_seq[index] # type: str
+                        read_no_ins = read_no_ins + al_read_seq[index] # type: str
+                al_ref_seq = ref_no_ins # type: str
+                al_read_seq = read_no_ins # type: str
+            deletion_list = toolkit.find_gaps(seq=al_read_seq, head=read_head, tail=read_tail) # type: List
+            if deletion_list:
+                num_del = len(deletion_list)
+                for gap in deletion_list:
+                    position, gd_length = gap
+                    counts['deletions'][position].extend([gd_length] * num_reads)
+            mismatches, matches = toolkit.get_mismatch(
+                seq_a=al_ref_seq,
+                seq_b=al_read_seq,
+                head=read_head,
+                tail=read_tail,
+                matches=True
+            )
+            for mis in mismatches:
+                position, perm = mis
+                source, snp = perm
+                counts['mismatches'][position].extend([snp] * num_reads)
+            for match_position in matches:
+                counts['matches'][match_position] += num_reads
+            results = Events(num_reads=num_reads, num_ins=num_ins, num_del=num_del, num_mis=num_mis) # type: Events
+            if al_read_seq[snp_info.position] == snp_info.target:
+                hdr[str(aligned)] = results
+            elif all(map(lambda x: not x, (num_del, num_ins, num_mis))):
+                no_edit[str(aligned)] = results
+            else:
+                nhej[str(aligned)] = results
+    logging.debug("FASTQ %s: Read classifcation took %s seconds", fastq_name, round(time.time() - classifcation_start, 3))
     if not (args_dict['suppress_classification'] or args_dict['suppress_tables']):
-        logging.info("FASTQ %s: Starting read classifcation...", fastq_name)
-        classifcation_start = time.time() # type: float
-        counts = { # type: Dict[str, defaultdict]
-            'deletions': defaultdict(list),
-            'insertions': defaultdict(list),
-            'mismatches': defaultdict(list),
-            'matches': defaultdict(int)
-        }
-        classifications = (dict(), dict(), dict(), dict()) # type: Tuple[Dict[str, Events]]
-        hdr, nhej, no_edit, discard = classifications # type: Dict[str, Events]
-        for length, alignment_list in alignments.items(): # type: int, List[alignment.Alignment]
-            for aligned in alignment_list: # type: alignment.Alignment
-                num_ins, num_del, num_mis = 0, 0, 0 # type: int, int, int
-                num_reads = unique_reads[str(aligned)] # type: int
-                if aligned.score < score_threshold:
-                    discard[str(aligned)] = Events(num_reads=num_reads, num_ins=0, num_del=0, num_mis=0)
-                    continue
-                ref_head, ref_tail = toolkit.trim_interval(seq=aligned.reference) # type: int, int
-                al_ref_seq = aligned.reference[ref_head:ref_tail] # type: str
-                al_read_seq = aligned.read[ref_head:ref_tail] # type: str
-                read_head, read_tail = toolkit.trim_interval(seq=al_read_seq) # type: int, int
-                insertion_list = toolkit.find_gaps(seq=al_ref_seq) # type: List
-                if insertion_list:
-                    num_ins = len(insertion_list)
-                    temp = 0
-                    for gap in insertion_list:
-                        position, gi_length = gap
-                        position = position - temp
-                        temp = temp + gi_length
-                        counts['insertions'][position].extend([gi_length] * num_reads)
-                if num_ins:
-                    ref_no_ins, read_no_ins = str(), str() # type: str, str
-                    for index in range(len(al_ref_seq)): # type: int
-                        if al_ref_seq[index] == '-':
-                            continue
-                        else:
-                            ref_no_ins = ref_no_ins + al_ref_seq[index] # type: str
-                            read_no_ins = read_no_ins + al_read_seq[index] # type: str
-                    al_ref_seq = ref_no_ins # type: str
-                    al_read_seq = read_no_ins # type: str
-                deletion_list = toolkit.find_gaps(seq=al_read_seq, head=read_head, tail=read_tail) # type: List
-                if deletion_list:
-                    num_del = len(deletion_list)
-                    for gap in deletion_list:
-                        position, gd_length = gap
-                        counts['deletions'][position].extend([gd_length] * num_reads)
-                mismatches, matches = toolkit.get_mismatch(
-                    seq_a=al_ref_seq,
-                    seq_b=al_read_seq,
-                    head=read_head,
-                    tail=read_tail,
-                    matches=True
-                )
-                for mis in mismatches:
-                    position, perm = mis
-                    source, snp = perm
-                    counts['mismatches'][position].extend([snp] * num_reads)
-                for match_position in matches:
-                    counts['matches'][match_position] += num_reads
-                results = Events(num_reads=num_reads, num_ins=num_ins, num_del=num_del, num_mis=num_mis) # type: Events
-                if al_read_seq[snp_info.position] == snp_info.target:
-                    hdr[str(aligned)] = results
-                elif all(map(lambda x: not x, (num_del, num_ins, num_mis))):
-                    no_edit[str(aligned)] = results
-                else:
-                    nhej[str(aligned)] = results
-        logging.debug("FASTQ %s: Read classifcation took %s seconds", fastq_name, round(time.time() - classifcation_start, 3))
-        analysis.display_classification(
+        LOCK.acquire()
+        hdr_indels, total_counts = analysis.display_classification(
             fastq_name=fastq_name,
             classifications=classifications,
             unique_reads=unique_reads,
@@ -189,6 +193,7 @@ def crispr_analysis(tup_args):
             score_threshold=score_threshold,
             output_prefix=output_prefix
         )
+        LOCK.release()
     #   Count events
     if not (args_dict['suppress_events'] or args_dict['suppress_tables']):
         analysis.events_report(
@@ -257,7 +262,7 @@ def crispr_analysis(tup_args):
         LOCK.acquire()
         with open(sam_name, 'w') as sfile:
             logging.info("FASTQ %s: Writing %s SAM lines to %s", fastq_name, len(sam_lines), sam_name)
-            headers = itertools.chain((sam.HD_HEADER), sq_header, rg_header) # type: itertools.chain[str]
+            headers = itertools.chain({sam.HD_HEADER}, sq_header, rg_header) # type: itertools.chain[str]
             for header_line in headers: # type: str
                 sfile.write(header_line)
                 sfile.write('\n')
@@ -271,6 +276,31 @@ def crispr_analysis(tup_args):
         for samline in sam_lines:
             del samline
     logging.debug("FASTQ %s: Analysis took %s seconds", fastq_name, round(time.time() - analysis_start, 3))
+    #   Assemble return values
+    if not (args_dict['suppress_classification'] or args_dict['suppress_events'] or args_dict['suppress_tables']):
+        mismatch_bases = Counter(itertools.chain.from_iterable(counts['mismatches'].values()))
+        total_mismatch = sum(mismatch_bases.values())
+        fastq_summary = { # type: Dict[str, Any]
+            'filename'          :   fastq_name,
+            'total_reads'       :   len(reads),
+            'unique_reads'      :   len(unique_reads),
+            'discarded'         :   total_counts['DISCARD'],
+            'no_edit'           :   total_counts['NO_EDIT'],
+            'no_edit_perc'      :   analysis.percent(num=total_counts['NO_EDIT'], total=len(reads)),
+            'hdr_clean'         :   total_counts['HDR'] - hdr_indels,
+            'hdr_clean_perc'    :   analysis.percent(num=total_counts['HDR'] - hdr_indels, total=total_counts['HDR']),
+            'hdr_gap'           :   hdr_indels,
+            'hdr_gap_perc'      :   analysis.percent(num=hdr_indels, total=total_counts['HDR']),
+            'nhej'              :   total_counts['NHEJ'],
+            'nhej_perc'         :   analysis.percent(num=total_counts['NHEJ'], total=len(reads)),
+            'perc_a'            :   analysis.percent(num=mismatch_bases['A'], total=total_mismatch),
+            'perc_t'            :   analysis.percent(num=mismatch_bases['T'], total=total_mismatch),
+            'perc_c'            :   analysis.percent(num=mismatch_bases['C'], total=total_mismatch),
+            'perc_g'            :   analysis.percent(num=mismatch_bases['G'], total=total_mismatch)
+        }
+    else:
+        fastq_summary = dict() # type: Dict[str, Any]
+    return tuple(toolkit.unpack(collection=alignments.values())), fastq_summary
 
 
 def main():
@@ -288,6 +318,8 @@ def main():
         level=_set_verbosity(level=args['verbosity']),
         datefmt='%Y-%m-%d %H:%M:%S'
     )
+    logging.info("Welcome to %s!", os.path.basename(sys.argv[0]))
+    program_start = time.time()
     #   Make an output directory
     output_directory = os.path.join(args['outdirectory'], args['project']) # type: str
     if not os.path.exists(output_directory):
@@ -304,8 +336,7 @@ def main():
     if args['suppress_plots']: # Suppressed plots?
         logging.warning("Plots suppressed, not creating plots")
     if args['xkcd']:
-        # plots._XKCD = True
-        pass
+        plots._XKCD = True
     #   Tell worker processes to ignore SIGINT (^C)
     #   by turning INTERUPT signals into IGNORED signals
     sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN) # type: function
@@ -345,17 +376,118 @@ def main():
     )
     snp = SNP(reference=reference_state, target=target_snp, position=snp_index) # type: SNP
     logging.debug("Quality control took %s seconds", round(time.time() - qc_start, 3))
-    crispr_analysis(tup_args=(args['input_file'], reference, aligned_reference, args, snp, output_directory))
+    #   Collect FASTQ information
+    if 'sample_list' in args:
+        if not os.path.exists(args['sample_list']):
+            raise ValueError(logging.critical("Cannot find sample list %s", args['sample_list']))
+        with open(args['sample_list'], 'r') as listfile:
+            fastq_list = tuple(line.strip() for line in listfile if not line.startswith('#')) # type: Tuple[str]
+    elif 'input_file' in args:
+        fastq_list = (args['input_file'],) # type: Tuple[str]
+    else:
+        sys.exit(logging.critical("No input file provided"))
+    zipped_args = zip(
+        fastq_list,
+        itertools.repeat(reference),
+        itertools.repeat(aligned_reference),
+        itertools.repeat(args),
+        itertools.repeat(snp),
+        itertools.repeat(output_directory)
+    )
     #   Setup our multiprocessing pool
     #   Allow the user to specify the number of jobs to run at once
     #   If not specified, let multiprocessing figure it out
-    # try:
-    #     pool = Pool(processes=args['num_cores']) # type: multiprocessing.Pool
-    # except KeyError:
-    #     pool = Pool() # type: multiprocessing.Pool
-    # if all(map(lambda i: i > 1, (len(fastq_list), getattr(pool, '_processes')))):
-    #     pass
+    try:
+        pool = Pool(processes=args['num_cores']) # type: multiprocessing.Pool
+    except KeyError:
+        pool = Pool() # type: multiprocessing.Pool
+    #   If we have multiple FASTQ files AND multiple processes running
+    #   use pool.map_async; else use generic map to avoid timeout issues
+    if all(map(lambda i: i > 1, (len(fastq_list), getattr(pool, '_processes')))):
+        try:
+            #   Use map_async and get with a large timeout
+            #   to allow for KeyboardInterrupts to be caught
+            #   and handled with the try/except
+            res = pool.map_async(crispr_analysis, zipped_args) # type: multiprocessing.pool.MapResult
+            pool.close()
+            results = res.get(9999)
+        except KeyboardInterrupt: # Handle ctrl+c
+            pool.terminate()
+            sys.exit('\nkilled')
+        except SystemExit: # Handle sys.exit() calls
+            pool.terminate()
+            raise
+    #   Otherwise, don't bother with pool.map() make life easy
+    else:
+        #   Clean up the pool
+        pool.close(); pool.terminate()
+        #   Use standard map (or itertools.imap)
+        results = map(crispr_analysis, zipped_args)
+    alignments, summaries = zip(*results)
+    alignments = toolkit.unpack(collection=alignments)
+    output_prefix = os.path.join(output_directory, args['project'])
+    if not args['suppress_plots']:
+        plots.quality_plot(
+            alignments=alignments,
+            output_prefix=output_prefix
+        )
+    if not (args['suppress_classification'] or args['suppress_events'] or args['suppress_tables']):
+        summary_name = output_prefix + '.summary'
+        summary_header = (
+            '#FASTQ',
+            'TOTAL_READS',
+            'UNIQ_READS',
+            'DISCARDED',
+            'SNP_POS',
+            'REF_STATE',
+            'TEMP_SNP',
+            'NO_EDIT',
+            'PERC_NO_EDIT',
+            'HDR_CLEAN',
+            'PERC_HDR_CLEAN',
+            'HDR_GAP',
+            'PERC_HDR_GAP',
+            'NHEJ',
+            'NHEJ_GAP',
+            'PERC_MIS_A',
+            'PERC_MIS_T',
+            'PERC_MIS_C',
+            'PERC_MIS_G'
+        )
+        logging.info("Writing summary to %s", summary_name)
+        summary_start = time.time()
+        with open(summary_name, 'w') as summfile:
+            summfile.write('\t'.join(summary_header) + '\n')
+            summfile.flush()
+            for sum_dict in sorted(summaries, key=lambda d: d['filename']):
+                out = (
+                    sum_dict['filename'],
+                    sum_dict['total_reads'],
+                    sum_dict['unique_reads'],
+                    sum_dict['discarded'],
+                    snp.position + 1,
+                    snp.reference,
+                    snp.target,
+                    sum_dict['no_edit'],
+                    sum_dict['no_edit_perc'],
+                    sum_dict['hdr_clean'],
+                    sum_dict['hdr_clean_perc'],
+                    sum_dict['hdr_gap'],
+                    sum_dict['hdr_gap_perc'],
+                    sum_dict['nhej'],
+                    sum_dict['nhej_perc'],
+                    sum_dict['perc_a'],
+                    sum_dict['perc_t'],
+                    sum_dict['perc_c'],
+                    sum_dict['perc_g']
+                )
+                out = map(str, out)
+                summfile.write('\t'.join(out))
+                summfile.write('\n')
+                summfile.flush()
+        logging.debug("Writing summary took %s seconds", round(time.time() - summary_start, 3))
     #   Close logfile
+    logging.debug("Entire program took %s seconds to run", round(time.time() - program_start, 3))
     args['logfile'].close()
 
 

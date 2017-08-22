@@ -40,6 +40,7 @@ class Alignment(object):
         self._read = read_align # type: str
         self._score = score # type: str
         self._names = names # type: Iterable[str]
+        self._source = None # type: Optional[str]
         self._unaligned = None # type: Optional[str]
         self._num_reads = None # type: Optional[int]
         self._nmdel = None # type: Optional[int]
@@ -56,6 +57,9 @@ class Alignment(object):
         args = toolkit.unpack(collection=args)
         self._names = args
 
+    def _set_source(self, source): # type: (str) -> None
+        self._source = source
+
     def _get_aligned_reference(self): # type: (None) -> str
         return self._ref
 
@@ -71,11 +75,15 @@ class Alignment(object):
     def _get_unaligned(self): # type: (None) -> str
         return self._unaligned
 
+    def _get_source(self): # type: (None) -> str
+        return self._source
+
     reference = property(fget=_get_aligned_reference, doc='Aligned reference sequence')
     read = property(fget=_get_aligned_read, doc='Aligned read sequence')
     score = property(fget=_get_score, doc='Alignment score')
     unaligned = property(fget=_get_unaligned, fset=_set_unaligned, doc='Set an unaligned sequence')
     names = property(fget=_get_names, fset=_set_names, doc='Names of supporting reads')
+    source = property(fget=_get_source, fset=_set_source, doc='Name of source file')
 
 
 def sort_reads_by_length(reads, fastq_name): # type: (Iterable[str], str) -> Dict[int, List[str]]
@@ -124,6 +132,7 @@ def align_recurse(
                 ) # type: str, str, int
                 aligned = Alignment(ref_align=al_ref, read_align=al_read, score=score) # type: Alignment
                 aligned.unaligned = read
+                aligned.source = fastq_name
                 alignments[length].append(aligned)
                 temp = read # type: str
                 continue
@@ -149,6 +158,7 @@ def align_recurse(
                 ) # type: str, str, int
             aligned = Alignment(ref_align=al_ref, read_align=al_read, score=score)
             aligned.unaligned = read
+            aligned.source = fastq_name
             alignments[length].append(aligned)
             temp = read # type: str
     logging.debug("FASTQ %s: Alignment took %s seconds", fastq_name, round(time.time() - alignment_start, 3))
