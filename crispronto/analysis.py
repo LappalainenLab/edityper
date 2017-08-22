@@ -300,4 +300,4 @@ def display_classification(
         else:
             logging.error("%s reads missing after classification", total_reads - counted_total)
         logging.warning(class_header)
-        return hdr_indels, total_counts
+    return hdr_indels, total_counts
