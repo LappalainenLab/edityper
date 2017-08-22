@@ -426,13 +426,16 @@ def make_cigar(alignment, exact=False): # type: (al.Alignment, bool) -> (str, st
     cigar_ops = [] # type: List[str]
     #   Iterate through our range, comparing bases between read and reference
     for i in range(head, tail + 1): # type: int
-        if reference[i] == '-' and read[i] == '-': continue # This shouldn't happen, but just in case
-        #   Actual comparisons
-        if reference[i] == '-': cigar_ops.append('I') # Insertion relative to reference
-        elif read[i] == '-': cigar_ops.append('D') # Deletion relative to reference
-        elif exact and read[i] == reference[i]: cigar_ops.append('=') # Sequence match, when exact CIGAR is needed
-        elif exact and read[i] != reference[i]: cigar_ops.append('X') # Sequence mismatch, when exact CIGAR is needed
-        else: cigar_ops.append('M') # Alignment match (not base match)
+        try:
+            if reference[i] == '-' and read[i] == '-': continue # This shouldn't happen, but just in case
+            #   Actual comparisons
+            if reference[i] == '-': cigar_ops.append('I') # Insertion relative to reference
+            elif read[i] == '-': cigar_ops.append('D') # Deletion relative to reference
+            elif exact and read[i] == reference[i]: cigar_ops.append('=') # Sequence match, when exact CIGAR is needed
+            elif exact and read[i] != reference[i]: cigar_ops.append('X') # Sequence mismatch, when exact CIGAR is needed
+            else: cigar_ops.append('M') # Alignment match (not base match)
+        except IndexError:
+            break
     #   Now, turn our list of operations into a proper cigar string
     counter = 0 # type: int
     cigar_string = '' # type: str
