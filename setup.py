@@ -40,7 +40,8 @@ INSTALL_REQUIRES = [
     'numpy',
     'scipy',
     'matplotlib',
-    'biopython'
+    'biopython',
+    'regex'
 ]
 
 #   Packages
