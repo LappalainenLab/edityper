@@ -2,8 +2,8 @@
 
 """CRISPRonto"""
 
-from __future__ import print_function
 from __future__ import division
+from __future__ import print_function
 
 import sys
 PYTHON_VERSION = sys.version_info.major
@@ -15,8 +15,6 @@ import signal
 import itertools
 from multiprocessing import Lock
 from collections import Counter, defaultdict, namedtuple
-
-LOCK = Lock()
 
 try:
     if PYTHON_VERSION is 3:
@@ -48,6 +46,7 @@ except ImportError as error:
     sys.exit(error)
 
 
+LOCK = Lock()
 SNP = namedtuple('SNP', ('reference', 'target', 'position'))
 Events = namedtuple('Events', ('num_reads', 'num_ins', 'num_del', 'num_mis'))
 

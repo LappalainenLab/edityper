@@ -2,8 +2,8 @@
 
 """Quality control for CRIPRonto"""
 
-from __future__ import print_function
 from __future__ import division
+from __future__ import print_function
 
 import sys
 PYTHON_VERSION = sys.version_info.major
@@ -16,7 +16,7 @@ try:
     import numpy
     from scipy.stats import norm
 except ImportError as error:
-    sys.exit("Please install Numpy and SciPy for this module")
+    sys.exit(error)
 
 try:
     if PYTHON_VERSION is 3:
@@ -27,8 +27,8 @@ try:
         import nw_align
     else:
         sys.exit("Please use Python 2 or 3 for this module: " + __name__)
-except ImportError:
-    sys.exit("FAIL")
+except ImportError as error:
+    sys.exit(error)
 
 
 random.seed(a=time.time())

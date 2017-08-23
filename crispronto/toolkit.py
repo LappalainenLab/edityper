@@ -2,8 +2,8 @@
 
 """Tools for CRISPRonto"""
 
-from __future__ import print_function
 from __future__ import division
+from __future__ import print_function
 
 import sys
 
@@ -27,7 +27,7 @@ else:
 try:
     from Bio.SeqIO.QualityIO import FastqGeneralIterator
 except ImportError as error:
-    sys.exit("Please install BioPython")
+    sys.exit(error)
 
 
 Read = namedtuple('Read', ('name', 'seq', 'qual'))
@@ -44,7 +44,7 @@ def load_fastq(fastq_file): # type: (str, Optional[str]) -> Tuple[Read]:
         my_open = open
     try:
         with my_open(fastq_file, 'rt') as ffile:
-            for read in FastqGeneralIterator(ffile):
+            for read in FastqGeneralIterator(ffile): # type: Tuple[str, str, str]
                 name, seq, qual = read # type: str, str, str
                 reads.append(Read(name=name, seq=seq, qual=qual))
     except:

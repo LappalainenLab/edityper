@@ -2,12 +2,11 @@
 
 """Plotting utilities for the CRISPR program"""
 
-from __future__ import print_function
 from __future__ import division
+from __future__ import print_function
 
 import sys
 PYTHON_VERSION = sys.version_info.major
-
 
 import os
 import time
@@ -19,7 +18,7 @@ try:
     import matplotlib.patches as ptch
     import matplotlib.font_manager as fm
 except ImportError as error:
-    sys.exit("Please install Numpy and Matplotlib for this module: " + error)
+    sys.exit(error)
 
 
 _LOCUS_WIDTH = 0.5
@@ -47,34 +46,22 @@ def locus_plot(
     # type: (...) -> None
     """Make a locus plot"""
     logging.info("Making locus plot")
-    locus_start = time.time()
+    locus_start = time.time() # type: float
     if _check_fonts():
         plt.xkcd()
     #   Make a name for our locus plot
-    plot_name = os.path.join(output_prefix, fastq_name + '_locus.pdf')
+    plot_name = os.path.join(output_prefix, fastq_name + '_locus.pdf') # type: str
     #   Create our subplots
     fig, ax = plt.subplots()
     #   Get our data ready for plotting
     mis_dict = {position: len(bases) for position, bases in mismatches.items()} # type: Dict[int, int]
     ins_dict = {position: len(counts) for position, counts in insertions.items()} # type: Dict[int, int]
     del_dict = {position: len(counts) for position, counts in deletions.items()} # type: Dict[int, int]
-    # del_dict = deletions
-    # indels = defaultdict(int) # type: Mapping[int, int]
-    # for this_dict in (insertions, deletions): # type: Mapping[int, List[int]]
-    #     for position, lengths in this_dict.items(): # type: int, List[int]
-    #         indels[position] += len(lengths)
     #   Sort our data
-    # indel_counts = map(lambda tup: tup[1], sorted(indels.items())) # type: List[int]
     mis_counts = map(lambda tup: tup[1], sorted(mis_dict.items())) # type: List[int]
     ins_counts = map(lambda tup: tup[1], sorted(ins_dict.items())) # type: List[int]
     del_counts = map(lambda tup: tup[1], sorted(del_dict.items())) # type: List[int]
     #   Create the bar graphs
-    # indel_bars = ax.bar(
-    #     left=sorted(indels),
-    #     height=indel_counts,
-    #     width=_LOCUS_WIDTH,
-    #     color=_INDEL_COLOR
-    # )
     ins_bars = ax.bar(
         left=sorted(insertions),
         height=ins_counts,
@@ -95,12 +82,11 @@ def locus_plot(
     )
     #   Add title and legend
     plt.title(fastq_name)
-    # indel_patch = ptch.Patch(color=_INDEL_COLOR, label='Indels')
+    #   Add patches for colors
     ins_patch = ptch.Patch(color=_INS_COLOR, label='Insertions')
     del_patch = ptch.Patch(color=_DEL_COLOR, label='Deletions')
     mismatch_patch = ptch.Patch(color=_MISMATCH_COLOR, label='Mismatches')
     plt.legend(handles=(ins_patch, del_patch, mismatch_patch))
-    # plt.legend(handles=(indel_patch, mismatch_patch))
     #   Set the y limits and labels
     plt.ylim(0, num_reads)
     plt.ylabel('Number of Reads')
@@ -123,23 +109,16 @@ def quality_plot(
     # type: (...) -> None
     """Make a violin plot of the alignment scores"""
     logging.info("Making quality scores plot")
-    quality_start = time.time()
+    quality_start = time.time() # type: float
     if _check_fonts():
         plt.xkcd()
-    plot_name = output_prefix + '_quality.pdf'
+    plot_name = output_prefix + '_quality.pdf' # type: str
     alignments_by_fastq = defaultdict(list) # type: Mapping[str, List[alignment.Alignment]]
     for aligned in alignments: # type: alignment.Alignment
         alignments_by_fastq[aligned.source].append(aligned)
     #   Assemble our scores
-    # scores = tuple(al.get_score() for al in alignments)
-    scores = {fastq: tuple(al.score for al in al_list) for fastq, al_list in alignments_by_fastq.items()}
-    # import code; code.interact(local=locals()); sys.exit()
-    # scores = dict.fromkeys(alignments_by_fastq.keys(), list())
-    # for fastq, alignment_list in alignments_by_fastq.items(): # type: str, List[alignment.Alignment]
-    #     for alignment in alignment_list: # type: alignment.Alignment
-    #         scores[fastq].append(alignment.get_score())
+    scores = {fastq: tuple(al.score for al in al_list) for fastq, al_list in alignments_by_fastq.items()} # type: Dict[str, Tuple[int]]
     #   Plot the scores
-    # vlnplt = plt.violinplot(scores)
     fig, ax = plt.subplots(nrows=1, ncols=1)
     ax.violinplot(scores.values())
     #   Determine rotation of xtick text
@@ -156,7 +135,6 @@ def quality_plot(
     #   Adjust the plot area to ensure everything is shown
     plt.tight_layout()
     #   Yield the plot
-    # plt.show()
     logging.info("Saving plot to %s", plot_name)
     plt.savefig(plot_name, format='pdf')
     logging.debug("Making quality scores plot took %s seconds", round(time.time() - quality_start, 3))

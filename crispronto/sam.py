@@ -2,8 +2,8 @@
 
 """Create a SAM file from alignment data for the CRISPR program"""
 
-from __future__ import print_function
 from __future__ import division
+from __future__ import print_function
 
 import sys
 PYTHON_VERSION = sys.version_info.major
@@ -24,14 +24,14 @@ try:
     else:
         sys.exit("Please use Python 2.7 or 3.3 or higher")
 except ImportError as error:
-    sys.exit("Please keep this program in it's directory to load custom modules: " + error)
+    sys.exit(error)
 
 
 try:
     #   Use regex over re as it allows for fuzzy matching
     import regex
 except ImportError as error:
-    sys.exit("Please install 'regex' for this module: " + error)
+    sys.exit(error)
 
 
 SORT_ORDER = 'coordinate' # type: str

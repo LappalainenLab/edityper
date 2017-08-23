@@ -21,8 +21,8 @@ try:
         import nw_align
     else:
         sys.exit("Please use Python 2.7 or 3.5 or higher for this module: " + __name__)
-except ImportError:
-    raise
+except ImportError as error:
+    sys.exit(error)
 
 class Alignment(object):
 

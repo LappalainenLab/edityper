@@ -27,8 +27,8 @@ else:
 
 try:
     import numpy
-except ImportError:
-    sys.exit("Please install Numpy for this module: " + __name__)
+except ImportError as error:
+    sys.exit(error)
 
 
 _DISP_BREAK = '-----------------------------------------------------------------------------------------'
