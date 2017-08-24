@@ -246,7 +246,7 @@ def crispr_analysis(
         sam_start = time.time()
         sam_name = os.path.join(output_prefix, fastq_name + '.sam')
         count = 1 # type: int
-        sam_lines = list() # type: List[write_sam.SAM]
+        sam_lines = list() # type: List[sam.SAM]
         bit_base = 16 if do_reverse else 0 # type: int
         reads_dict = defaultdict(list) # type: Mapping[str, List[toolkit.Read]]
         for read in reads:
@@ -259,7 +259,7 @@ def crispr_analysis(
             cigar = sam.make_cigar(alignment=aligned) # type: str
             sam_seq = sam.make_sam_sequence(alignment=aligned, head=head, tail=tail) # type: str
             read_count = 1 # type: int
-            sams = map( # type: Map[write_sam.SAM]
+            sams = map( # type: Iterable[sam.SAM]
                 sam.SAM,
                 (read.name for read in supporting_reads), # qname=
                 itertools.repeat(bit_base), # flag=
@@ -278,10 +278,17 @@ def crispr_analysis(
         if reads_dict:
             unaligned_reads = tuple(itertools.chain.from_iterable(reads_dict.values())) # type: Tuple[toolkit.Read]
             logging.warning("FASTQ %s: %s reads unaligned...", fastq_name, len(unaligned_reads))
-        sam_lines = tuple(sorted(sam_lines))
+            for read in unaligned_reads: # type: toolkit.Read
+                unaligned_sam = sam.SAM( # type: sam.SAM
+                    qname=read.name,
+                    seq=read.seq,
+                    qual=read.qual
+                )
+                sam_lines.append(unaligned_sam)
+        sam_lines = tuple(sorted(sam_lines)) # type: Tuple[sam.SAM]
         #   Make the header
         rg_header = sam.make_read_group(sam_lines=sam_lines, conf_dict=args_dict) # type: Tuple[str]
-        sq_header = sam.make_sequence_header(
+        sq_header = sam.make_sequence_header( # type: Tuple[str]
             sam_lines=sam_lines,
             ref_seq_dict={reference.name: reference.sequence}
         )
@@ -293,7 +300,7 @@ def crispr_analysis(
                 sfile.write(header_line)
                 sfile.write('\n')
                 sfile.flush()
-            for samline in sam_lines: # type: write_sam.SAM
+            for samline in sam_lines: # type: sam.SAM
                 sfile.write(str(samline))
                 sfile.write('\n')
                 sfile.flush()

@@ -509,6 +509,7 @@ def make_sequence_header(
         sam_lines, # type: Iterable[SAM]
         ref_seq_dict # type: Dict[str, str]
 ):
+    # type: (...) -> Tuple[str]
     """Make reference @SQ headers"""
     rnames = {sam.get_rname() for sam in sam_lines} # type: Set[str]
     for rname in rnames: # type: str
