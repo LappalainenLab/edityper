@@ -121,14 +121,18 @@ def crispr_analysis(
         'mismatches': defaultdict(list),
         'matches': defaultdict(int)
     }
+    read_assignments = dict()
     classifications = (dict(), dict(), dict(), dict()) # type: Tuple[Dict[str, Events]]
     hdr, nhej, no_edit, discard = classifications # type: Dict[str, Events]
     for length, alignment_list in alignments.items(): # type: int, List[alignment.Alignment]
         for aligned in alignment_list: # type: alignment.Alignment
             num_ins, num_del, num_mis = 0, 0, 0 # type: int, int, int
             num_reads = unique_reads[str(aligned)] # type: int
+            unaligned = toolkit.reverse_complement(sequence=aligned.unaligned) if do_reverse else aligned.unaligned
             if aligned.score < score_threshold:
-                discard[str(aligned)] = Events(num_reads=num_reads, num_ins=0, num_del=0, num_mis=0)
+                discard_results = Events(num_reads=num_reads, num_ins=0, num_del=0, num_mis=0)
+                discard[str(aligned)] = discard_results
+                read_assignments[unaligned] = ('DISCARD', discard_results)
                 continue
             ref_head, ref_tail = toolkit.trim_interval(seq=aligned.reference) # type: int, int
             al_ref_seq = aligned.reference[ref_head:ref_tail] # type: str
@@ -175,11 +179,34 @@ def crispr_analysis(
             results = Events(num_reads=num_reads, num_ins=num_ins, num_del=num_del, num_mis=num_mis) # type: Events
             if al_read_seq[snp_info.position] == snp_info.target:
                 hdr[str(aligned)] = results
+                read_assignments[unaligned] = ('HDR', results)
             elif all(map(lambda x: not x, (num_del, num_ins, num_mis))):
                 no_edit[str(aligned)] = results
+                read_assignments[unaligned] = ('NO_EDIT', results)
             else:
                 nhej[str(aligned)] = results
+                read_assignments[unaligned] = ('NHEJ', results)
     logging.debug("FASTQ %s: Read classifcation took %s seconds", fastq_name, round(time.time() - classifcation_start, 3))
+    if _set_verbosity(level=args_dict['verbosity']) == 10 and not args_dict['suppress_tables']:
+        assignments_name = os.path.join(output_prefix, fastq_name + '.assignments')
+        with open(assignments_name, 'w') as afile:
+            logging.debug("FASTQ %s: Writing read assignments to %s", fastq_name, assignments_name)
+            afile.write('\t'.join(('ReadID', 'Label', 'NumDel', 'NumIns', 'NumMis')))
+            afile.write('\n')
+            afile.flush()
+            for read in reads: # type: toolkit.read
+                label, results = read_assignments[read.seq]
+                out = ( # type: Tuple[Any]
+                    read.name,
+                    label,
+                    results.num_del,
+                    results.num_ins,
+                    results.num_mis
+                )
+                out = map(str, out)
+                afile.write('\t'.join(out))
+                afile.write('\n')
+                afile.flush()
     if not (args_dict['suppress_classification'] or args_dict['suppress_tables']):
         LOCK.acquire()
         hdr_indels, total_counts = analysis.display_classification(
