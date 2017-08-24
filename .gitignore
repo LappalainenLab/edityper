@@ -34,3 +34,4 @@ bin/
 build/
 lib/
 *.egg-info/
+dist/
