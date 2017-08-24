@@ -122,8 +122,8 @@ def crispr_analysis(
         'matches': defaultdict(int)
     }
     read_assignments = dict() # type: Dict[str, Tuple[str, Events]]
-    classifications = (dict(), dict(), dict(), dict()) # type: Tuple[Dict[str, Events]]
-    hdr, nhej, no_edit, discard = classifications # type: Dict[str, Events]
+    classifications = (dict(), dict(), dict(), dict(), dict()) # type: Tuple[Dict[str, Events]]
+    hdr, mix, nhej, no_edit, discard = classifications # type: Dict[str, Events]
     for length, alignment_list in alignments.items(): # type: int, List[alignment.Alignment]
         for aligned in alignment_list: # type: alignment.Alignment
             num_ins, num_del, num_mis = 0, 0, 0 # type: int, int, int
@@ -149,6 +149,7 @@ def crispr_analysis(
                     counts['insertions'][position].extend([gi_length] * num_reads)
             if num_ins:
                 ref_no_ins, read_no_ins = str(), str() # type: str, str
+                read_w_ins = al_read_seq[:] # type: str, str - keep sequence with insertions
                 for index in range(len(al_ref_seq)): # type: int
                     if al_ref_seq[index] == '-':
                         continue
@@ -177,15 +178,39 @@ def crispr_analysis(
             for match_position in matches: # type: int
                 counts['matches'][match_position] += num_reads
             results = Events(num_reads=num_reads, num_ins=num_ins, num_del=num_del, num_mis=num_mis) # type: Events
-            if al_read_seq[snp_info.position] == snp_info.target:
-                hdr[str(aligned)] = results
-                read_assignments[unaligned] = ('HDR', results)
-            elif all(map(lambda x: not x, (num_del, num_ins, num_mis))):
-                no_edit[str(aligned)] = results
-                read_assignments[unaligned] = ('NO_EDIT', results)
+            # reposition the SNP index with deletion shift
+            if al_read_seq[snp_info.position] == '-':
+                new_snp_index = snp_info.position
+                # print(new_snp_index)
+                while al_read_seq[new_snp_index] == '-':
+                    new_snp_index += 1
+                    if new_snp_index == len(al_read_seq) - 3:
+                        break
             else:
-                nhej[str(aligned)] = results
-                read_assignments[unaligned] = ('NHEJ', results)
+                new_snp_index = snp_info.position
+            snp_info_new = snp_info._replace(position=new_snp_index) # created new named tuple
+            if al_read_seq[snp_info_new.position] == snp_info_new.target:
+                if all(map(lambda x: not x, (num_del, num_ins))):
+                    hdr[str(aligned)] = results
+                    read_assignments[unaligned] = ('HDR', results)
+                else:
+                    mix[str(aligned)] = results
+                    read_assignments[unaligned] = ('MIX', results)
+            else:
+                if all(map(lambda x: not x, (num_del, num_ins))):
+                    no_edit[str(aligned)] = results
+                    read_assignments[unaligned] = ('NO_EDIT', results)
+                else:
+                    if num_ins != 0 and insertion_list[0][0] == snp_info.position: # if first insertion started on the snp index
+                        if read_w_ins[snp_info.position] == snp_info.target:
+                            mix[str(aligned)] = results
+                            read_assignments[unaligned] = ('MIX', results)
+                        else:
+                            nhej[str(aligned)] = results
+                            read_assignments[unaligned] = ('NHEJ', results)
+                    else:
+                        nhej[str(aligned)] = results
+                        read_assignments[unaligned] = ('NHEJ', results)
     logging.debug("FASTQ %s: Read classifcation took %s seconds", fastq_name, round(time.time() - classifcation_start, 3))
     #   Output read assignments if verbosity is set to 'debug' and we're not suppressing tables
     if _set_verbosity(level=args_dict['verbosity']) == 10 and not args_dict['suppress_tables']:

@@ -203,13 +203,14 @@ def display_classification(
         'INDELS',
         'PERC_INDELS'
     )
-    #   Four categories, and read_classification is a tuple, so need index, not names
+    #   Five categories, and read_classification is a tuple, so need index, not names
     #   A dictionary of classifications, numbered for easy access
     iter_tag = { # type: Dict[int, str]
         0: 'HDR',
-        1: 'NHEJ',
-        2: 'NO_EDIT',
-        3: 'DISCARD'
+        1: 'MIX',
+        2: 'NHEJ',
+        3: 'NO_EDIT',
+        4: 'DISCARD'
     }
     counted_total = 0 # type: int
     hdr_indels = 0 # type: int
@@ -246,8 +247,8 @@ def display_classification(
             #   Display our summaries
             logging.warning("%s: count %s", tag, count)
             logging.warning("%s: avg indels %s", tag, round(avg_indels, 3))
-            #   Reporting for HDR and NHEJ
-            if tag in {iter_tag[0], iter_tag[1]}:
+            #   Reporting for HDR/MIX and NHEJ
+            if tag in {iter_tag[0], iter_tag[1], iter_tag[2]}:
                 total_ins, avg_ins, std_ins = summarize(data=event_lists['insertions'], rounding=2)
                 total_del, avg_del, std_del = summarize(data=event_lists['deletions'], rounding=2)
                 total_mis, avg_mis, std_mis = summarize(data=event_lists['mismatches'], rounding=2)
@@ -255,8 +256,8 @@ def display_classification(
                 total_ins, avg_ins, std_ins = NA, NA, NA
                 total_del, avg_del, std_del = NA, NA, NA
                 total_mis, avg_mis, std_mis = NA, NA, NA
-            #   HDR-specific reporting
-            if tag == iter_tag[0]:
+            #   HDR/MIX-specific reporting
+            if tag in {iter_tag[0], iter_tag[1]}:
                 none_total, perc_none = event_counts['none'], percent(num=event_counts['none'], total=count)
                 del_total, perc_del = event_counts['deletions'], percent(num=event_counts['deletions'], total=count)
                 ins_total, perc_ins = event_counts['insertions'], percent(num=event_counts['insertions'], total=count)
