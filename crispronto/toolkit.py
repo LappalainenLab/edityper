@@ -110,11 +110,11 @@ def get_mismatch(
     Optionally, get indecies where the sequences match as well'''
     if len(seq_a) != len(seq_b):
         raise ValueError("Sequences must be the same length")
-    mis_list, match_list = list(), list() # type: Tuple[int, Tuple[str]], List[int]
+    mis_list, match_list = list(), list() # type: List[Tuple[int, Tuple[str, str]]], List[int]
     if head and tail:
-        seq_range = range(head, tail + 1)
+        seq_range = range(head, tail + 1) # type: int
     else:
-        seq_range = range(len(seq_a))
+        seq_range = range(len(seq_a)) # type: int
     for index in seq_range: # type: int
         try:
             if seq_a[index] == '-' or seq_b[index] == '-':
@@ -134,17 +134,17 @@ def get_mismatch(
         return mis_list
 
 
-def find_gaps(seq, head=None, tail=None): # type: (str, Optional[int], Optional[int]) -> List[Tuple[int]]
+def find_gaps(seq, head=None, tail=None): # type: (str, Optional[int], Optional[int]) -> List[Tuple[int, int]]
     '''Return absolute position and length of all the gaps in a sequence
     Use known head and tail, or optionally find head and tail'''
-    #Adjust the interval of study to discard head/tail gaps due to alignment
+    # Adjust the interval of study to discard head/tail gaps due to alignment
     if not (head and tail):
         head, tail = trim_interval(seq=seq) # type: int, int
     head = max(0, head) # type: int
     tail = min(tail, len(seq)) # type: int
-    spans = (m.span() for m in re.finditer(r'(-+)', seq[head:tail]))
-    gap_list = [(span[0] + head, span[1] - span[0]) for span in spans]
-    return gap_list # type: List(Tuple[int])
+    spans = (m.span() for m in re.finditer(r'(-+)', seq[head:tail])) # type: generator[Tuple[int, int]]
+    gap_list = [(span[0] + head, span[1] - span[0]) for span in spans] # type: List[Tuple[int, int]]
+    return gap_list
 
 
 def trim_interval(seq): # type: (str) -> (int, int)
@@ -163,13 +163,8 @@ def trim_interval(seq): # type: (str) -> (int, int)
 
 def side_trimmer(seq): # type: (str) -> str
     '''Trim only side gaps of an aligned sequence, return trimmed aligned sequence'''
-    trimmed_seq = str() # type: str
     head, tail = trim_interval(seq=seq) # type: int, int
-    if tail == -1:
-        trimmed_seq = seq[head:] # type: str
-    else:
-        trimmed_seq = seq[head:tail] # type: str
-    return trimmed_seq
+    return seq[head:tail] # type: str
 
 
 def sim_seq(seq1, seq2): # type: (Iterable, Iterable) -> int

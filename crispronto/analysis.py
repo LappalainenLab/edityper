@@ -290,7 +290,7 @@ def display_classification(
                 indel_total,
                 perc_indel
             )
-            out = map(str, out)
+            out = map(str, out) # type: Iterable[str]
             cfile.write('\t'.join(out) + '\n')
             cfile.flush()
             total_counts[tag] += count

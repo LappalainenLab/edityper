@@ -121,7 +121,7 @@ def crispr_analysis(
         'mismatches': defaultdict(list),
         'matches': defaultdict(int)
     }
-    read_assignments = dict()
+    read_assignments = dict() # type: Dict[str, Tuple[str, Events]]
     classifications = (dict(), dict(), dict(), dict()) # type: Tuple[Dict[str, Events]]
     hdr, nhej, no_edit, discard = classifications # type: Dict[str, Events]
     for length, alignment_list in alignments.items(): # type: int, List[alignment.Alignment]
@@ -130,22 +130,22 @@ def crispr_analysis(
             num_reads = unique_reads[str(aligned)] # type: int
             unaligned = toolkit.reverse_complement(sequence=aligned.unaligned) if do_reverse else aligned.unaligned
             if aligned.score < score_threshold:
-                discard_results = Events(num_reads=num_reads, num_ins=0, num_del=0, num_mis=0)
-                discard[str(aligned)] = discard_results
-                read_assignments[unaligned] = ('DISCARD', discard_results)
+                results = Events(num_reads=num_reads, num_ins=0, num_del=0, num_mis=0)
+                discard[str(aligned)] = results
+                read_assignments[unaligned] = ('DISCARD', results)
                 continue
             ref_head, ref_tail = toolkit.trim_interval(seq=aligned.reference) # type: int, int
             al_ref_seq = aligned.reference[ref_head:ref_tail] # type: str
             al_read_seq = aligned.read[ref_head:ref_tail] # type: str
             read_head, read_tail = toolkit.trim_interval(seq=al_read_seq) # type: int, int
-            insertion_list = toolkit.find_gaps(seq=al_ref_seq) # type: List
+            insertion_list = toolkit.find_gaps(seq=al_ref_seq) # type: List[Tuple[int, int]]
             if insertion_list:
-                num_ins = len(insertion_list)
-                temp = 0
-                for gap in insertion_list:
-                    position, gi_length = gap
-                    position = position - temp
-                    temp = temp + gi_length
+                num_ins = len(insertion_list) # type: int
+                temp = 0 # type: int
+                for gap in insertion_list: # type: Tuple[int, int]
+                    position, gi_length = gap # type: int, int
+                    position = position - temp # type: int
+                    temp = temp + gi_length # type: int
                     counts['insertions'][position].extend([gi_length] * num_reads)
             if num_ins:
                 ref_no_ins, read_no_ins = str(), str() # type: str, str
@@ -157,24 +157,24 @@ def crispr_analysis(
                         read_no_ins = read_no_ins + al_read_seq[index] # type: str
                 al_ref_seq = ref_no_ins # type: str
                 al_read_seq = read_no_ins # type: str
-            deletion_list = toolkit.find_gaps(seq=al_read_seq, head=read_head, tail=read_tail) # type: List
+            deletion_list = toolkit.find_gaps(seq=al_read_seq, head=read_head, tail=read_tail) # type: List[Tuple[int, int]]
             if deletion_list:
-                num_del = len(deletion_list)
-                for gap in deletion_list:
-                    position, gd_length = gap
+                num_del = len(deletion_list) # type: int
+                for gap in deletion_list: # type: Tuple[int, int]
+                    position, gd_length = gap # type: int, int
                     counts['deletions'][position].extend([gd_length] * num_reads)
-            mismatches, matches = toolkit.get_mismatch(
+            mismatches, matches = toolkit.get_mismatch( # type: List[Tuple[int, Tuple[str, str]]], List[int]
                 seq_a=al_ref_seq,
                 seq_b=al_read_seq,
                 head=read_head,
                 tail=read_tail,
                 matches=True
             )
-            for mis in mismatches:
-                position, perm = mis
-                source, snp = perm
+            for mis in mismatches: # type: Tuple[int, Tuple[str, str]]
+                position, perm = mis # type: int, Tuple[str, str]
+                source, snp = perm # type: str, str
                 counts['mismatches'][position].extend([snp] * num_reads)
-            for match_position in matches:
+            for match_position in matches: # type: int
                 counts['matches'][match_position] += num_reads
             results = Events(num_reads=num_reads, num_ins=num_ins, num_del=num_del, num_mis=num_mis) # type: Events
             if al_read_seq[snp_info.position] == snp_info.target:
@@ -187,15 +187,16 @@ def crispr_analysis(
                 nhej[str(aligned)] = results
                 read_assignments[unaligned] = ('NHEJ', results)
     logging.debug("FASTQ %s: Read classifcation took %s seconds", fastq_name, round(time.time() - classifcation_start, 3))
+    #   Output read assignments if verbosity is set to 'debug' and we're not suppressing tables
     if _set_verbosity(level=args_dict['verbosity']) == 10 and not args_dict['suppress_tables']:
         assignments_name = os.path.join(output_prefix, fastq_name + '.assignments')
         with open(assignments_name, 'w') as afile:
             logging.debug("FASTQ %s: Writing read assignments to %s", fastq_name, assignments_name)
-            afile.write('\t'.join(('ReadID', 'Label', 'NumDel', 'NumIns', 'NumMis')))
+            afile.write('\t'.join(('#ReadID', 'Label', 'NumDel', 'NumIns', 'NumMis')))
             afile.write('\n')
             afile.flush()
             for read in reads: # type: toolkit.read
-                label, results = read_assignments[read.seq]
+                label, results = read_assignments[read.seq] # type: str, Events
                 out = ( # type: Tuple[Any]
                     read.name,
                     label,
@@ -203,7 +204,7 @@ def crispr_analysis(
                     results.num_ins,
                     results.num_mis
                 )
-                out = map(str, out)
+                out = map(str, out) # type: Iterable[str]
                 afile.write('\t'.join(out))
                 afile.write('\n')
                 afile.flush()
