@@ -18,6 +18,7 @@ try:
 except ImportError as error:
     sys.exit(error)
 
+
 try:
     if PYTHON_VERSION is 3:
         from crispronto import toolkit
