@@ -65,7 +65,7 @@ CRISPRonto
 | Parameter | Definition | Required? | Default |
 | --------- | ---------- | --------- | ------- |
 | `-d | --output-directory` | Choose where to put all output files | No | 'output' |
-| `-j | --project` | Give this project a name, will be used as the basename for output files | No | 'crispronto'
+| `-j | --project` | Give this project a name, will be used as the basename for output files | No | 'crispronto' |
 
 ### Read Group Arguments
 
