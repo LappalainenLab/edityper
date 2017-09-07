@@ -29,7 +29,7 @@ _MISMATCH_COLOR = 'b'
 _XKCD = False
 
 def _check_fonts(): # type: (None) -> bool
-    humor = 'Humor-Sans.ttf' in tuple(map(os.path.basename, fm.findSystemFonts())) # type: bool
+    humor = 'Humor-Sans.ttf' in map(os.path.basename, fm.findSystemFonts()) # type: bool
     if _XKCD and not humor:
         logging.error("Cannot find 'Humor-Sans.ttf' font. Please install and clear your matplotlib cache")
     return _XKCD and humor
