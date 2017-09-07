@@ -10,11 +10,11 @@ To install, run the following command
 python setup.py install
 ```
 
-Please note, to install system-wide, you must have sudo acces. If you are not installing system-wide, please install within your `$PYTHONPATH`.
+Please note, to install system-wide, you must have sudo access. If you are not installing system-wide, please install within your `$PYTHONPATH`.
 
 ## Dependencies
 
-CRISPRonto is compatible with Python 2.7+ and 3.3+; tt also depends on the following Python modules:
+CRISPRonto is compatible with Python 2.7+ and 3.3+; it also depends on the following Python modules:
  - [Cython](http://cython.org/)
  - [matplotlib](http://matplotlib.org/)
  - [NumPy](http://www.numpy.org/)
