@@ -49,7 +49,7 @@ def make_argument_parser():
         '-f',
         '--logfile',
         dest='logfile',
-        type=argparse.FileType(mode='a'),
+        type=argparse.FileType(mode='w'),
         default=sys.stderr,
         required=False,
         metavar='LOG FILE',

@@ -375,6 +375,8 @@ def main():
         level=_set_verbosity(level=args['verbosity']),
         datefmt='%Y-%m-%d %H:%M:%S'
     )
+    if not sys.stderr == args['logfile']:
+        logging.getLogger().addHandler(logging.StreamHandler())
     logging.info("Welcome to %s!", os.path.basename(sys.argv[0]))
     program_start = time.time()
     #   Make an output directory
