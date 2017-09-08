@@ -41,14 +41,18 @@ def _filter_to_dict(filtered_dict): # type: (Iterable[Tuple[Any, Any]]) -> Dict[
 
 def percent(num, total): # type: (int, int) -> float
     """Calculate a percent"""
-    return round(num * 100 / total, 2)
+    percent = num * 100 / total if total is not 0 else 0
+    return round(percent, 2)
 
 
 def summarize(data, rounding=None): # type: (Iterable[Union[int, float]], Optional[int]) -> Union[int, float], float, float
     '''Get the sum, mean, and standard deviation of a collection of data'''
     total = sum(data)
-    avg = numpy.mean(data)
-    std = numpy.std(data)
+    if len(data) > 0:
+        avg = numpy.mean(data)
+        std = numpy.std(data)
+    else:
+        avg, std = 0, 0 # type: int, int
     if rounding:
         avg = round(avg, rounding)
         std = round(std, rounding)
