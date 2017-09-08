@@ -369,14 +369,19 @@ def main():
         sys.exit(parser.print_help())
     args = {key: value for key, value in vars(parser.parse_args()).items() if value is not None} # type: Dict[str, Any]
     #   Setup logger
+    log_format = '%(asctime)s %(levelname)s:\t%(message)s' # type: str
+    date_format = '%Y-%m-%d %H:%M:%S' # type: str
     logging.basicConfig(
-        format='%(asctime)s %(levelname)s:\t%(message)s',
+        format=log_format,
         stream=args['logfile'],
         level=_set_verbosity(level=args['verbosity']),
-        datefmt='%Y-%m-%d %H:%M:%S'
+        datefmt=date_format
     )
     if not sys.stderr == args['logfile']:
-        logging.getLogger().addHandler(logging.StreamHandler())
+        formatter = logging.Formatter(fmt=log_format, datefmt=date_format) # type: logging.Formatter
+        handler = logging.StreamHandler() # type: logging.StreamHandler
+        handler.setFormatter(formatter)
+        logging.getLogger().addHandler(handler)
     logging.info("Welcome to %s!", os.path.basename(sys.argv[0]))
     program_start = time.time()
     #   Make an output directory
