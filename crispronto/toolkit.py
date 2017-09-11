@@ -30,8 +30,31 @@ except ImportError as error:
     raise SystemExit(error)
 
 
+try:
+    from pympler import muppy, summary, tracker
+    TRACKER = tracker.SummaryTracker()
+except ImportError:
+    _MEM_PROFILE = False
+else:
+    _MEM_PROFILE = True
+
+
+_DO_PROFILE = False
 Read = namedtuple('Read', ('name', 'seq', 'qual'))
 NamedSequence = namedtuple('NamedSequence', ('name', 'sequence'))
+
+def profile(diff=False): # type: (bool) -> None
+    """A simple profiler using stuff from pympler"""
+    if _DO_PROFILE and _MEM_PROFILE:
+        if diff:
+            TRACKER.print_diff()
+        else:
+            summary.print_(summary.summarize(muppy.get_objects()))
+    elif _DO_PROFILE and not _MEM_PROFILE:
+        logging.warning("Could not find 'pympler' module, please install with pip and run again")
+    else:
+        pass
+
 
 def load_fastq(fastq_file): # type: (str, Optional[str]) -> Tuple[Read]:
     """Load a FASTQ file"""
