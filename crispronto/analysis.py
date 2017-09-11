@@ -18,10 +18,11 @@ from math import floor, ceil
 from collections import Counter, defaultdict, namedtuple
 
 if PYTHON_VERSION is 2:
+    import toolkit
     from itertools import imap as map
     range = xrange
 elif PYTHON_VERSION is 3:
-    pass
+    from crispronto import toolkit
 else:
     raise SystemExit("Please use Python 2 or 3 for this module: " + __name__)
 

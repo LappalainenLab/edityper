@@ -14,6 +14,16 @@ import logging
 from collections import defaultdict
 
 try:
+    if PYTHON_VERSION is 3:
+        from crispronto import toolkit
+    elif PYTHON_VERSION is 2:
+        import toolkit
+    else:
+        raise SystemExit("Please use Python 2.7 or 3.5 or higher for this module: " + __name__)
+except ImportError as error:
+    raise SystemExit(error)
+
+try:
     import matplotlib.pyplot as plt
     import matplotlib.patches as ptch
     import matplotlib.font_manager as fm
