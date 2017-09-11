@@ -267,6 +267,14 @@ def make_argument_parser():
         help="Suppress plots"
     )
     parser.add_argument(
+        '--profile',
+        dest='profile',
+        action='store_true',
+        required=False,
+        # help="Profile CRISPRonto"
+        help=argparse.SUPPRESS
+    )
+    parser.add_argument(
         '--xkcd',
         dest='xkcd',
         action='store_true',

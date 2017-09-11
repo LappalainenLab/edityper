@@ -393,7 +393,10 @@ def main():
         sys.exit(logging.critical("All output suppressed, not running"))
     if args['suppress_sam']: # Suppressed SAM output?
         logging.warning("SAM output suppressed, not writing SAM file")
-    if args['suppress_events'] or args['suppress_tables']: # Suppressed events table?
+    if args['suppress_events'    #   Enable the profiler if desired
+    #   Do we profile?
+    if args['profile']:
+        toolkit._DO_PROFILE = True] or args['suppress_tables']: # Suppressed events table?
         logging.warning("Events output suppressed, not writing events table")
     if args['suppress_classification'] or args['suppress_tables']: # Suppressed classification table?
         logging.warning("Read classification suppressed, not writing classification table")
