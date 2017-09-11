@@ -22,16 +22,16 @@ try:
         from itertools import imap as map
         range = xrange
     else:
-        sys.exit("Please use Python 2.7 or 3.3 or higher")
+        raise SystemExit("Please use Python 2.7 or 3.3 or higher")
 except ImportError as error:
-    sys.exit(error)
+    raise SystemExit(error)
 
 
 try:
     #   Use regex over re as it allows for fuzzy matching
     import regex
 except ImportError as error:
-    sys.exit(error)
+    raise SystemExit(error)
 
 
 SORT_ORDER = 'coordinate' # type: str

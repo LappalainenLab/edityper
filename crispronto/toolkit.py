@@ -22,12 +22,12 @@ if PYTHON_VERSION is 2:
 elif PYTHON_VERSION is 3:
     maketrans = str.maketrans
 else:
-    sys.exit("Please use Python 2 or 3 for this module: " + __name__)
+    raise SystemExit("Please use Python 2 or 3 for this module: " + __name__)
 
 try:
     from Bio.SeqIO.QualityIO import FastqGeneralIterator
 except ImportError as error:
-    sys.exit(error)
+    raise SystemExit(error)
 
 
 Read = namedtuple('Read', ('name', 'seq', 'qual'))
@@ -48,7 +48,7 @@ def load_fastq(fastq_file): # type: (str, Optional[str]) -> Tuple[Read]:
                 name, seq, qual = read # type: str, str, str
                 reads.append(Read(name=name, seq=seq, qual=qual))
     except:
-        sys.exit(logging.critical("Cannot find or read FASTQ file '%s'", fastq_file))
+        raise SystemExit(logging.critical("Cannot find or read FASTQ file '%s'", fastq_file))
     logging.debug("Reading in FASTQ file '%s' took %s seconds", fastq_file, round(time.time() - read_start, 3))
     return tuple(reads)
 
@@ -70,7 +70,7 @@ def load_seq(seq_file): # type: (str) -> NamedSequence
                     continue
                 output += line.strip().replace(' ', '').upper()
     except:
-        sys.exit(logging.critical("Cannot find or read sequence file '%s'", seq_file))
+        raise SystemExit(logging.critical("Cannot find or read sequence file '%s'", seq_file))
     if not name:
         name = os.path.basename(seq_file) # type:str
         if name.count('.') == 2:
@@ -91,6 +91,7 @@ def unpack(collection): # type: (Iterable[Any]) -> Tuple[Any]
         else:
             result.append(item)
     return tuple(result)
+
 
 def reverse_complement(sequence): # type: (str) -> str
     """Reverse complement a nucleotide sequence"""

@@ -18,7 +18,7 @@ try:
     import matplotlib.patches as ptch
     import matplotlib.font_manager as fm
 except ImportError as error:
-    sys.exit(error)
+    raise SystemExit(error)
 
 
 _LOCUS_WIDTH = 0.5

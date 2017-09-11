@@ -16,7 +16,7 @@ try:
     import numpy
     from scipy.stats import norm
 except ImportError as error:
-    sys.exit(error)
+    raise SystemExit(error)
 
 
 try:
@@ -27,9 +27,9 @@ try:
         import toolkit
         import nw_align
     else:
-        sys.exit("Please use Python 2 or 3 for this module: " + __name__)
+        raise SystemExit("Please use Python 2 or 3 for this module: " + __name__)
 except ImportError as error:
-    sys.exit(error)
+    raise SystemExit(error)
 
 
 random.seed(a=time.time())

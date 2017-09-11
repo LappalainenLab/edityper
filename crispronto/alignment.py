@@ -20,9 +20,9 @@ try:
         import toolkit
         import nw_align
     else:
-        sys.exit("Please use Python 2.7 or 3.5 or higher for this module: " + __name__)
+        raise SystemExit("Please use Python 2.7 or 3.5 or higher for this module: " + __name__)
 except ImportError as error:
-    sys.exit(error)
+    raise SystemExit(error)
 
 class Alignment(object):
 

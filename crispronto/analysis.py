@@ -23,12 +23,12 @@ if PYTHON_VERSION is 2:
 elif PYTHON_VERSION is 3:
     pass
 else:
-    sys.exit("Please use Python 2 or 3 for this module: " + __name__)
+    raise SystemExit("Please use Python 2 or 3 for this module: " + __name__)
 
 try:
     import numpy
 except ImportError as error:
-    sys.exit(error)
+    raise SystemExit(error)
 
 
 _DISP_BREAK = '-----------------------------------------------------------------------------------------'
