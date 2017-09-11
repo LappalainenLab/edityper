@@ -377,7 +377,7 @@ def main():
         level=_set_verbosity(level=args['verbosity']),
         datefmt=date_format
     )
-    if not sys.stderr == args['logfile']:
+    if not args['logfile'] == sys.stderr:
         formatter = logging.Formatter(fmt=log_format, datefmt=date_format) # type: logging.Formatter
         handler = logging.StreamHandler() # type: logging.StreamHandler
         handler.setFormatter(formatter)
@@ -401,10 +401,6 @@ def main():
         logging.warning("Plots suppressed, not creating plots")
     if args['xkcd']:
         plots._XKCD = True
-    #   Tell worker processes to ignore SIGINT (^C)
-    #   by turning INTERUPT signals into IGNORED signals
-    sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN) # type: function
-    signal.signal(signal.SIGINT, sigint_handler)
     #   Read in reference and template sequences
     logging.info("Quality control...")
     qc_start = time.time() # type: float
@@ -458,6 +454,9 @@ def main():
         itertools.repeat(snp),
         itertools.repeat(output_directory)
     )
+    #   Tell the pool to ignore SIGINT (^C)
+    #   by turning INTERUPT signals into IGNORED signals
+    sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN) # type: function
     #   Setup our multiprocessing pool
     #   Allow the user to specify the number of jobs to run at once
     #   If not specified, let multiprocessing figure it out
@@ -465,6 +464,9 @@ def main():
         pool = Pool(processes=args['num_cores']) # type: multiprocessing.Pool
     except KeyError:
         pool = Pool() # type: multiprocessing.Pool
+    #   Re-enable the capturing of SIGINT, catch with KeyboardInterrupt
+    #   or SystemExit, depending on how the exit was initiated
+    signal.signal(signal.SIGINT, sigint_handler)
     #   If we have multiple FASTQ files AND multiple processes running
     #   use pool.map_async; else use generic map to avoid timeout issues
     if all(map(lambda i: i > 1, (len(fastq_list), getattr(pool, '_processes')))):
@@ -477,18 +479,25 @@ def main():
             results = res.get(9999)
         except KeyboardInterrupt: # Handle ctrl+c
             pool.terminate()
+            pool.join()
             sys.exit('\nkilled')
         except SystemExit: # Handle sys.exit() calls
             pool.terminate()
+            pool.join()
             raise
+        else:
+            pool.join()
     #   Otherwise, don't bother with pool.map() make life easy
     else:
         #   Clean up the pool
-        pool.close(); pool.terminate()
-        #   Use standard map (or itertools.imap)
+        pool.close(); pool.terminate(); pool.join()
+        #   Use standard map (or itertools.imap if Python 2)
         results = map(crispr_analysis, zipped_args)
+    #   Sort our alignments and summaries into separate collections
     alignments, summaries = zip(*results)
-    alignments = toolkit.unpack(collection=alignments)
+    #   Unpack our alignments into a single tuple
+    alignments = toolkit.unpack(collection=alignments) # type: Tuple[alignment.Alignment]
+    #   Final batch summary plot and table
     output_prefix = os.path.join(output_directory, args['project'])
     if not args['suppress_plots']:
         plots.quality_plot(
