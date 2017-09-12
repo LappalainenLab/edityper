@@ -89,11 +89,11 @@ class Alignment(object):
 def sort_reads_by_length(reads, fastq_name): # type: (Iterable[str], str) -> Dict[int, List[str]]
     """Sort a list of reads by their length"""
     logging.info("FASTQ %s: Sorting reads by length", fastq_name)
-    sort_start = time.time()
-    reads_by_length = defaultdict(list)
-    for read in reads:
+    sort_start = time.time() # type: float
+    reads_by_length = defaultdict(list) # type: defaultdict[int, List[str]]
+    for read in reads: # type: str
         reads_by_length[len(read)].append(read)
-    for length in reads_by_length:
+    for length in reads_by_length: # type: int
         reads_by_length[length].sort()
     logging.debug("FASTQ %s: Sorting reads took %s seconds", fastq_name, round(time.time() - sort_start, 3))
     return reads_by_length
@@ -110,12 +110,12 @@ def align_recurse(
     """Align using the recurisve method"""
     #   Keep track of matrix re-used lines
     logging.info("FASTQ %s: Aligning reads", fastq_name)
-    alignment_start = time.time()
+    alignment_start = time.time() # type: float
     alignments = defaultdict(list) # type: defaultdict[List]
     reuse = 0 # type: int
     for length, reads_list in reads_by_length.items(): # type: int, List[str]
         count, temp = 0, '' # type: int, str
-        total = len(reads_list)
+        total = len(reads_list) # type: int
         for read in reads_list: # type: read
             count += 1
             # seq = summary.sequence # type: str
@@ -131,12 +131,12 @@ def align_recurse(
                     terminate=0
                 ) # type: str, str, int
                 aligned = Alignment(ref_align=al_ref, read_align=al_read, score=score) # type: Alignment
-                aligned.unaligned = read
-                aligned.source = fastq_name
+                aligned.unaligned = read # type: str
+                aligned.source = fastq_name # type: str
                 alignments[length].append(aligned)
                 temp = read # type: str
                 continue
-            index = toolkit.sim_seq(seq1=al_ref, seq2=al_read) # type: int
+            index = toolkit.sim_seq(seq1=temp, seq2=read) # type: int
             reuse += index
             if count == total:
                 al_ref, al_read, score = nw_align.align_aff_mem(
@@ -156,9 +156,9 @@ def align_recurse(
                     sim=index,
                     terminate=0
                 ) # type: str, str, int
-            aligned = Alignment(ref_align=al_ref, read_align=al_read, score=score)
-            aligned.unaligned = read
-            aligned.source = fastq_name
+            aligned = Alignment(ref_align=al_ref, read_align=al_read, score=score) # type: Alignment
+            aligned.unaligned = read # type: str
+            aligned.source = fastq_name # type: str
             alignments[length].append(aligned)
             temp = read # type: str
     logging.debug("FASTQ %s: Alignment took %s seconds", fastq_name, round(time.time() - alignment_start, 3))
