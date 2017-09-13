@@ -96,7 +96,7 @@ def sort_reads_by_length(reads, fastq_name): # type: (Iterable[str], str) -> Dic
     for length in reads_by_length: # type: int
         reads_by_length[length].sort()
     logging.debug("FASTQ %s: Sorting reads took %s seconds", fastq_name, round(time.time() - sort_start, 3))
-    return reads_by_length
+    return dict(reads_by_length)
 
 
 def align_recurse(
