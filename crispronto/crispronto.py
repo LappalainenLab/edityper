@@ -385,9 +385,12 @@ def main():
     logging.info("Welcome to %s!", os.path.basename(sys.argv[0]))
     program_start = time.time()
     #   Make an output directory
-    output_directory = os.path.join(args['outdirectory'], args['project']) # type: str
-    if not os.path.exists(output_directory):
-        os.makedirs(output_directory)
+    if os.path.exists(args['outdirectory']):
+        args['outdirectory'] = args['outdirectory'] + time.strftime('_%Y-%m-%d_%H:%M')
+    try:
+        os.makedirs(args['outdirectory'])
+    except (OSError, FileExistsError):
+        pass
     #   Check suppression values
     if _check_suppressions(suppressions=args): # All output suppressed? Error
         sys.exit(logging.critical("All output suppressed, not running"))
@@ -455,7 +458,7 @@ def main():
         itertools.repeat(aligned_reference),
         itertools.repeat(args),
         itertools.repeat(snp),
-        itertools.repeat(output_directory)
+        itertools.repeat(args['outdirectory'])
     )
     #   Tell the pool to ignore SIGINT (^C)
     #   by turning INTERUPT signals into IGNORED signals
@@ -501,7 +504,7 @@ def main():
     #   Unpack our alignments into a single tuple
     alignments = toolkit.unpack(collection=alignments) # type: Tuple[alignment.Alignment]
     #   Final batch summary plot and table
-    output_prefix = os.path.join(output_directory, args['project'])
+    output_prefix = os.path.join(args['outdirectory'], args['project'])
     if not args['suppress_plots']:
         plots.quality_plot(
             alignments=alignments,
