@@ -267,7 +267,7 @@ class SAM(object):
             self._qname,
             self._flag,
             self._rname,
-            self._pos,
+            self._pos + 1 if self._pos > 0 else self._pos,
             self._mapq,
             self._cigar,
             self._rnext,
