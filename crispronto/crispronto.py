@@ -365,7 +365,7 @@ def main():
     #   Setup CRISPRonto
     #   Parse arguments
     parser = make_argument_parser() # type: argparse.ArgumentParser
-    if not sys.argv[1:]:
+    if not sys.argv[1:] or any(map(lambda a: a in sys.argv, ('-h', '--help'))):
         sys.exit(parser.print_help())
     args = {key: value for key, value in vars(parser.parse_args()).items() if value is not None} # type: Dict[str, Any]
     #   Setup logger
@@ -389,7 +389,7 @@ def main():
         args['outdirectory'] = args['outdirectory'] + time.strftime('_%Y-%m-%d_%H:%M')
     try:
         os.makedirs(args['outdirectory'])
-    except (OSError, FileExistsError):
+    except:
         pass
     #   Check suppression values
     if _check_suppressions(suppressions=args): # All output suppressed? Error
@@ -449,9 +449,11 @@ def main():
         with open(args['sample_list'], 'r') as listfile:
             fastq_list = tuple(line.strip() for line in listfile if not line.startswith('#')) # type: Tuple[str]
     elif 'input_file' in args:
-        fastq_list = (args['input_file'],) # type: Tuple[str]
+        fastq_list = tuple(args['input_file']) # type: Tuple[str]
+    elif 'fastq_directory' in args:
+        fastq_list = toolkit.find_fastq(directory=args['fastq_directory']) # type: Tuple[str]
     else:
-        sys.exit(logging.critical("No input file provided"))
+        sys.exit(logging.critical("No inputs provided"))
     zipped_args = zip(
         fastq_list,
         itertools.repeat(reference),
@@ -483,6 +485,13 @@ def main():
             res = pool.map_async(crispr_analysis, zipped_args) # type: multiprocessing.pool.MapResult
             pool.close()
             results = res.get(9999)
+        # except (KeyboardInterrupt, SystemExit) as error:
+        #     pool.terminate()
+        #     pool.join()
+        #     if isinstance(error, KeyboardInterrupt):
+        #         sys.exit('\nkilled')
+        #     else:
+        #         raise
         except KeyboardInterrupt: # Handle ctrl+c
             pool.terminate()
             pool.join()

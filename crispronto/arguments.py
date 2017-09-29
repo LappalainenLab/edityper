@@ -1,5 +1,12 @@
 #!/usr/bin/env python
 
+# Add argument for genomic location of reference
+#   Use in SAM output
+#   BED input?
+# Convert SAM to BAM
+#   Needs SAMtools
+#   Also index
+
 '''Set the arguments for the CRISPR alingment and analysis pipeline'''
 
 import os
@@ -146,8 +153,9 @@ def make_argument_parser():
         dest='input_file',
         type=str,
         default=None,
+        nargs='*',
         metavar='INPUT FILE',
-        help="Provide a single input file, mutually exclusive with '-l | --sample-list'"
+        help="Provide one or more FASTQ files, mutually exclusive with '-l | --sample-list' and '-d | --directory'"
     )
     in_files.add_argument( # Are we using a sample list?
         '-l',
@@ -156,14 +164,23 @@ def make_argument_parser():
         type=str,
         default=None,
         metavar='SAMPLE LIST',
-        help="Provdide a sample list, with each sample on its own line, mutually exclusive with '-i | --input-file'"
+        help="Provdide a sample list, with each sample on its own line, mutually exclusive with '-i | --input-file' and '-d | --directory'"
+    )
+    in_files.add_argument(
+        '-d',
+        '--fastq-directory',
+        dest='fastq_directory',
+        type=str,
+        default=None,
+        metavar='FASTQ DIRECTORY',
+        help="Provide a directory with FASTQ files; note that each file must end in .fq or .fastq (optional .gz), mutually exclusive with '-i | --input-file' and '-l | --sample-list'"
     )
     out_opts = parser.add_argument_group( # Output options
         title='output arguments',
         description='Provide an output directory and project name. All files, including the configuration file, will be placed in the output directory with a basename of the project name.'
     )
     out_opts.add_argument( # Output directory
-        '-d',
+        '-o',
         '--output-directory',
         dest='outdirectory',
         type=str,
@@ -266,24 +283,16 @@ def make_argument_parser():
         required=False,
         help="Suppress plots"
     )
-    parser.add_argument(
+    parser.add_argument( # Enable profiling
         '--profile',
         dest='profile',
         action='store_true',
         required=False,
-        # help="Profile CRISPRonto"
         help=argparse.SUPPRESS
     )
-    parser.add_argument(
+    parser.add_argument( # Enable XKCD
         '--xkcd',
         dest='xkcd',
-        action='store_true',
-        required=False,
-        help=argparse.SUPPRESS
-    )
-    parser.add_argument(
-        '-h',
-        '--help',
         action='store_true',
         required=False,
         help=argparse.SUPPRESS
