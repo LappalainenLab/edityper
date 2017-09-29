@@ -20,7 +20,7 @@ try:
     if PYTHON_VERSION is 3:
         from crispronto import plots
         from crispronto import toolkit
-        from crispronto import nw_align
+        # from crispronto import nw_align
         from crispronto import analysis
         from crispronto import alignment
         from crispronto import sam
@@ -30,7 +30,7 @@ try:
     elif PYTHON_VERSION is 2:
         import plots
         import toolkit
-        import nw_align
+        # import nw_align
         import analysis
         import alignment
         import sam
@@ -45,6 +45,8 @@ try:
 except ImportError as error:
     sys.exit(error)
 
+
+from toolkit import ExitPool
 
 LOCK = Lock()
 SNP = namedtuple('SNP', ('reference', 'target', 'position'))
@@ -124,7 +126,8 @@ def crispr_analysis(
     read_assignments = dict() # type: Dict[str, Tuple[str, Events]]
     classifications = (dict(), dict(), dict(), dict(), dict()) # type: Tuple[Dict[str, Events]]
     hdr, mix, nhej, no_edit, discard = classifications # type: Dict[str, Events]
-    for length, alignment_list in alignments.items(): # type: int, List[alignment.Alignment]
+    # for length, alignment_list in alignments.items(): # type: int, List[alignment.Alignment]
+    for alignment_list in alignments.values(): # type: List[alignment.Alignment]
         for aligned in alignment_list: # type: alignment.Alignment
             num_ins, num_del, num_mis = 0, 0, 0 # type: int, int, int
             num_reads = unique_reads[str(aligned)] # type: int
@@ -181,7 +184,6 @@ def crispr_analysis(
             # reposition the SNP index with deletion shift
             if al_read_seq[snp_info.position] == '-':
                 new_snp_index = snp_info.position
-                # print(new_snp_index)
                 while al_read_seq[new_snp_index] == '-':
                     new_snp_index += 1
                     if new_snp_index == len(al_read_seq) - 3:
@@ -283,7 +285,7 @@ def crispr_analysis(
             position = sam.calc_read_pos(alignment=aligned) # type: int
             cigar = sam.make_cigar(alignment=aligned) # type: str
             sam_seq = sam.make_sam_sequence(alignment=aligned, head=head, tail=tail) # type: str
-            read_count = 1 # type: int
+            # read_count = 1 # type: int
             sams = map( # type: Iterable[sam.SAM]
                 sam.SAM,
                 (read.name for read in supporting_reads), # qname=
@@ -485,21 +487,15 @@ def main():
             res = pool.map_async(crispr_analysis, zipped_args) # type: multiprocessing.pool.MapResult
             pool.close()
             results = res.get(9999)
-        # except (KeyboardInterrupt, SystemExit) as error:
-        #     pool.terminate()
-        #     pool.join()
-        #     if isinstance(error, KeyboardInterrupt):
-        #         sys.exit('\nkilled')
-        #     else:
-        #         raise
-        except KeyboardInterrupt: # Handle ctrl+c
+        except (KeyboardInterrupt, ExitPool) as error: # Handle ctrl+c or custom ExitPool
             pool.terminate()
             pool.join()
-            sys.exit('\nkilled')
-        except SystemExit: # Handle sys.exit() calls
-            pool.terminate()
-            pool.join()
-            raise
+            if isinstance(error, KeyboardInterrupt): # ctrl+c
+                sys.exit('\nkilled')
+            elif isinstance(error, ExitPool): # My way of handling SystemExits
+                sys.exit(error.msg)
+            else: # Shouldn't happen, but you know...
+                raise
         else:
             pool.join()
     #   Otherwise, don't bother with pool.map() make life easy

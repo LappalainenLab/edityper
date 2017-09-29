@@ -14,6 +14,7 @@ import re
 import time
 import gzip
 import logging
+import itertools
 from collections import namedtuple
 
 if PYTHON_VERSION is 2:
@@ -43,6 +44,14 @@ _DO_PROFILE = False
 Read = namedtuple('Read', ('name', 'seq', 'qual'))
 NamedSequence = namedtuple('NamedSequence', ('name', 'sequence'))
 
+
+class ExitPool(Exception):
+    """Something happend and the pool needs to exit"""
+    def __init__(self, msg):
+        super(ExitPool, self).__init__(msg)
+        self.msg = msg
+
+
 def profile(diff=False): # type: (bool) -> None
     """A simple profiler using stuff from pympler"""
     if _DO_PROFILE and _MEM_PROFILE:
@@ -54,6 +63,21 @@ def profile(diff=False): # type: (bool) -> None
         logging.warning("Could not find 'pympler' module, please install with pip and run again")
     else:
         pass
+
+
+def find_fastq(directory): # type: (str) -> Tuple[str]
+    """Find FASTQ files in a directory"""
+    directory = os.path.abspath(directory) # type: str
+    if not os.path.isdir(directory):
+        raise SystemExit(logging.critical("Cannot find FASTQ directory %s", directory))
+    fastqs = re.findall(r'(.*\.(fq|fastq)(\.gz)?)', '\n'.join(os.listdir(directory))) # type: List[Tuple[str, str, str]]
+    fastqs = unpack(collection=fastqs) # type: Tuple[str]
+    fastqs = itertools.islice(fastqs, 0, None, 3) # type: itertools.islice
+    fastqs = map(lambda name: os.path.join(directory, name), fastqs) # type: map
+    fastqs = tuple(fastqs) # type: Tuple[str]
+    if not fastqs:
+        raise SystemExit(logging.critical("No FASTQs found in %s", directory))
+    return fastqs
 
 
 def load_fastq(fastq_file): # type: (str, Optional[str]) -> Tuple[Read]:
@@ -71,7 +95,8 @@ def load_fastq(fastq_file): # type: (str, Optional[str]) -> Tuple[Read]:
                 name, seq, qual = read # type: str, str, str
                 reads.append(Read(name=name, seq=seq, qual=qual))
     except:
-        raise SystemExit(logging.critical("Cannot find or read FASTQ file '%s'", fastq_file))
+        raise ExitPool(logging.critical("Cannot find or read FASTQ file '%s'", fastq_file))
+        # sys.exit(logging.critical("Cannot find or read FASTQ file '%s'", fastq_file))
     logging.debug("Reading in FASTQ file '%s' took %s seconds", fastq_file, round(time.time() - read_start, 3))
     return tuple(reads)
 
