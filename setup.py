@@ -56,13 +56,14 @@ CLASSIFIERS = [
     #   For more classfiiers
     #   How mature is this project? Common values are
     'Development Status :: 5 - Production/Stable',
+    #   What environment does this run in?
+    'Environment :: Console',
     #   Indicate who your project is intended for
     'Intended Audience :: Science/Research',
     'Topic :: Scientific/Engineering :: Bio-Informatics',
     'Topic :: Scientific/Engineering :: Visualization',
     #   Language
     'Natural Language :: English',
-    'Topic :: Software Development :: Build Tools',
     #   Pick your license as you wish (should match "license" above)
     # 'License :: OSI Approved :: MIT License',
     #   Specify the Python versions you support here. In particular, ensure
@@ -74,6 +75,11 @@ CLASSIFIERS = [
     'Programming Language :: Python :: 3.5',
     'Programming Language :: Python :: 3.6',
     'Programming Language :: Python :: Implementation :: CPython',
+    #   Operating systems we support
+    # 'Operating System :: Microsoft :: Windows',
+    'Operating System :: MacOS :: MacOS X',
+    'Operating System :: POSIX :: Linux',
+    'Operating System :: Unix',
 ]
 
 #   Specify Python version
