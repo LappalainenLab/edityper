@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-# TODO: Alignment cutoff in quality plots
-
 """Plotting utilities for the CRISPR program"""
 
 from __future__ import division
@@ -31,7 +29,7 @@ try:
     import matplotlib.pyplot as plt
     import matplotlib.patches as ptch
     import matplotlib.font_manager as fm
-    from matplotlib.backends import backend_pdf
+    from matplotlib.backends.backend_pdf import PdfPages
 except ImportError as error:
     raise SystemExit(error)
 
@@ -42,6 +40,7 @@ _INS_COLOR = 'r'
 _DEL_COLOR = 'g'
 _MISMATCH_COLOR = 'b'
 _COVERAGE_COLOR = '#00000022'
+_THRESHOLD_LENGTH = 0.05
 _XKCD = False
 
 def _check_fonts(): # type: (None) -> bool
@@ -62,7 +61,7 @@ def locus_plot(
 ):
     # type: (...) -> None
     """Make a locus plot"""
-    logging.info("Making locus plot")
+    logging.info("FASTQ %s: Making locus plot", fastq_name)
     locus_start = time.time() # type: float
     if _check_fonts():
         plt.xkcd()
@@ -80,25 +79,25 @@ def locus_plot(
     del_counts = tuple(map(lambda tup: tup[1], sorted(del_dict.items()))) # type: Tuple[int]
     cov_counts = tuple(map(lambda tup: tup[1], sorted(coverage.items()))) # type: Tuple[int]
     #   Create the bar graphs
-    ins_bars = ax.bar(
+    ax.bar( # Insertions
         left=sorted(insertions),
         height=ins_counts,
         width=_LOCUS_WIDTH,
         color=_INS_COLOR
     )
-    del_bars = ax.bar(
+    ax.bar( # Deletions
         left=tuple(map(lambda x: x + _LOCUS_WIDTH, sorted(deletions))),
         height=del_counts,
         width=_LOCUS_WIDTH,
         color=_DEL_COLOR
     )
-    mis_bars = ax.bar(
+    ax.bar( # Mismatches
         left=tuple(map(lambda x: x + (_LOCUS_WIDTH * 2), sorted(mismatches))),
         height=mis_counts,
         width=_LOCUS_WIDTH,
         color=_MISMATCH_COLOR
     )
-    cov_bars = ax.bar(
+    ax.bar( # Coverage
         left=sorted(coverage),
         height=cov_counts,
         width=1.0,
@@ -113,7 +112,6 @@ def locus_plot(
     coverage_patch = ptch.Patch(color=_COVERAGE_COLOR, label='Coverage')
     plt.legend(handles=(ins_patch, del_patch, mismatch_patch, coverage_patch))
     #   Set the y limits and labels
-    # plt.ylim(0, num_reads)
     ax.set_ylim(0, num_reads)
     ax.set_ylabel('Number of Reads')
     #   Add a percent y axis
@@ -122,25 +120,25 @@ def locus_plot(
     ax2.set_yticks(tuple(map(lambda x: round(x * 100), ax2.get_yticks())))
     #   Zoomed plot
     fig_z, ax_z = plt.subplots()
-    ins_bars_z = ax_z.bar(
+    ax_z.bar( # Insertions
         left=sorted(insertions),
         height=ins_counts,
         width=_LOCUS_WIDTH,
         color=_INS_COLOR
     )
-    del_bars_z = ax_z.bar(
+    ax_z.bar( # Deletions
         left=tuple(map(lambda x: x + _LOCUS_WIDTH, sorted(deletions))),
         height=del_counts,
         width=_LOCUS_WIDTH,
         color=_DEL_COLOR
     )
-    mis_bars_z = ax_z.bar(
+    ax_z.bar( # Mismatches
         left=tuple(map(lambda x: x + (_LOCUS_WIDTH * 2), sorted(mismatches))),
         height=mis_counts,
         width=_LOCUS_WIDTH,
         color=_MISMATCH_COLOR
     )
-    cov_bars_z = ax_z.bar(
+    ax_z.bar( # Coverage
         left=sorted(coverage),
         height=cov_counts,
         width=1.0,
@@ -159,7 +157,7 @@ def locus_plot(
     plt.tight_layout()
     #   Yield the plots
     logging.info("Saving plot to %s", plot_name)
-    with backend_pdf.PdfPages(plot_name) as pdf:
+    with PdfPages(plot_name) as pdf:
         for figure in (fig, fig_z):
             pdf.savefig(figure)
     plt.close('all')
@@ -168,6 +166,7 @@ def locus_plot(
 
 def quality_plot(
         alignments, # type: Iterable[alignment.Alignment]
+        thresholds, # type: Dict[str, float]
         output_prefix # type: str
 ):
     # type: (...) -> None
@@ -177,25 +176,32 @@ def quality_plot(
     if _check_fonts():
         plt.xkcd()
     plot_name = output_prefix + '_quality.pdf' # type: str
-    alignments_by_fastq = defaultdict(list) # type: Mapping[str, List[alignment.Alignment]]
+    alignments_by_fastq = defaultdict(list) # type: Mapping[str, List[int]]
     for aligned in alignments: # type: alignment.Alignment
-        alignments_by_fastq[aligned.source].append(aligned)
+        alignments_by_fastq[aligned.source].append(aligned.score)
     #   Assemble our scores
-    scores = {fastq: tuple(al.score for al in al_list) for fastq, al_list in alignments_by_fastq.items()} # type: Dict[str, Tuple[int]]
+    scores = tuple(tuple(alignments_by_fastq[fastq]) for fastq in sorted(alignments_by_fastq)) # type: Tuple[Tuple[int]]
+    thresh_values = tuple(thresholds[fastq] for fastq in sorted(alignments_by_fastq)) # type: Tuple[float]
     #   Plot the scores
     fig, ax = plt.subplots(nrows=1, ncols=1)
-    ax.violinplot(scores.values())
+    ax.violinplot(scores)
     #   Determine rotation of xtick text
     if len(scores) == 1:
-        rotation = 'horizontal'
+        rotation = 'horizontal' # type: str
     else:
-        rotation = 45
+        rotation = 45 # type: int
     #   Set labels
     plt.title("Alignment Score Distribution by FASTQ File")
     plt.ylabel('Alignment Score')
     plt.xlabel('FASTQ')
     ax.set_xticks(range(1, len(scores) + 1))
-    ax.set_xticklabels(scores.keys(), rotation=rotation, fontsize='small')
+    #   Draw score thresholds lines
+    ax.hlines(
+        y=thresh_values,
+        xmin=tuple(map(lambda x: x - _THRESHOLD_LENGTH, ax.get_xticks())),
+        xmax=tuple(map(lambda x: x + _THRESHOLD_LENGTH, ax.get_xticks()))
+    )
+    ax.set_xticklabels(sorted(alignments_by_fastq), rotation=rotation, fontsize='small')
     #   Adjust the plot area to ensure everything is shown
     plt.tight_layout()
     #   Yield the plot

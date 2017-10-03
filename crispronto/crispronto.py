@@ -344,7 +344,6 @@ def crispr_analysis(
         mismatch_bases = Counter(itertools.chain.from_iterable(counts['mismatches'].values()))
         total_mismatch = sum(mismatch_bases.values())
         fastq_summary = { # type: Dict[str, Any]
-            'filename'          :   fastq_name,
             'total_reads'       :   len(reads),
             'unique_reads'      :   len(unique_reads),
             'discarded'         :   total_counts['DISCARD'],
@@ -363,6 +362,9 @@ def crispr_analysis(
         }
     else:
         fastq_summary = dict() # type: Dict[str, Any]
+    #   Add stuff that's required no matter classification or not
+    fastq_summary['filename'] = fastq_name # Add FASTQ name
+    fastq_summary['score_threshold'] = score_threshold # Add score threshold
     return tuple(toolkit.unpack(collection=alignments.values())), fastq_summary
 
 
@@ -525,6 +527,7 @@ def main():
     if not args['suppress_plots']:
         plots.quality_plot(
             alignments=alignments,
+            thresholds={d['filename']: d['score_threshold'] for d in summaries},
             output_prefix=output_prefix
         )
     if not (args['suppress_classification'] or args['suppress_events'] or args['suppress_tables']):
