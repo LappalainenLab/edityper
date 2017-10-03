@@ -18,25 +18,23 @@ from collections import Counter, defaultdict, namedtuple
 
 try:
     if PYTHON_VERSION is 3:
+        from crispronto import sam
         from crispronto import plots
         from crispronto import toolkit
-        # from crispronto import nw_align
         from crispronto import analysis
         from crispronto import alignment
-        from crispronto import sam
         from crispronto import quality_control
-        from crispronto.arguments import make_argument_parser
         from multiprocessing import pool as Pool
+        from crispronto.arguments import make_argument_parser
     elif PYTHON_VERSION is 2:
+        import sam
         import plots
         import toolkit
-        # import nw_align
         import analysis
         import alignment
-        import sam
         import quality_control
-        from arguments import make_argument_parser
         from multiprocessing import Pool
+        from arguments import make_argument_parser
         from itertools import izip as zip
         from itertools import imap as map
         range = xrange
@@ -214,6 +212,9 @@ def crispr_analysis(
                         nhej[str(aligned)] = results
                         read_assignments[unaligned] = ('NHEJ', results)
     logging.debug("FASTQ %s: Read classifcation took %s seconds", fastq_name, round(time.time() - classifcation_start, 3))
+    #   Calculate cummulative deletions and coverage
+    cummulative_deletions = analysis.cummulative_deletions(deletions=counts['deletions'])
+    coverage = analysis.calc_coverage(cummul_del=cummulative_deletions, mismatches=counts['mismatches'])
     #   Output read assignments if verbosity is set to 'debug' and we're not suppressing tables
     if _set_verbosity(level=args_dict['verbosity']) == 10 and not args_dict['suppress_tables']:
         assignments_name = os.path.join(output_prefix, fastq_name + '.assignments')
@@ -253,6 +254,8 @@ def crispr_analysis(
         analysis.events_report(
             fastq_name=fastq_name,
             events=counts,
+            cummulative_deletions=cummulative_deletions,
+            coverage=coverage,
             reference=reference.sequence,
             snp_index=snp_info.position,
             output_prefix=output_prefix
@@ -263,6 +266,7 @@ def crispr_analysis(
             insertions=counts['insertions'],
             deletions=counts['deletions'],
             mismatches=counts['mismatches'],
+            coverage=coverage,
             num_reads=len(reads),
             fastq_name=fastq_name,
             output_prefix=output_prefix
@@ -370,6 +374,7 @@ def main():
     if not sys.argv[1:] or any(map(lambda a: a in sys.argv, ('-h', '--help'))):
         sys.exit(parser.print_help())
     args = {key: value for key, value in vars(parser.parse_args()).items() if value is not None} # type: Dict[str, Any]
+    sys.exit(args)
     #   Setup logger
     log_format = '%(asctime)s %(levelname)s:\t%(message)s' # type: str
     date_format = '%Y-%m-%d %H:%M:%S' # type: str
@@ -393,11 +398,18 @@ def main():
         os.makedirs(args['outdirectory'])
     except:
         pass
-    #   Check suppression values
+    #   Check suppression values and other arguments
     if _check_suppressions(suppressions=args): # All output suppressed? Error
         sys.exit(logging.critical("All output suppressed, not running"))
     if args['suppress_sam']: # Suppressed SAM output?
         logging.warning("SAM output suppressed, not writing SAM file")
+        args['bam'] = False
+    elif args['bam']: # Check for SAMtools
+        try:
+            args['samtools_exec'] = toolkit.which('samtools')
+        except ValueError: # No SAMtools found
+            logging.error("Cannot find SAMtools, outputing SAM instead of BAM")
+            args['bam'] = False
     if args['suppress_events'] or args['suppress_tables']: # Suppressed events table?
         logging.warning("Events output suppressed, not writing events table")
     if args['suppress_classification'] or args['suppress_tables']: # Suppressed classification table?

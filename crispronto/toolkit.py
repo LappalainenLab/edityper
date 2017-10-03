@@ -19,6 +19,8 @@ from collections import namedtuple
 
 if PYTHON_VERSION is 2:
     from string import maketrans
+    from itertools import imap as map
+    from itertools import ifilter as filter
     range = xrange
 elif PYTHON_VERSION is 3:
     maketrans = str.maketrans
@@ -60,9 +62,28 @@ def profile(diff=False): # type: (bool) -> None
         else:
             summary.print_(summary.summarize(muppy.get_objects()))
     elif _DO_PROFILE and not _MEM_PROFILE:
-        logging.warning("Could not find 'pympler' module, please install with pip and run again")
+        logging.error("Could not find 'pympler' module, please install with pip and run again")
     else:
         pass
+
+
+def which(program): # type: (str) -> str
+    """Like UNIX which, returns the first location of a program given using your system PATH
+    If full location to program is given, uses that first"""
+    dirname, progname = os.path.split(program) # type: str, str
+    syspath = tuple([dirname] + os.environ['PATH'].split(os.pathsep)) # type: Tuple[str]
+    syspath = tuple(filter(None, syspath)) # type: tuple[str]
+    progpath = map(os.path.join, syspath, itertools.repeat(progname, len(syspath))) # type: map[str]
+    try:
+        extensions = tuple([''] + os.environ.get('PATHEXT').split(os.pathsep)) # type: Tuple[str]
+        progpath = map(lambda t: ''.join(t), itertools.product(progpath, extensions)) # type: map[str]
+    except AttributeError:
+        pass
+    progpath = filter(lambda e: os.path.isfile(e) and os.access(e, os.X_OK), progpath) # type: filter[str]
+    progpath = tuple(progpath) # type: tuple: str
+    if not progpath:
+        raise ValueError("Cannot find program '%s' in your PATH" % program)
+    return progpath[0]
 
 
 def find_fastq(directory): # type: (str) -> Tuple[str]

@@ -1,5 +1,10 @@
 #!/usr/bin/env python
 
+#   Add coverage to locus plot
+#   Add zoomed in locus plot (pg 2)
+
+#   Alignment cutoff in quality plots
+
 """Plotting utilities for the CRISPR program"""
 
 from __future__ import division
@@ -36,6 +41,7 @@ _INDEL_COLOR = 'r'
 _INS_COLOR = 'r'
 _DEL_COLOR = 'g'
 _MISMATCH_COLOR = 'b'
+_COVERAGE_COLOR = '#00000022'
 _XKCD = False
 
 def _check_fonts(): # type: (None) -> bool
@@ -49,6 +55,7 @@ def locus_plot(
         insertions, # type: Mapping[int, List[int]]
         deletions, # type: Mapping[int, List[int]]
         mismatches, # type: Mapping[int, List[str]]
+        coverage, # type: Mapping[int, int]
         num_reads, # type: int
         fastq_name, # type: str
         output_prefix # type: str
@@ -68,9 +75,10 @@ def locus_plot(
     ins_dict = {position: len(counts) for position, counts in insertions.items()} # type: Dict[int, int]
     del_dict = {position: len(counts) for position, counts in deletions.items()} # type: Dict[int, int]
     #   Sort our data
-    mis_counts = map(lambda tup: tup[1], sorted(mis_dict.items())) # type: List[int]
-    ins_counts = map(lambda tup: tup[1], sorted(ins_dict.items())) # type: List[int]
-    del_counts = map(lambda tup: tup[1], sorted(del_dict.items())) # type: List[int]
+    mis_counts = tuple(map(lambda tup: tup[1], sorted(mis_dict.items()))) # type: Tuple[int]
+    ins_counts = tuple(map(lambda tup: tup[1], sorted(ins_dict.items()))) # type: Tuple[int]
+    del_counts = tuple(map(lambda tup: tup[1], sorted(del_dict.items()))) # type: Tuple[int]
+    cov_counts = tuple(map(lambda tup: tup[1], sorted(coverage.items()))) # type: Tuple[int]
     #   Create the bar graphs
     ins_bars = ax.bar(
         left=sorted(insertions),
@@ -79,16 +87,22 @@ def locus_plot(
         color=_INS_COLOR
     )
     del_bars = ax.bar(
-        left=map(lambda x: x + _LOCUS_WIDTH, sorted(deletions)),
+        left=tuple(map(lambda x: x + _LOCUS_WIDTH, sorted(deletions))),
         height=del_counts,
         width=_LOCUS_WIDTH,
         color=_DEL_COLOR
     )
     mis_bars = ax.bar(
-        left=map(lambda x: x + (_LOCUS_WIDTH * 2), sorted(mismatches)),
+        left=tuple(map(lambda x: x + (_LOCUS_WIDTH * 2), sorted(mismatches))),
         height=mis_counts,
         width=_LOCUS_WIDTH,
         color=_MISMATCH_COLOR
+    )
+    cov_bars = ax.bar(
+        left=sorted(coverage),
+        height=cov_counts,
+        width=1.0,
+        color=_COVERAGE_COLOR
     )
     #   Add title and legend
     plt.title(fastq_name)
@@ -96,19 +110,30 @@ def locus_plot(
     ins_patch = ptch.Patch(color=_INS_COLOR, label='Insertions')
     del_patch = ptch.Patch(color=_DEL_COLOR, label='Deletions')
     mismatch_patch = ptch.Patch(color=_MISMATCH_COLOR, label='Mismatches')
-    plt.legend(handles=(ins_patch, del_patch, mismatch_patch))
+    coverage_patch = ptch.Patch(color=_COVERAGE_COLOR, label='Coverage')
+    plt.legend(handles=(ins_patch, del_patch, mismatch_patch, coverage_patch))
     #   Set the y limits and labels
-    plt.ylim(0, num_reads)
-    plt.ylabel('Number of Reads')
+    # plt.ylim(0, num_reads)
+    ax.set_ylim(0, num_reads)
+    ax.set_ylabel('Number of Reads')
     #   Add a percent y axis
     ax2 = ax.twinx()
     ax2.set_ylabel('Percent')
-    ax2.set_yticks(map(lambda x: round(x * 100), ax2.get_yticks()))
+    ax2.set_yticks(tuple(map(lambda x: round(x * 100), ax2.get_yticks())))
+    # #   Zoomed plot
+    # fig_z, ax_z = plt.subplot()
+    # cov_bars_z = ax_z.bar(
+    #     left=sorted(coverage),
+    #     height=cov_counts,
+    #     width=1.0,
+    #     color=_COVERAGE_COLOR
+    # )
     #   Adjust the plot area to ensure everything is shown
-    plt.tight_layout()
+    # plt.tight_layout()
     #   Yield the plot
     logging.info("Saving plot to %s", plot_name)
-    plt.savefig(plot_name, format='pdf')
+    # plt.savefig(plot_name, format='pdf')
+    plt.show()
     logging.debug("Making locus plot took %s seconds", round(time.time() - locus_start, 3))
 
 

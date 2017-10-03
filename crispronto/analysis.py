@@ -40,6 +40,26 @@ def _filter_to_dict(filtered_dict): # type: (Iterable[Tuple[Any, Any]]) -> Dict[
     return {pair[0]: pair[1] for pair in filtered_dict}
 
 
+def cummulative_deletions(deletions): # type: Dict[int, List[int]] -> Dict[int, int]
+    """Calculate cummulative deletions"""
+    cummul_del = defaultdict(int) # type: defaultdict
+    for position, dist in deletions.items(): # type: int, List[int]
+        for length in dist: # type: int
+            for i in range(length): # type: int
+                cummul_del[position + i] += 1
+    return dict(cummul_del)
+
+
+def calc_coverage(cummul_del, mismatches): # type: (Dict[int, int], Dict[int, List[str]]) -> Dict[int, int]
+    """Calculate coverage"""
+    coverage = defaultdict(int) # type: defaultdict
+    for base, cummul_count in cummul_del.items(): # type: int, int
+        coverage[base] += cummul_count
+    for base, mismatch_list in mismatches.items(): # type: int, List[str]
+        coverage[base] += len(mismatch_list)
+    return coverage
+
+
 def percent(num, total): # type: (int, int) -> float
     """Calculate a percent"""
     percent = num * 100 / total if total is not 0 else 0
@@ -63,6 +83,8 @@ def summarize(data, rounding=None): # type: (Iterable[Union[int, float]], Option
 def events_report(
         fastq_name, # type: str
         events, # type: Dict[str, defaultdict]
+        cummulative_deletions, # type: Dict[int, int]
+        coverage, # type: Dict[int, int]
         reference, # type: str
         snp_index, # type: int
         output_prefix # type: str
@@ -86,12 +108,12 @@ def events_report(
         'C',
         'G'
     )
-    #   Calculate cumulative deletions
-    cummulative_deletions = defaultdict(int) # type: defaultdict
-    for position, dist in events['deletions'].items():
-        for length in dist:
-            for i in range(length):
-                cummulative_deletions[position + i] += 1
+    # #   Calculate cumulative deletions
+    # cummulative_deletions = defaultdict(int) # type: defaultdict
+    # for position, dist in events['deletions'].items():
+    #     for length in dist:
+    #         for i in range(length):
+    #             cummulative_deletions[position + i] += 1
     #   Create output file
     output_name = os.path.join(output_prefix, fastq_name + '.events')
     with open(output_name, 'w') as efile:
@@ -102,36 +124,41 @@ def events_report(
         for index, base in enumerate(reference):
             #   Get the mismatches
             try:
-                nucleotides = Counter(events['mismatches'][index])
+                nucleotides = dict(Counter(events['mismatches'][index])) # type: Dict[str, int]
             except KeyError:
-                nucleotides = dict.fromkeys(('A', 'C', 'G', 'T'), 0)
+                nucleotides = dict.fromkeys(('A', 'C', 'G', 'T'), 0) # type: Dict[str, int]
             #   Get deletions
-            deletions = events['deletions'].get(index, [])
-            deletion_count = len(deletions)
+            deletions = events['deletions'].get(index, []) # type: List[int]
+            deletion_count = len(deletions) # type: int
             avg_deletion = numpy.mean(deletions) if deletion_count else 0
             # Get insertions
-            insertions = events['insertions'].get(index, [])
-            insertion_count = len(insertions)
+            insertions = events['insertions'].get(index, []) # type: List[int]
+            insertion_count = len(insertions) # type: int
             avg_insertion = numpy.mean(insertions) if insertion_count else 0
             #   Matches
-            nucleotides[base] = events['matches'].get(index, 0)
-            #   Coverage
-            covered = cummulative_deletions.get(index, 0)
-            covered += sum(nucleotides.values())
+            nucleotides[base] = events['matches'].get(index, 0) # type: int
+            # #   Coverage
+            # covered = cummulative_deletions.get(index, 0) # type: int
+            # covered += sum(nucleotides.values()) # type: int
             #   Assemble and write
             results = ( # type: Tuple[Any]
                 index + 1,
                 base,
-                covered,
+                # covered,
+                coverage.get(index, 0),
                 deletion_count,
                 avg_deletion,
                 cummulative_deletions.get(index, 0),
                 insertion_count,
                 avg_insertion,
-                nucleotides['A'],
-                nucleotides['T'],
-                nucleotides['C'],
-                nucleotides['G']
+                nucleotides.get('A', 0),
+                nucleotides.get('T', 0),
+                nucleotides.get('C', 0),
+                nucleotides.get('G', 0)
+                # nucleotides['A'],
+                # nucleotides['T'],
+                # nucleotides['C'],
+                # nucleotides['G']
             )
             results = map(str, results) # type: Tuple[str]
             if index == snp_index:
