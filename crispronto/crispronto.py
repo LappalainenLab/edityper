@@ -374,7 +374,6 @@ def main():
     if not sys.argv[1:] or any(map(lambda a: a in sys.argv, ('-h', '--help'))):
         sys.exit(parser.print_help())
     args = {key: value for key, value in vars(parser.parse_args()).items() if value is not None} # type: Dict[str, Any]
-    sys.exit(args)
     #   Setup logger
     log_format = '%(asctime)s %(levelname)s:\t%(message)s' # type: str
     date_format = '%Y-%m-%d %H:%M:%S' # type: str
