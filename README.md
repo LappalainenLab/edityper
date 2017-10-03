@@ -40,7 +40,7 @@ CRISPRonto
 | `-p | --pvalue-threshold` | Set the p-value threshold for the alignment | No | 1 * 10<sup>-3</sup> |
 | `-g | --gap-opening` | Set the gap opening penalty | No | 8 |
 | `-e | --gap-extension` | Set the gap extension penalty | No | 1 |
-| `-n | --num-cores` | Set the number of cores for multiprocessing | No | Number of cores available or number of FASTQ files provided, whichever is lower |
+| `--parallel` | Run CRISPRonto in parallel, supports optional argument to limit number of cores, otherwise uses all available cores | No | None |
 
 ### Reference Arguments
 
@@ -59,6 +59,7 @@ CRISPRonto
 | --------- | ---------- |
 | `-i | --input-file` | Provide a single FASTQ file for aligning |
 | `-l | --sample-list` | Provide a list of FASTQ files for aligning; there should be one FASTQ file per line |
+| `-d | --fastq-directory` | Provide a directory where FASTQ files are located; files must end in .fastq or .fq (.gz is allowed afterwards) |
 
 ### Output Arguments
 
@@ -66,6 +67,7 @@ CRISPRonto
 | --------- | ---------- | --------- | ------- |
 | `-d | --output-directory` | Choose where to put all output files | No | 'output' |
 | `-j | --project` | Give this project a name, will be used as the basename for output files | No | 'crispronto' |
+| `--bam` | Convert SAM files to BAM files, optionally use CSI indecies instead of BAI indeces with `--bam csi`; requires [SAMtools](https://github.com/samtools/samtools) |
 
 ### Read Group Arguments
 
