@@ -157,7 +157,7 @@ def locus_plot(
     plt.tight_layout()
     #   Yield the plots
     with PdfPages(plot_name) as pdf:
-        logging.info("Saving plot to %s", plot_name)
+        logging.info("FASTQ %s: Saving plot to %s", fastq_name, plot_name)
         for figure in (fig, fig_z):
             pdf.savefig(figure)
     plt.close('all')
