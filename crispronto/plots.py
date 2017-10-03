@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 
-#   Add coverage to locus plot
-#   Add zoomed in locus plot (pg 2)
-
-#   Alignment cutoff in quality plots
+# TODO: Alignment cutoff in quality plots
 
 """Plotting utilities for the CRISPR program"""
 
@@ -21,8 +18,10 @@ from collections import defaultdict
 try:
     if PYTHON_VERSION is 3:
         from crispronto import toolkit
+        from crispronto.analysis import percent
     elif PYTHON_VERSION is 2:
         import toolkit
+        from analysis import percent
     else:
         raise SystemExit("Please use Python 2.7 or 3.5 or higher for this module: " + __name__)
 except ImportError as error:
@@ -32,6 +31,7 @@ try:
     import matplotlib.pyplot as plt
     import matplotlib.patches as ptch
     import matplotlib.font_manager as fm
+    from matplotlib.backends import backend_pdf
 except ImportError as error:
     raise SystemExit(error)
 
@@ -120,20 +120,49 @@ def locus_plot(
     ax2 = ax.twinx()
     ax2.set_ylabel('Percent')
     ax2.set_yticks(tuple(map(lambda x: round(x * 100), ax2.get_yticks())))
-    # #   Zoomed plot
-    # fig_z, ax_z = plt.subplot()
-    # cov_bars_z = ax_z.bar(
-    #     left=sorted(coverage),
-    #     height=cov_counts,
-    #     width=1.0,
-    #     color=_COVERAGE_COLOR
-    # )
+    #   Zoomed plot
+    fig_z, ax_z = plt.subplots()
+    ins_bars_z = ax_z.bar(
+        left=sorted(insertions),
+        height=ins_counts,
+        width=_LOCUS_WIDTH,
+        color=_INS_COLOR
+    )
+    del_bars_z = ax_z.bar(
+        left=tuple(map(lambda x: x + _LOCUS_WIDTH, sorted(deletions))),
+        height=del_counts,
+        width=_LOCUS_WIDTH,
+        color=_DEL_COLOR
+    )
+    mis_bars_z = ax_z.bar(
+        left=tuple(map(lambda x: x + (_LOCUS_WIDTH * 2), sorted(mismatches))),
+        height=mis_counts,
+        width=_LOCUS_WIDTH,
+        color=_MISMATCH_COLOR
+    )
+    cov_bars_z = ax_z.bar(
+        left=sorted(coverage),
+        height=cov_counts,
+        width=1.0,
+        color=_COVERAGE_COLOR
+    )
+    #   Add title and legend
+    plt.title(fastq_name)
+    plt.legend(handles=(ins_patch, del_patch, mismatch_patch, coverage_patch))
+    #   Set y label and add percent?
+    ax_z.set_ylabel('Number of Reads')
+    ax_z2 = ax_z.twinx()
+    ax_z2.set_ylabel('Percent')
+    ax_z2_percent = percent(num=max(ax_z.get_ylim()), total=num_reads) # type: float
+    ax_z2.set_yticks(tuple(map(lambda x: round(x * ax_z2_percent), ax_z2.get_yticks())))
     #   Adjust the plot area to ensure everything is shown
-    # plt.tight_layout()
-    #   Yield the plot
+    plt.tight_layout()
+    #   Yield the plots
     logging.info("Saving plot to %s", plot_name)
-    # plt.savefig(plot_name, format='pdf')
-    plt.show()
+    with backend_pdf.PdfPages(plot_name) as pdf:
+        for figure in (fig, fig_z):
+            pdf.savefig(figure)
+    plt.close('all')
     logging.debug("Making locus plot took %s seconds", round(time.time() - locus_start, 3))
 
 
