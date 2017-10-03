@@ -156,12 +156,12 @@ def locus_plot(
     #   Adjust the plot area to ensure everything is shown
     plt.tight_layout()
     #   Yield the plots
-    logging.info("Saving plot to %s", plot_name)
     with PdfPages(plot_name) as pdf:
+        logging.info("Saving plot to %s", plot_name)
         for figure in (fig, fig_z):
             pdf.savefig(figure)
     plt.close('all')
-    logging.debug("Making locus plot took %s seconds", round(time.time() - locus_start, 3))
+    logging.debug("FASTQ %s: Making locus plot took %s seconds", fastq_name, round(time.time() - locus_start, 3))
 
 
 def quality_plot(
