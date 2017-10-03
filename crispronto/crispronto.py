@@ -487,7 +487,8 @@ def main():
     except KeyError:
         pool = Pool() # type: multiprocessing.Pool
     #   Re-enable the capturing of SIGINT, catch with KeyboardInterrupt
-    #   or SystemExit, depending on how the exit was initiated
+    #   or ExitPool, depending on how the exit was initiated
+    #   Note: SystemExits are swallowed by Pool, no way to change that
     signal.signal(signal.SIGINT, sigint_handler)
     #   If we have multiple FASTQ files AND multiple processes running
     #   use pool.map_async; else use generic map to avoid timeout issues
