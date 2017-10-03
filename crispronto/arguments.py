@@ -231,7 +231,7 @@ def make_argument_parser():
         nargs='?',
         required=False,
         metavar='csi',
-        help="Output BAM format instead of SAM, ignored if '--suppress-sam' is passed; for CSI indecies, pass '--bam csi', otherwise uses BAI indecies"
+        help="Output BAM format instead of SAM, ignored if '--suppress-sam' is passed; for CSI indices, pass '--bam csi', otherwise uses BAI indices"
     )
     rg_opts = parser.add_argument_group( # Arguments for read groups
         title='read group arguments',

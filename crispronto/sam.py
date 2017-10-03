@@ -171,13 +171,13 @@ class SAM(object):
         if not valid_ops(operations):
             raise ValueError("CIGAR string operations can only be from the following characters: '" + "', '".join(SAM.VALID_OPS + "'"))
         #   Validate hard clipping operations
-        hard_indecies = tuple(index for index, char in enumerate(operations) if char == 'H') # Get a list of indecies where there was hard clipping
-        if hard_indecies: # This is only run if we had an 'H' in our operations
+        hard_indices = tuple(index for index, char in enumerate(operations) if char == 'H') # Get a list of indices where there was hard clipping
+        if hard_indices: # This is only run if we had an 'H' in our operations
             try:
-                if len(hard_indecies) == 1:
-                    assert hard_indecies[0] == len(operations) - 1 or hard_indecies[0] == 0
-                elif len(hard_indecies) == 2:
-                    assert max(hard_indecies) == len(operations) - 1 and min(hard_indecies) == 0
+                if len(hard_indices) == 1:
+                    assert hard_indices[0] == len(operations) - 1 or hard_indices[0] == 0
+                elif len(hard_indices) == 2:
+                    assert max(hard_indices) == len(operations) - 1 and min(hard_indices) == 0
                 else: # Hard clipping can only happen up to two times. Something weird happened here
                     assert False
             except AssertionError:
@@ -587,7 +587,7 @@ def bam(fastq_name, samfile, samtools, index_type): # type: (str, str, str, str)
     logging.info("FASTQ %s: Writing BAM to %s", fastq_name, bamfile)
     subprocess.call(' '.join(view_cmd), shell=True)
     logging.info("FASTQ %s: Indexing BAM file", fastq_name)
-    logging.debug("FASTQ %s: Using %s index", fastq_name, index_type)
+    logging.debug("FASTQ %s: Making %s indices", fastq_name, index_type)
     subprocess.call(index_cmd, shell=False)
     logging.debug("FASTQ %s: Converting SAM to BAM took %s seconds", fastq_name, round(time.time() - bam_start, 3))
     logging.debug("FASTQ %s: Removing SAM file, leaving only BAM file", fastq_name)
