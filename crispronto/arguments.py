@@ -1,11 +1,8 @@
 #!/usr/bin/env python
 
-# Add argument for genomic location of reference
+# TODO: Add argument for genomic location of reference
 #   Use in SAM output
 #   BED input?
-# Convert SAM to BAM
-#   Needs SAMtools
-#   Also index
 
 '''Set the arguments for the CRISPR alingment and analysis pipeline'''
 
@@ -235,7 +232,6 @@ def make_argument_parser():
         required=False,
         metavar='csi',
         help="Output BAM format instead of SAM, ignored if '--suppress-sam' is passed; for CSI indecies, pass '--bam csi', otherwise uses BAI indecies"
-        # help=argparse.SUPPRESS
     )
     rg_opts = parser.add_argument_group( # Arguments for read groups
         title='read group arguments',

@@ -342,6 +342,8 @@ def crispr_analysis(
         logging.debug("FASTQ %s: Making SAM file took %s seconds", fastq_name, round(time.time() - sam_start, 3))
         for samline in sam_lines:
             del samline
+        if args_dict['bam']:
+            sam.bam(fastq_name=fastq_name,samfile=sam_name, samtools=args_dict['samtools_exec'], index_type=args_dict['bam'])
     logging.debug("FASTQ %s: Analysis took %s seconds", fastq_name, round(time.time() - analysis_start, 3))
     #   Assemble return values
     if not (args_dict['suppress_classification'] or args_dict['suppress_events'] or args_dict['suppress_tables']):

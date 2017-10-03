@@ -8,8 +8,11 @@ from __future__ import print_function
 import sys
 PYTHON_VERSION = sys.version_info.major
 
+import os
+import time
 import logging
 import itertools
+import subprocess
 from copy import copy
 from warnings import warn
 from collections import defaultdict
@@ -570,3 +573,22 @@ def calc_read_pos(alignment): # type: (alignment.Alignment) -> int
     except AttributeError:
         return _old_calc(alignment=alignment)
     return match_start + read_head
+
+
+def bam(fastq_name, samfile, samtools, index_type): # type: (str, str, str, str) -> None
+    """Use SAMtools to convert a SAM to BAM file"""
+    logging.info("FASTQ %s: Converting SAM to BAM", fastq_name)
+    bam_start = time.time() # type: float
+    #   Make BAM name
+    bamfile = samfile.replace('sam', 'bam') # type: str
+    view_cmd = (samtools, 'view -bhS', samfile, '>', bamfile) # type: Tuple[str]
+    index_arg = 'c' if index_type == 'csi' else 'b' # type: str
+    index_cmd = [samtools, 'index -%(arg)s %(bamfile)s' % {'arg': index_arg, 'bamfile': bamfile}] # type: List[str]
+    logging.info("FASTQ %s: Writing BAM to %s", fastq_name, bamfile)
+    subprocess.call(' '.join(view_cmd), shell=True)
+    logging.info("FASTQ %s: Indexing BAM file", fastq_name)
+    logging.debug("FASTQ %s: Using %s index", fastq_name, index_type)
+    subprocess.call(index_cmd, shell=False)
+    logging.debug("FASTQ %s: Converting SAM to BAM took %s seconds", fastq_name, round(time.time() - bam_start, 3))
+    logging.debug("FASTQ %s: Removing SAM file, leaving only BAM file", fastq_name)
+    os.remove(samfile)
