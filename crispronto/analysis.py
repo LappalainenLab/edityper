@@ -40,6 +40,15 @@ def _filter_to_dict(filtered_dict): # type: (Iterable[Tuple[Any, Any]]) -> Dict[
     return {pair[0]: pair[1] for pair in filtered_dict}
 
 
+def _fastq_header(fastq_name, fastq_path): # type: (str, str) -> str
+    header = ( # type: Tuple[str]
+        '##FASTQ',
+        'Name:%s' % fastq_name,
+        'Path:%s' % fastq_path
+    )
+    return '\t'.join(header)
+
+
 def cummulative_deletions(deletions): # type: Dict[int, List[int]] -> Dict[int, int]
     """Calculate cummulative deletions"""
     cummul_del = defaultdict(int) # type: defaultdict
@@ -82,8 +91,9 @@ def summarize(data, rounding=None): # type: (Iterable[Union[int, float]], Option
 
 def events_report(
         fastq_name, # type: str
+        fastq_path, # type: str
         events, # type: Dict[str, defaultdict]
-        cummulative_deletions, # type: Dict[int, int]
+        cummul_del, # type: Dict[int, int]
         coverage, # type: Dict[int, int]
         reference, # type: str
         snp_index, # type: int
@@ -118,6 +128,8 @@ def events_report(
     output_name = os.path.join(output_prefix, fastq_name + '.events')
     with open(output_name, 'w') as efile:
         logging.info("FASTQ %s: Writing events table to %s", fastq_name, output_name)
+        efile.write(_fastq_header(fastq_name=fastq_name, fastq_path=fastq_path))
+        efile.write('\n')
         efile.write('\t'.join(header))
         efile.write('\n')
         efile.flush()
@@ -148,7 +160,8 @@ def events_report(
                 coverage.get(index, 0),
                 deletion_count,
                 avg_deletion,
-                cummulative_deletions.get(index, 0),
+                # cummulative_deletions.get(index, 0),
+                cummul_del.get(index, 0),
                 insertion_count,
                 avg_insertion,
                 nucleotides.get('A', 0),
@@ -173,6 +186,7 @@ def events_report(
 
 def display_classification(
         fastq_name, # type: str
+        fastq_path, # type: str
         classifications, # type: Tuple[Dict[str, Events]]
         unique_reads, # type: Mapping[str, int]
         snp_info, # type: SNP
@@ -248,6 +262,7 @@ def display_classification(
     hdr_indels = 0 # type: int
     total_counts = dict.fromkeys(iter_tag.values(), 0)
     with open(output_name, 'w') as cfile:
+        cfile.write(_fastq_header(fastq_name=fastq_name, fastq_path=fastq_path) + '\n')
         cfile.write('\t'.join(snp_header) + '\n')
         cfile.write('\t'.join(read_header) + '\n')
         cfile.write('\t'.join(score_header) + '\n')

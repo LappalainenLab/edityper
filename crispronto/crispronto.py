@@ -220,6 +220,8 @@ def crispr_analysis(
         assignments_name = os.path.join(output_prefix, fastq_name + '.assignments')
         with open(assignments_name, 'w') as afile:
             logging.debug("FASTQ %s: Writing read assignments to %s", fastq_name, assignments_name)
+            afile.write(analysis._fastq_header(fastq_name=fastq_name, fastq_path=fastq_file))
+            afile.write('\n')
             afile.write('\t'.join(('#ReadID', 'Label', 'NumDel', 'NumIns', 'NumMis')))
             afile.write('\n')
             afile.flush()
@@ -240,6 +242,7 @@ def crispr_analysis(
         LOCK.acquire()
         hdr_indels, total_counts = analysis.display_classification(
             fastq_name=fastq_name,
+            fastq_path=fastq_file,
             classifications=classifications,
             unique_reads=unique_reads,
             snp_info=snp_info,
@@ -253,8 +256,9 @@ def crispr_analysis(
     if not (args_dict['suppress_events'] or args_dict['suppress_tables']):
         analysis.events_report(
             fastq_name=fastq_name,
+            fastq_path=fastq_file,
             events=counts,
-            cummulative_deletions=cummulative_deletions,
+            cummul_del=cummulative_deletions,
             coverage=coverage,
             reference=reference.sequence,
             snp_index=snp_info.position,
@@ -399,6 +403,8 @@ def main():
         os.makedirs(args['outdirectory'])
     except:
         pass
+    finally:
+        logging.warning("Using outdirectory %s", args['outdirectory'])
     #   Check suppression values and other arguments
     if _check_suppressions(suppressions=args): # All output suppressed? Error
         sys.exit(logging.critical("All output suppressed, not running"))
