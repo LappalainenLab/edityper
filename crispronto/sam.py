@@ -405,6 +405,29 @@ class SAM(object):
     program = property(fget=_get_program, fset=_set_program, doc="Program used to make SAM file")
 
 
+def get_genomic_location(bedfile): # type: (str) -> (str, int)
+    """Get the chromosome and start location of the first line in a BED or GTF/GFF file, returns 1-based coordinates"""
+    extension = os.path.splitext(bedfile)[1].lower() # type: (str)
+    if extension in ('.gtf', '.gff'):
+        logging.warning("Reading %s as GTF/GFF file", bedfile)
+        start_index, position_modifier = 3, 0 # type: int, int
+    elif extension == '.bed':
+        logging.info("Reading %s", bedfile)
+        start_index, position_modifier = 1, 1 # type: int, int
+    else:
+        logging.warning("Could not identify annotation file type, assuming BED format")
+        start_index, position_modifier = 1, 1 # type: int, int
+    with open(bedfile, 'r') as bfile:
+        for line in bfile:
+            line = line.strip()
+            if line.startswith(('browser', 'track', '#')):
+                continue
+            line = line.split()
+            return line[0], int(line[start_index]) + position_modifier
+        else:
+            raise ValueError("Could not parse BED file")
+
+
 def make_sam_sequence(alignment, head=None, tail=None): # type: (str, Optional[int], Optional[int]) -> str
     """Make a SAM-ready aligned read"""
     if head and tail:
@@ -535,7 +558,7 @@ def make_sequence_header(
     return tuple(sq_header)
 
 
-def calc_read_pos(alignment): # type: (alignment.Alignment) -> int
+def calc_read_pos(alignment, genomic_start=0): # type: (alignment.Alignment, Optional[int]) -> int
     """Calculate read position"""
     reference = alignment.reference # type: str
     read = alignment.read # type: str
@@ -571,8 +594,8 @@ def calc_read_pos(alignment): # type: (alignment.Alignment) -> int
     try:
         match_start = regex.match(r'(%s){s<=%s}' % (read, nmis), reference, regex.BESTMATCH).start() # type: int
     except AttributeError:
-        return _old_calc(alignment=alignment)
-    return match_start + read_head
+        return _old_calc(alignment=alignment) + genomic_start
+    return match_start + read_head + genomic_start
 
 
 def bam(fastq_name, samfile, samtools, index_type): # type: (str, str, str, str) -> None

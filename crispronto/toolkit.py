@@ -27,6 +27,7 @@ elif PYTHON_VERSION is 3:
 else:
     raise SystemExit("Please use Python 2 or 3 for this module: " + __name__)
 
+
 try:
     from Bio.SeqIO.QualityIO import FastqGeneralIterator
 except ImportError as error:
@@ -45,7 +46,6 @@ else:
 _DO_PROFILE = False
 Read = namedtuple('Read', ('name', 'seq', 'qual'))
 NamedSequence = namedtuple('NamedSequence', ('name', 'sequence'))
-
 
 class ExitPool(Exception):
     """Something happend and the pool needs to exit"""
@@ -122,7 +122,7 @@ def load_fastq(fastq_file): # type: (str, Optional[str]) -> Tuple[Read]:
     return tuple(reads)
 
 
-def load_seq(seq_file): # type: (str) -> NamedSequence
+def load_seq(seq_file, chrom=None): # type: (str, Optional[str]) -> NamedSequence
     """Load reference and template"""
     logging.info("Loading sequence file '%s'...", seq_file)
     load_start = time.time() # type: float
@@ -140,6 +140,8 @@ def load_seq(seq_file): # type: (str) -> NamedSequence
                 output += line.strip().replace(' ', '').upper()
     except:
         raise SystemExit(logging.critical("Cannot find or read sequence file '%s'", seq_file))
+    if chrom:
+        name = chrom
     if not name:
         name = os.path.basename(seq_file) # type:str
         if name.count('.') == 2:

@@ -290,7 +290,7 @@ def crispr_analysis(
             head, tail = toolkit.trim_interval(seq=aligned.read) # type: int, int
             unaligned = toolkit.reverse_complement(sequence=aligned.unaligned) if do_reverse else aligned.unaligned # type: str
             supporting_reads = tuple(reads_dict.pop(unaligned)) # type: Tuple[toolkit.Read]
-            position = sam.calc_read_pos(alignment=aligned) # type: int
+            position = sam.calc_read_pos(alignment=aligned, genomic_start=args['genomic_start']) # type: int
             cigar = sam.make_cigar(alignment=aligned) # type: str
             sam_seq = sam.make_sam_sequence(alignment=aligned, head=head, tail=tail) # type: str
             # read_count = 1 # type: int
@@ -413,12 +413,19 @@ def main():
     if args['suppress_sam']: # Suppressed SAM output?
         logging.warning("SAM output suppressed, not writing SAM file")
         args['bam'] = False
-    elif args['bam']: # Check for SAMtools
+    else: # We are outputting SAM files
+        #   Get genomic chromosome and start position
         try:
-            args['samtools_exec'] = toolkit.which('samtools')
-        except ValueError: # No SAMtools found
-            logging.error("Cannot find SAMtools, outputing SAM instead of BAM")
-            args['bam'] = False
+            chrom, args['genomic_start'] = sam.get_genomic_location(bedfile=args['reference_bed']) # type: str, int
+        except KeyError: # Not provided
+            chrom, args['genomic_start'] = '', 0 # type: str, int
+        #   Are we outputting a BAM format?
+        if args['bam']: # Check for SAMtools
+            try:
+                args['samtools_exec'] = toolkit.which('samtools')
+            except ValueError: # No SAMtools found
+                logging.error("Cannot find SAMtools, outputing SAM instead of BAM")
+                args['bam'] = False
     if args['suppress_events'] or args['suppress_tables']: # Suppressed events table?
         logging.warning("Events output suppressed, not writing events table")
     if args['suppress_classification'] or args['suppress_tables']: # Suppressed classification table?
@@ -433,8 +440,8 @@ def main():
     #   Read in reference and template sequences
     logging.info("Quality control...")
     qc_start = time.time() # type: float
-    reference = toolkit.load_seq(args['reference']) # type: toolkit.NamedSequence
-    template = toolkit.load_seq(args['template']) # type: toolkit.NamedSequence
+    reference = toolkit.load_seq(seq_file=args['reference'], chrom=chrom) # type: toolkit.NamedSequence
+    template = toolkit.load_seq(seq_file=args['template']) # type: toolkit.NamedSequence
     #   Align template and reference sequences to determine alignment direction
     al_ref_seq, al_temp_seq = quality_control.align_reference( # type: str, str
         reference=reference.sequence,

@@ -165,6 +165,17 @@ def make_argument_parser():
         metavar='template sequence',
         help="Choose a template FASTA file"
     )
+    ref_opts.add_argument(
+        '-b',
+        '--reference-bed',
+        dest='reference_bed',
+        type=str,
+        default=None,
+        required=False,
+        metavar='reference bed',
+        # help=""
+        help=argparse.SUPPRESS
+    )
     in_opts = parser.add_argument_group( # Input FASTQ options
         title='input arguments',
         description='Provide either a single FASTQ file or a list of FASTQ files. Note: we currently do NOT support paired-end FASTQ files'
