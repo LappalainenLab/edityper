@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""Create a SAM file from alignment data for the CRISPR program"""
+"""Create a SAM file from alignment data for EdiTyper"""
 
 from __future__ import division
 from __future__ import print_function

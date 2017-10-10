@@ -375,8 +375,8 @@ def crispr_analysis(
 
 
 def main():
-    """CRISPronto"""
-    #   Setup CRISPRonto
+    """EdiTyper"""
+    #   Setup EdiTyper
     #   Parse arguments
     parser = make_argument_parser() # type: argparse.ArgumentParser
     if not sys.argv[1:] or any(map(lambda a: a in sys.argv, ('-h', '--help'))):

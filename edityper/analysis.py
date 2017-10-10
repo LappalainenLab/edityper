@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""Analysis of alignments for the CRISPR program"""
+"""Analysis of alignments for EdiTyper"""
 
 from __future__ import division
 from __future__ import print_function

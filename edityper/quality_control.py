@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""Quality control for CRIPRonto"""
+"""Quality control for EdiTyper"""
 
 from __future__ import division
 from __future__ import print_function

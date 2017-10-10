@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""Plotting utilities for the CRISPR program"""
+"""Plotting utilities for EdiTyper"""
 
 from __future__ import division
 from __future__ import print_function

@@ -4,7 +4,7 @@
 #   Use in SAM output
 #   BED input?
 
-'''Set the arguments for the CRISPR alingment and analysis pipeline'''
+'''Set the arguments for EdiTyper'''
 
 import os
 import sys
