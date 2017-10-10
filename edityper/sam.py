@@ -19,7 +19,7 @@ from collections import defaultdict
 
 try:
     if PYTHON_VERSION is 3:
-        from crispronto import toolkit
+        from edityper import toolkit
     elif PYTHON_VERSION is 2:
         import toolkit
         from itertools import imap as map

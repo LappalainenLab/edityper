@@ -21,8 +21,8 @@ except ImportError as error:
 
 try:
     if PYTHON_VERSION is 3:
-        from crispronto import toolkit
-        from crispronto import nw_align
+        from edityper import toolkit
+        from edityper import nw_align
     elif PYTHON_VERSION is 2:
         import toolkit
         import nw_align

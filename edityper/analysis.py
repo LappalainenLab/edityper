@@ -22,7 +22,7 @@ if PYTHON_VERSION is 2:
     from itertools import imap as map
     range = xrange
 elif PYTHON_VERSION is 3:
-    from crispronto import toolkit
+    from edityper import toolkit
 else:
     raise SystemExit("Please use Python 2 or 3 for this module: " + __name__)
 

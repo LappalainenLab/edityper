@@ -18,14 +18,14 @@ from collections import Counter, defaultdict, namedtuple
 
 try:
     if PYTHON_VERSION is 3:
-        from crispronto import sam
-        from crispronto import plots
-        from crispronto import toolkit
-        from crispronto import analysis
-        from crispronto import alignment
-        from crispronto import quality_control
+        from edityper import sam
+        from edityper import plots
+        from edityper import toolkit
+        from edityper import analysis
+        from edityper import alignment
+        from edityper import quality_control
         from multiprocessing import pool as Pool
-        from crispronto.arguments import make_argument_parser
+        from edityper.arguments import make_argument_parser
     elif PYTHON_VERSION is 2:
         import sam
         import plots

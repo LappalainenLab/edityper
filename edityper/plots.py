@@ -15,8 +15,8 @@ from collections import defaultdict
 
 try:
     if PYTHON_VERSION is 3:
-        from crispronto import toolkit
-        from crispronto.analysis import percent
+        from edityper import toolkit
+        from edityper.analysis import percent
     elif PYTHON_VERSION is 2:
         import toolkit
         from analysis import percent
