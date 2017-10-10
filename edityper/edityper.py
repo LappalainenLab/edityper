@@ -263,7 +263,6 @@ def crispr_analysis(
             coverage=coverage,
             reference=reference.sequence,
             snp_info=snp_info,
-            # snp_index=snp_info.position,
             output_prefix=output_prefix
         )
     #   Make the locus plot
@@ -295,7 +294,6 @@ def crispr_analysis(
             position = sam.calc_read_pos(alignment=aligned, genomic_start=args['genomic_start']) # type: int
             cigar = sam.make_cigar(alignment=aligned) # type: str
             sam_seq = sam.make_sam_sequence(alignment=aligned, head=head, tail=tail) # type: str
-            # read_count = 1 # type: int
             sams = map( # type: Iterable[sam.SAM]
                 sam.SAM,
                 (read.name for read in supporting_reads), # qname=

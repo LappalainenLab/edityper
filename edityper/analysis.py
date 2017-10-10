@@ -107,7 +107,6 @@ def events_report(
         coverage, # type: Dict[int, int]
         reference, # type: str
         snp_info, # type: SNP
-        # snp_index, # type: int
         output_prefix # type: str
 ):
     # type: (...) -> None
@@ -129,12 +128,6 @@ def events_report(
         'C',
         'G'
     )
-    # #   Calculate cumulative deletions
-    # cummulative_deletions = defaultdict(int) # type: defaultdict
-    # for position, dist in events['deletions'].items():
-    #     for length in dist:
-    #         for i in range(length):
-    #             cummulative_deletions[position + i] += 1
     #   Create output file
     output_name = os.path.join(output_prefix, fastq_name + '.events')
     with open(output_name, 'w') as efile:
@@ -159,18 +152,13 @@ def events_report(
             avg_insertion = numpy.mean(insertions) if insertion_count else 0
             #   Matches
             nucleotides[base] = events['matches'].get(index, 0) # type: int
-            # #   Coverage
-            # covered = cummulative_deletions.get(index, 0) # type: int
-            # covered += sum(nucleotides.values()) # type: int
             #   Assemble and write
             results = ( # type: Tuple[Any]
                 index + 1,
                 base,
-                # covered,
                 coverage.get(index, 0),
                 deletion_count,
                 avg_deletion,
-                # cummulative_deletions.get(index, 0),
                 cummul_del.get(index, 0),
                 insertion_count,
                 avg_insertion,
@@ -178,18 +166,10 @@ def events_report(
                 nucleotides.get('T', 0),
                 nucleotides.get('C', 0),
                 nucleotides.get('G', 0)
-                # nucleotides['A'],
-                # nucleotides['T'],
-                # nucleotides['C'],
-                # nucleotides['G']
             )
             results = map(str, results) # type: Tuple[str]
-            # if index == snp_index:
-            #     efile.write(_DISP_BREAK + '\n')
             efile.write('\t'.join(results))
             efile.write('\n')
-            # if index == snp_index:
-            #     efile.write(_DISP_BREAK + '\n')
             efile.flush()
     logging.debug("FASTQ %s: Creating events table took %s seconds", fastq_name, round(time.time() - events_start, 3))
 
@@ -212,8 +192,6 @@ def display_classification(
     pre_repeat = int(floor((len(class_header) - len(fastq_name)) / 2)) # type: int
     post_repeat = int(ceil((len(class_header) - len(fastq_name)) / 2)) # type: int
     name_header = ''.join(itertools.repeat('-', pre_repeat)) + fastq_name + ''.join(itertools.repeat('-', post_repeat))
-    # #   Classify warnings as errors for catching numpy stuff
-    # warnings.simplefilter('error')
     #   Create an output name
     output_name = os.path.join(output_prefix, fastq_name + '.classifications')
     logging.info("FASTQ %s: Writing full classification breakdown to %s", fastq_name, output_name)
