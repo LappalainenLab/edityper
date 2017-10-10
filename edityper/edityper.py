@@ -291,7 +291,7 @@ def crispr_analysis(
             head, tail = toolkit.trim_interval(seq=aligned.read) # type: int, int
             unaligned = toolkit.reverse_complement(sequence=aligned.unaligned) if do_reverse else aligned.unaligned # type: str
             supporting_reads = tuple(reads_dict.pop(unaligned)) # type: Tuple[toolkit.Read]
-            position = sam.calc_read_pos(alignment=aligned, genomic_start=args['genomic_start']) # type: int
+            position = sam.calc_read_pos(alignment=aligned, genomic_start=args_dict['genomic_start']) # type: int
             cigar = sam.make_cigar(alignment=aligned) # type: str
             sam_seq = sam.make_sam_sequence(alignment=aligned, head=head, tail=tail) # type: str
             sams = map( # type: Iterable[sam.SAM]
