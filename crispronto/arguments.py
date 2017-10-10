@@ -13,7 +13,7 @@ import multiprocessing
 
 _OUTDIR_DEFAULT = os.path.join(os.getcwd(), 'output')
 _MODE_DEFAULT = 'SNP'
-_PROJECT_DEFAULT = 'crispronto'
+_PROJECT_DEFAULT = os.path.basename(sys.argv[0]).lower()
 _VERBOSITY_DEFAULT = 'info'
 _VERBOSITY_LEVELS = (
     'debug',
@@ -172,9 +172,8 @@ def make_argument_parser():
         type=str,
         default=None,
         required=False,
-        metavar='reference bed',
-        # help=""
-        help=argparse.SUPPRESS
+        metavar='[reference bed]',
+        help="Optional BED file with genomic position of reference sequence in first entry; any line starting with 'browser', 'track', or '#' will be ignored"
     )
     in_opts = parser.add_argument_group( # Input FASTQ options
         title='input arguments',
