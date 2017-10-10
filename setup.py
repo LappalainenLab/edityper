@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""Setup CRISPRonto"""
+"""Setup EdiTyper"""
 
 #   Deal with Tkinter stuff
 #   Needed for matplotlib
@@ -32,14 +32,14 @@ except ImportError:
 
 
 #   Some basic information
-NAME = 'CRISPRonto'
+NAME = 'EdiTyper'
 VERSION = '1.0.0'
 AUTHOR = 'Alexandre Yahi'
 AUTHOR_EMAIL = 'ay2318@cumc.columbia.edu'
 DESCRIPTION = ''
 LICENSE = ''
 KEYWORDS = 'crispr rnaseq'
-URL = 'https://github.com/lappalainenlab/crispronto'
+URL = 'https://github.com/lappalainenlab/EdiTyper'
 
 #   A class to force install to run build first
 class install(_install):
@@ -101,7 +101,7 @@ INSTALL_REQUIRES = [
 ]
 
 #   Packages
-PACKAGE_DIR = 'crispronto'
+PACKAGE_DIR = 'edityper'
 PACKAGES = [
     PACKAGE_DIR
 ]
@@ -109,7 +109,7 @@ PACKAGES = [
 #   Set up the extension
 EXT_MODULES = [
     Extension(
-        name='crispronto.nw_align',
+        name='%s.nw_align' % PACKAGE_DIR,
         sources=['src/nw_align.pyx', 'src/py_align.cpp'],
         language='c++'
     )
@@ -124,7 +124,7 @@ CMD_CLASS = {
 #   Entry points into the program
 ENTRY_POINTS = {
     'console_scripts': [
-        '%(name)s = %(package)s.crispronto:main' % {'name': NAME, 'package': PACKAGE_DIR}
+        '%(name)s = %(package)s.%(package)s:main' % {'name': NAME, 'package': PACKAGE_DIR}
     ]
 }
 

@@ -1,4 +1,4 @@
-# CRISPRonto
+# EdiTyper
 
 A python program for aligning CRISPR-edited RNA-seq data. Written by Alexandre Yahi.
 
@@ -14,7 +14,7 @@ Please note, to install system-wide, you must have sudo access. If you are not i
 
 ## Dependencies
 
-CRISPRonto is compatible with Python 2.7+ and 3.3+; it also depends on the following Python modules:
+EdiTyper is compatible with Python 2.7+ and 3.3+; it also depends on the following Python modules:
  - [Cython](http://cython.org/)
  - [matplotlib](http://matplotlib.org/)
  - [NumPy](http://www.numpy.org/)
@@ -28,7 +28,7 @@ Each of these modules is available on [PyPi](https://pypi.python.org/) and insta
 To get a basic help message, simply run
 
 ```bash
-CRISPRonto
+EdiTyper
 ```
 
 ## Arguments
@@ -40,7 +40,7 @@ CRISPRonto
 | `-p | --pvalue-threshold` | Set the p-value threshold for the alignment | No | 1 * 10<sup>-3</sup> |
 | `-g | --gap-opening` | Set the gap opening penalty | No | 8 |
 | `-e | --gap-extension` | Set the gap extension penalty | No | 1 |
-| `--parallel` | Run CRISPRonto in parallel, supports optional argument to limit number of cores, otherwise uses all available cores | No | None |
+| `--parallel` | Run EdiTyper in parallel, supports optional argument to limit number of cores, otherwise uses all available cores | No | None |
 
 ### Reference Arguments
 
@@ -66,7 +66,7 @@ CRISPRonto
 | Parameter | Definition | Required? | Default |
 | --------- | ---------- | --------- | ------- |
 | `-d | --output-directory` | Choose where to put all output files | No | 'output' |
-| `-j | --project` | Give this project a name, will be used as the basename for output files | No | 'crispronto' |
+| `-j | --project` | Give this project a name, will be used as the basename for output files | No | 'edityper' |
 | `--bam` | Convert SAM files to BAM files, optionally use CSI indecies instead of BAI indeces with `--bam csi`; requires [SAMtools](https://github.com/samtools/samtools) |
 
 ### Read Group Arguments
