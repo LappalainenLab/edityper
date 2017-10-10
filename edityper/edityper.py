@@ -91,8 +91,10 @@ def crispr_analysis(
     analysis_start = time.time() # type: float
     #   Load the reads
     reads = toolkit.load_fastq(fastq_file=fastq_file) # type: Tuple[toolpack.Read]
+    total_reads = len(reads) # type: int
     #   Determine the alignment direction for our reads
     unique_reads = Counter(map(lambda read: read.seq, reads)) # type: Counter
+    total_unique = len(unique_reads) # type: int
     do_reverse, fwd_score, rev_score, score_threshold = quality_control.determine_alignment_direction( # type: bool, float, float, float
         fastq_name=fastq_name,
         unique_reads=unique_reads.keys(),
@@ -134,6 +136,8 @@ def crispr_analysis(
                 results = Events(num_reads=num_reads, num_ins=0, num_del=0, num_mis=0)
                 discard[str(aligned)] = results
                 read_assignments[unaligned] = ('DISCARD', results)
+                total_reads -= num_reads
+                total_unique -= 1
                 continue
             ref_head, ref_tail = toolkit.trim_interval(seq=aligned.reference) # type: int, int
             al_ref_seq = aligned.reference[ref_head:ref_tail] # type: str
@@ -258,7 +262,8 @@ def crispr_analysis(
             cummul_del=cummulative_deletions,
             coverage=coverage,
             reference=reference.sequence,
-            snp_index=snp_info.position,
+            snp_info=snp_info,
+            # snp_index=snp_info.position,
             output_prefix=output_prefix
         )
     #   Make the locus plot
@@ -268,7 +273,7 @@ def crispr_analysis(
             deletions=counts['deletions'],
             mismatches=counts['mismatches'],
             coverage=coverage,
-            num_reads=len(reads),
+            num_reads=total_reads,
             fastq_name=fastq_name,
             output_prefix=output_prefix
         )
@@ -347,17 +352,17 @@ def crispr_analysis(
         mismatch_bases = Counter(itertools.chain.from_iterable(counts['mismatches'].values()))
         total_mismatch = sum(mismatch_bases.values())
         fastq_summary = { # type: Dict[str, Any]
-            'total_reads'       :   len(reads),
-            'unique_reads'      :   len(unique_reads),
+            'total_reads'       :   total_reads,
+            'unique_reads'      :   total_unique,
             'discarded'         :   total_counts['DISCARD'],
             'no_edit'           :   total_counts['NO_EDIT'],
-            'no_edit_perc'      :   analysis.percent(num=total_counts['NO_EDIT'], total=len(reads)),
+            'no_edit_perc'      :   analysis.percent(num=total_counts['NO_EDIT'], total=total_reads),
             'hdr_clean'         :   total_counts['HDR'] - hdr_indels,
             'hdr_clean_perc'    :   analysis.percent(num=total_counts['HDR'] - hdr_indels, total=total_counts['HDR']),
             'hdr_gap'           :   hdr_indels,
             'hdr_gap_perc'      :   analysis.percent(num=hdr_indels, total=total_counts['HDR']),
             'nhej'              :   total_counts['NHEJ'],
-            'nhej_perc'         :   analysis.percent(num=total_counts['NHEJ'], total=len(reads)),
+            'nhej_perc'         :   analysis.percent(num=total_counts['NHEJ'], total=total_reads),
             'perc_a'            :   analysis.percent(num=mismatch_bases['A'], total=total_mismatch),
             'perc_t'            :   analysis.percent(num=mismatch_bases['T'], total=total_mismatch),
             'perc_c'            :   analysis.percent(num=mismatch_bases['C'], total=total_mismatch),
@@ -545,6 +550,7 @@ def main():
         summary_header = (
             '#FASTQ',
             'TOTAL_READS',
+            'TOTAL_NON_DISC',
             'UNIQ_READS',
             'DISCARDED',
             'SNP_POS',
@@ -571,6 +577,7 @@ def main():
             for sum_dict in sorted(summaries, key=lambda d: d['filename']):
                 out = (
                     sum_dict['filename'],
+                    sum_dict['total_reads'] + sum_dict['discarded'],
                     sum_dict['total_reads'],
                     sum_dict['unique_reads'],
                     sum_dict['discarded'],

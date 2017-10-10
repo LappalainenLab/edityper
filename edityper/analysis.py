@@ -49,6 +49,16 @@ def _fastq_header(fastq_name, fastq_path): # type: (str, str) -> str
     return '\t'.join(header)
 
 
+def _snp_header(snp_info): # type: (SNP) -> str
+    header = ( # type: Tuple[str]
+        '##SNP',
+        'POS:%s' % (snp_info.position + 1),
+        'REF:%s' % snp_info.reference,
+        'TEMPLATE:%s' % snp_info.target
+    )
+    return '\t'.join(header)
+
+
 def cummulative_deletions(deletions): # type: Dict[int, List[int]] -> Dict[int, int]
     """Calculate cummulative deletions"""
     cummul_del = defaultdict(int) # type: defaultdict
@@ -96,7 +106,8 @@ def events_report(
         cummul_del, # type: Dict[int, int]
         coverage, # type: Dict[int, int]
         reference, # type: str
-        snp_index, # type: int
+        snp_info, # type: SNP
+        # snp_index, # type: int
         output_prefix # type: str
 ):
     # type: (...) -> None
@@ -128,10 +139,9 @@ def events_report(
     output_name = os.path.join(output_prefix, fastq_name + '.events')
     with open(output_name, 'w') as efile:
         logging.info("FASTQ %s: Writing events table to %s", fastq_name, output_name)
-        efile.write(_fastq_header(fastq_name=fastq_name, fastq_path=fastq_path))
-        efile.write('\n')
-        efile.write('\t'.join(header))
-        efile.write('\n')
+        efile.write(_fastq_header(fastq_name=fastq_name, fastq_path=fastq_path) + '\n')
+        efile.write(_snp_header(snp_info=snp_info) + '\n')
+        efile.write('\t'.join(header) + '\n')
         efile.flush()
         for index, base in enumerate(reference):
             #   Get the mismatches
@@ -174,12 +184,12 @@ def events_report(
                 # nucleotides['G']
             )
             results = map(str, results) # type: Tuple[str]
-            if index == snp_index:
-                efile.write(_DISP_BREAK + '\n')
+            # if index == snp_index:
+            #     efile.write(_DISP_BREAK + '\n')
             efile.write('\t'.join(results))
             efile.write('\n')
-            if index == snp_index:
-                efile.write(_DISP_BREAK + '\n')
+            # if index == snp_index:
+            #     efile.write(_DISP_BREAK + '\n')
             efile.flush()
     logging.debug("FASTQ %s: Creating events table took %s seconds", fastq_name, round(time.time() - events_start, 3))
 
@@ -214,12 +224,6 @@ def display_classification(
     logging.warning(class_header)
     logging.warning("--------------Read Classifications--------------")
     logging.warning(name_header)
-    snp_header = ( # type: Tuple[str]
-        '##SNP',
-        'POS:%s' % (snp_info.position + 1),
-        'REF:%s' % snp_info.reference,
-        'TEMPLATE:%s' % snp_info.target
-    )
     read_header = ( # type: Tuple[str]
         '##READS',
         'TOTAL:%s' % total_reads,
@@ -263,7 +267,7 @@ def display_classification(
     total_counts = dict.fromkeys(iter_tag.values(), 0)
     with open(output_name, 'w') as cfile:
         cfile.write(_fastq_header(fastq_name=fastq_name, fastq_path=fastq_path) + '\n')
-        cfile.write('\t'.join(snp_header) + '\n')
+        cfile.write(_snp_header(snp_info=snp_info) + '\n')
         cfile.write('\t'.join(read_header) + '\n')
         cfile.write('\t'.join(score_header) + '\n')
         cfile.write('\t'.join(category_header) + '\n')
