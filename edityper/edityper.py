@@ -180,14 +180,11 @@ def crispr_analysis(
                 counts['matches'][match_position] += num_reads
             results = Events(num_reads=num_reads, num_ins=num_ins, num_del=num_del, num_mis=num_mis) # type: Events
             # reposition the SNP index with deletion shift
-            if al_read_seq[snp_info.position] == '-':
-                new_snp_index = snp_info.position
-                while al_read_seq[new_snp_index] == '-':
-                    new_snp_index += 1
-                    if new_snp_index == len(al_read_seq) - 3:
-                        break
-            else:
-                new_snp_index = snp_info.position
+            new_snp_index = snp_info.position # type: int
+            while al_read_seq[new_snp_index] == '-': # Won't do anything if al_read_seq[new_snp_index] != '-'
+                new_snp_index += 1
+                if new_snp_index == len(al_read_seq) - 3:
+                    break
             snp_info_new = snp_info._replace(position=new_snp_index) # created new named tuple
             if al_read_seq[snp_info_new.position] == snp_info_new.target:
                 if all(map(lambda x: not x, (num_del, num_ins))):
@@ -413,19 +410,12 @@ def main():
     if args['suppress_sam']: # Suppressed SAM output?
         logging.warning("SAM output suppressed, not writing SAM file")
         args['bam'] = False
-    else: # We are outputting SAM files
-        #   Get genomic chromosome and start position
+    elif args['bam']: # Check for SAMtools
         try:
-            chrom, args['genomic_start'] = sam.get_genomic_location(bedfile=args['reference_bed']) # type: str, int
-        except KeyError: # Not provided
-            chrom, args['genomic_start'] = '', 0 # type: str, int
-        #   Are we outputting a BAM format?
-        if args['bam']: # Check for SAMtools
-            try:
-                args['samtools_exec'] = toolkit.which('samtools')
-            except ValueError: # No SAMtools found
-                logging.error("Cannot find SAMtools, outputing SAM instead of BAM")
-                args['bam'] = False
+            args['samtools_exec'] = toolkit.which('samtools')
+        except ValueError: # No SAMtools found
+            logging.error("Cannot find SAMtools, outputing SAM instead of BAM")
+            args['bam'] = False
     if args['suppress_events'] or args['suppress_tables']: # Suppressed events table?
         logging.warning("Events output suppressed, not writing events table")
     if args['suppress_classification'] or args['suppress_tables']: # Suppressed classification table?
@@ -439,6 +429,11 @@ def main():
         toolkit._DO_PROFILE = True
     #   Read in reference and template sequences
     logging.info("Quality control...")
+    #   Get genomic chromosome and start position
+    try:
+        chrom, args['genomic_start'] = sam.get_genomic_location(bedfile=args['reference_bed']) # type: str, int
+    except KeyError: # Not provided
+        chrom, args['genomic_start'] = '', 0 # type: str, int
     qc_start = time.time() # type: float
     reference = toolkit.load_seq(seq_file=args['reference'], chrom=chrom) # type: toolkit.NamedSequence
     template = toolkit.load_seq(seq_file=args['template']) # type: toolkit.NamedSequence
