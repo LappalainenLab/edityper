@@ -1,4 +1,4 @@
-from crispronto import toolkit
+from edityper import toolkit
 from libcpp.string cimport string
 
 cdef extern from "py_align.h":

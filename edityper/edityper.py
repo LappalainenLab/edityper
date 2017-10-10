@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""CRISPRonto"""
+"""EdiTyper"""
 
 from __future__ import division
 from __future__ import print_function
