@@ -383,19 +383,35 @@ def main():
         sys.exit(parser.print_help())
     args = {key: value for key, value in vars(parser.parse_args()).items() if value is not None} # type: Dict[str, Any]
     #   Setup logger
+    #   Formatting values
     log_format = '%(asctime)s %(levelname)s:\t%(message)s' # type: str
     date_format = '%Y-%m-%d %H:%M:%S' # type: str
+    formatter = logging.Formatter(fmt=log_format, datefmt=date_format) # type: logging.Formatter
+    #   Open /dev/null (or whatever it is on Windows) to send stream information to
+    devnull = open(os.devnull, 'w')
+    #   Configure the logger
     logging.basicConfig(
-        format=log_format,
-        stream=args['logfile'],
+        stream=devnull,
         level=_set_verbosity(level=args['verbosity']),
-        datefmt=date_format
     )
-    if not args['logfile'] == sys.stderr:
-        formatter = logging.Formatter(fmt=log_format, datefmt=date_format) # type: logging.Formatter
-        handler = logging.StreamHandler() # type: logging.StreamHandler
-        handler.setFormatter(formatter)
-        logging.getLogger().addHandler(handler)
+    #   Setup a FileHandler for any logging to a file we may do
+    try:
+        logfile = logging.FileHandler(filename=args['logfile'], mode='w') # type: Logging.FileHandler
+        logfile.setFormatter(formatter)
+        logging.getLogger().addHandler(logfile)
+    except KeyError:
+        pass
+    #   Setup the console handler
+    #   Colorize the entire line
+    colored_formater = toolkit.ColoredFormatter(fmt=log_format, datefmt=date_format) # type: toolkit.ColoredFormatter
+    console = logging.StreamHandler() # type: logging.StreamHandler
+    console.setFormatter(colored_formater)
+    # #   Colorize just the message
+    # handler = logging.StreamHandler() # type: logging.StreamHandler
+    # console = toolkit.ColoredStreamHandler() # type: toolkit.ColoredStreamHandler
+    # console.setFormatter(formatter)
+    logging.getLogger().addHandler(console)
+    #   Begin the program
     logging.info("Welcome to %s!", os.path.basename(sys.argv[0]))
     program_start = time.time()
     #   Make an output directory
@@ -602,7 +618,11 @@ def main():
         logging.debug("Writing summary took %s seconds", round(time.time() - summary_start, 3))
     #   Close logfile
     logging.debug("Entire program took %s seconds to run", round(time.time() - program_start, 3))
-    args['logfile'].close()
+    devnull.close()
+    try:
+        logfile.close()
+    except NameError:
+        pass
 
 
 if __name__ == '__main__':

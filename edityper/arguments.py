@@ -75,8 +75,8 @@ def make_argument_parser():
         '-f',
         '--logfile',
         dest='logfile',
-        type=argparse.FileType(mode='w'),
-        default=sys.stderr,
+        type=str,
+        default=None,
         required=False,
         metavar='log file',
         help="Specify a file for the log messages, defaults to stderr"

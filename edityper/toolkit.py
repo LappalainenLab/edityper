@@ -12,6 +12,7 @@ PYTHON_VERSION = sys.version_info.major
 import os
 import re
 import time
+import copy
 import gzip
 import logging
 import itertools
@@ -52,6 +53,59 @@ class ExitPool(Exception):
     def __init__(self, msg):
         super(ExitPool, self).__init__(msg)
         self.msg = msg
+
+
+class ColoredFormatter(logging.Formatter):
+    """A colorized stream handler for logging"""
+
+    _colors = {
+        50: '\x1b[1m\x1b[31m', # CRITICAL: bold red
+        40: '\x1b[31m', # ERROR: red
+        30: '\x1b[33m', # WARNING: yellow
+        20: '\x1b[32m', # INFO: green
+        10: '\x1b[36m' # DEBUG: cyan
+    }
+
+    _default = '\x1b[0m' # Anything else: reset
+
+    def __init__(self, *args, **kwargs):
+        # super(ColoredFormatter, self).__init__(*args, **kwargs)
+        logging.Formatter.__init__(self, *args, **kwargs)
+
+    def format(self, record):
+        """Colorize to console"""
+        # color_record = copy.copy(record)
+        message = logging.Formatter.format(self, record)
+        if sys.platform not in ('win32', 'cygwin'):
+            color_level = min(self._colors.keys(), key=lambda level: abs(level - record.levelno)) # type: int
+            color_level = min((color_level, record.levelno)) # type: int
+            color = self._colors.get(color_level, self._default) # type: str
+            message = color + message + self._default # type: str
+        return message
+
+
+class ColoredStreamHandler(logging.StreamHandler):
+    """A colorized stream handler for logging"""
+
+    _colors = {
+        50: '\x1b[1m\x1b[31m', # CRITICAL: bold red
+        40: '\x1b[31m', # ERROR: red
+        30: '\x1b[33m', # WARNING: yellow
+        20: '\x1b[32m', # INFO: green
+        10: '\x1b[36m' # DEBUG: cyan
+    }
+
+    _default = '\x1b[0m' # Anything else: reset
+
+    def emit(self, record):
+        """Colorize to console"""
+        color_record = copy.copy(record)
+        if sys.platform not in ('win32', 'cygwin'):
+            color_level = min(self._colors.keys(), key=lambda level: abs(level - color_record.levelno))
+            color_level = min((color_level, color_record.levelno))
+            color = self._colors.get(color_level, self._default)
+            color_record.msg = color + str(color_record.msg) + self._default
+        logging.StreamHandler.emit(self, color_record)
 
 
 def profile(diff=False): # type: (bool) -> None
