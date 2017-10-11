@@ -10,8 +10,9 @@ PYTHON_VERSION = sys.version_info.major
 
 import os
 import time
-import logging
 import signal
+import logging
+import warnings
 import itertools
 from multiprocessing import Lock
 from collections import Counter, defaultdict, namedtuple
@@ -390,10 +391,17 @@ def main():
     #   Open /dev/null (or whatever it is on Windows) to send stream information to
     devnull = open(os.devnull, 'w')
     #   Configure the logger
+    verbosity = _set_verbosity(level=args['verbosity']) # type: int
     logging.basicConfig(
         stream=devnull,
-        level=_set_verbosity(level=args['verbosity']),
+        level=verbosity,
     )
+    #   If we're being verbose, capture other warnings (mainly matplotlib and numpy)
+    #   Otherwise, ignore them
+    if verbosity == logging.DEBUG:
+        logging.captureWarnings(True)
+    else:
+        warnings.filterwarnings('ignore')
     #   Setup a FileHandler for any logging to a file we may do
     try:
         logfile = logging.FileHandler(filename=args['logfile'], mode='w') # type: Logging.FileHandler
