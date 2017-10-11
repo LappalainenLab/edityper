@@ -20,6 +20,8 @@ nw_align.cpp
 ###############################
 *.sam
 *.bam
+*.bai
+*.csi
 *.assignments
 *.classifications
 *.events
