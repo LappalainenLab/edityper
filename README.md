@@ -16,10 +16,11 @@ Please note, to install system-wide, you must have sudo access. If you are not i
 
 EdiTyper is compatible with Python 2.7+ and 3.3+; it also depends on the following Python modules:
  - [Cython](http://cython.org/)
- - [matplotlib](http://matplotlib.org/)
  - [NumPy](http://www.numpy.org/)
  - [SciPy](https://www.scipy.org/)
+ - [matplotlib](http://matplotlib.org/)
  - [Biopython](http://biopython.org/)
+ - [regex](https://pypi.python.org/pypi/regex)
 
 Each of these modules is available on [PyPi](https://pypi.python.org/) and installable using [pip](https://pip.pypa.io/en/stable/)
 
@@ -48,6 +49,7 @@ EdiTyper
 | --------- | ---------- | --------- |
 | `-r | --reference-sequence` | Reference FASTA for alignment | **Yes** |
 | `-t | --template-sequence` | Template sequence for CRISPR editing | **Yes** |
+| `-b | --reference-bed` | A BED file with the genomic location of the reference sequence. Used to get chromosome name and sequence start point. Only the first entry will be read; any line starting with 'browser', 'track' or '`#`' will be ignored | No |
 
 ### Input Arguments
 
@@ -92,26 +94,116 @@ EdiTyper
 
 ## Output Files
 
-For each output table, all lines starting with `#` are header lines. All lines starting with `##` are extra information.
+For each output table, all lines starting with `#` are header lines. All lines starting with `##` are extra information. See details below for specifics about each output.
 
 | Output file | Extension |
 | ----------- | --------- |
-| Alignments in SAM format | `.sam` |
+| Alignments in SAM/BAM format | `.sam | .bam` |
 | Table of events by base | `.events` |
 | Classification of reads in tabular format | `.classification` |
 | Locus and alignment quality plots | `.pdf` |
 | Summary of read classifications per input FASTQ file | `.summary` |
+| Read assignments table | `.assignments` |
 
-SAM alignments are standard SAM files. They have been presorted in coordinate order with read groups attached.
+### SAM/BAM Output
 
-The `.events` table shows reference state, coverage, number of deletions, average deletion length, number of insertions, average insertion length, and base counts at each position in reference sequence.
+SAM alignments are standard SAM files. They have been presorted in coordinate order with read groups attached. If BAM output, BAM indices will also be output in either BAI or CSI format. For more details, see SAM/BAM format specification from [HTSlib](http://www.htslib.org/).
 
-The `.classifications` table shows counts, indels, and mismatches for HDR, NHEJ, no editing, and discarded reads. In addition, this file shows SNP state and position, read counts, and alignment scoring information.
+### Events Table
 
-The `.summary` table shows total reads, unique reads, discarded reads, SNP information, no editing, HDR, NHEJ, and mismatch percentages by base per FASTQ file.
+The `.events` table shows a locus-by-locus overview of indels and mismatches in each FASTQ file. One table is generated per FASTQ file.
 
-The locus plot shows events at each base along the reference and the number of supporting reads for each event.
+<!-- reference state, coverage, number of deletions, average deletion length, number of insertions, average insertion length, and base counts at each position in reference sequence. -->
 
-The quality plot shows the distribution of alignment quality scores for each FASTQ file.
+| Column | Meaning |
+| ------ | ------- |
+| `POS` | Position in reference sequence |
+| `REF` | Nucleotide in reference sequence at this position |
+| `COV` | Coverage in FASTQ at position |
+| `DEL` | Number of deletions starting at this position |
+| `AVG_DEL` | Average length of deletions starting at this position |
+| `DCOUNT` | Number of times this position is deleted |
+| `INS` | Number of insertions starting at this position |
+| `AVG_INS` | Average length of insertions starting at this position |
+| `A` | Count of mismatched A's at this position |
+| `T` | Count of mismatched T's at this position |
+| `C` | Count of mismatched C's at this position |
+| `G` | Count of mismatched G's at this position |
 
-<img src='.nygc.jpeg' alt='New York Genome Center' height='100' width='100'>
+### Read Classifications
+
+The `.classifications` table shows a breakdown of indels and mismatches per read category. One table is generated per FASTQ file. The read categories are HDR, MIX, NHEJ, NO_EDIT, and DISCARD.
+
+<!-- counts, indels, and mismatches for HDR, NHEJ, no editing, and discarded reads. In addition, this file shows SNP state and position, read counts, and alignment scoring information. -->
+
+| Column | Meaning |
+| ------ | ------- |
+| `TAG` | Which classification category, one of HDR, MIX, NHEJ, NO_EDIT, and DISCARD |
+| `COUNT` | How many reads fall in this classification category? |
+| `PERC_COUNT` | What percentage of reads fall in this classification category. Excludes discarded reads from calculation |
+| `INS_EVENTS` | Total number of insertion events; reported for HDR, MIX, and NHEJ only |
+| `AVG_INS` | Average number of insertion events per read; reported for HDR, MIX, and NHEJ only |
+| `STD_DEV_INS` | Standard deviation of the distribution of insertions; reported for HDR, MIX, and NHEJ only |
+| `DEL_EVENTS` | Total number of deletion events; reported for HDR, MIX, and NHEJ only |
+| `AVG_DEL` | Average number of deletion events per read; reported for HDR, MIX, and NHEJ only |
+| `STD_DEV_DEL` | Standard deviation of the distribution of deletions; reported for HDR, MIX, and NHEJ only |
+| `MISMATCH_EVENTS` | Total number of mismatch events; reported for HDR, MIX, and NHEJ only |
+| `AVG_MIS` | Average number of mismatch events per read; reported for HDR, MIX, and NHEJ only |
+| `STD_DEV_MIS` | Standard deviation of the distribution of mismatches; reported for HDR, MIX, and NHEJ only |
+| `NO_INDELS` | Number of reads with no indels; reported for HDR and MIX only |
+| `PERC_NO_INDELS` | Percentage of reads with no indels; reported for HDR and MIX only |
+| `INS_ONLY` | Number of reads with only insertions; reported for HDR and MIX only |
+| `PERC_INS_ONLY` | Percentage of reads with only insertions; reported for HDR and MIX only |
+| `DEL_ONLY` | Number of reads with only deletions; reported for HDR and MIX only |
+| `PERC_DEL_ONLY` | Percentage of reads with only deletions; reported for HDR and MIX only |
+| `INDELS` | Number of reads with both insertions and deletions; reported for HDR and MIX only |
+| `PERC_INDELS` | Percentage of reads with both insertions and deletions; reported for HDR and MIX only |
+
+### Summary Table
+
+The `.summary` table shows total reads, unique reads, discarded reads, SNP information, no editing, HDR, NHEJ, and mismatch percentages by base. One table is generated for *all* FASTQ files.
+
+| Column | Meaning |
+| ------ | ------- |
+| `FASTQ` | Name of FASTQ file |
+| `TOTAL_READS` | Total number of reads in this FASTQ file |
+| `TOTAL_NON_DISC` | Total number of reads in this FASTQ file, excluding discarded reads |
+| `UNIQ_READS` | Total number of unique non-discarded reads |
+| `DISCARDED` | Number of discarded reads |
+| `SNP_POS` | SNP position |
+| `REF_STATE` | Reference state |
+| `TEMP_SNP` | Alternate state |
+| `NO_EDIT` | Number of non-edited reads |
+| `PERC_NO_EDIT` | Percentage of non-edited reads, excluding discarded reads |
+| `HDR_CLEAN` | Number of clean HDR (not MIX) reads |
+| `PERC_HDR_CLEAN` | Percentage of clean HDR (not MIX) reads, excluding discarded reads |
+| `HDR_GAP` | Number of gapped HDR (MIX) reads |
+| `PERC_HDR_GAP` | Percentage of gapped HDR (MIX) reads, excluding discarded reads |
+| `NHEJ` | Number of NHEJ reads |
+| `NHEJ_GAP` | Percentage of NHEJ reads, excluding discarded reads |
+| `PERC_MIS_A` | Percentage of mismatches with an A compared to total number of mismatches |
+| `PERC_MIS_T` | Percentage of mismatches with an T compared to total number of mismatches |
+| `PERC_MIS_C` | Percentage of mismatches with an C compared to total number of mismatches |
+| `PERC_MIS_G` | Percentage of mismatches with an G compared to total number of mismatches |
+
+### Locus and Quality Plots
+
+The locus plot shows events at each base along the reference and the number of supporting reads for each event. One PDF is generated per FASTQ file. The first page is scaled to total number of reads in the FASTQ file, the second is scaled to maximum number of supporting reads accross all events. Coverage at each base is also shown.
+
+The quality plot shows the distribution of alignment quality scores.  One PDF is generated for *all* FASTQ files. The quality-score threshold for discarding reads is shown as a black bar.
+
+### Assignments Table
+
+The `.assignments` table shows how each read was classified as well as the number of insertions, deletions, and mismatches for each read. One table is generated per FASTQ. This table is *only* generated when verbosity is set to 'debug' (`-v debug | --verbosty debug`) and `--suppress-tables` is **not** passed.
+
+| Column | Meaning |
+| ------ | ------- |
+| `ReadID` | Read ID from the FASTQ file |
+| `Label` | Classification assigned to this read |
+| `NumDel` | Number of deletions in this read |
+| `NumIns` | Number of insertions in this read |
+| `NumMis` | Number of mismatches in this read |
+
+<!-- ---
+
+<img src='.nygc.jpeg' alt='New York Genome Center' height='100' width='100'> -->
