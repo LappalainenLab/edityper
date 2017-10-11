@@ -272,7 +272,10 @@ def display_classification(
                 count += event.num_reads
                 counted_total += event.num_reads
             avg_indels = numpy.mean(event_lists['indels']) if event_lists['indels'] else 0
-            perc_count = percent(num=count, total=total_reads)
+            if tag == 'DISCARD':
+                perc_count = NA
+            else:
+                perc_count = percent(num=count, total=total_reads)
             #   Display our summaries
             logging.warning("%s: count %s", tag, count)
             logging.warning("%s: avg indels %s", tag, round(avg_indels, 3))
