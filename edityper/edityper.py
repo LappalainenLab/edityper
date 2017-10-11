@@ -413,13 +413,13 @@ def main():
     logging.getLogger().addHandler(console)
     #   Begin the program
     logging.info("Welcome to %s!", os.path.basename(sys.argv[0]))
-    program_start = time.time()
+    program_start = time.time() # type: float
     #   Make an output directory
     if os.path.exists(args['outdirectory']):
         args['outdirectory'] = args['outdirectory'] + time.strftime('_%Y-%m-%d_%H:%M')
     try:
         os.makedirs(args['outdirectory'])
-    except:
+    except OSError:
         pass
     finally:
         logging.warning("Using outdirectory %s", args['outdirectory'])
@@ -546,13 +546,16 @@ def main():
         #   Clean up the pool
         pool.close(); pool.terminate(); pool.join()
         #   Use standard map (or itertools.imap if Python 2)
-        results = map(crispr_analysis, zipped_args)
+        results = map(crispr_analysis, zipped_args) # type: Iterable[Tuple[Tuple[alignment.Alignment]], Tuple[Dict[str, Any]]]
     #   Sort our alignments and summaries into separate collections
-    alignments, summaries = zip(*results)
+    try:
+        alignments, summaries = zip(*results) # type: Tuple[Tuple[alignment.Alignment]], Tuple[Dict[str, Any]]
+    except ExitPool as error: # Handle ExitPool calls for single-threaded map
+        sys.exit(error.msg)
     #   Unpack our alignments into a single tuple
     alignments = toolkit.unpack(collection=alignments) # type: Tuple[alignment.Alignment]
     #   Final batch summary plot and table
-    output_prefix = os.path.join(args['outdirectory'], args['project'])
+    output_prefix = os.path.join(args['outdirectory'], args['project']) # type: str
     if not args['suppress_plots']:
         plots.quality_plot(
             alignments=alignments,
@@ -560,7 +563,7 @@ def main():
             output_prefix=output_prefix
         )
     if not (args['suppress_classification'] or args['suppress_events'] or args['suppress_tables']):
-        summary_name = output_prefix + '.summary'
+        summary_name = output_prefix + '.summary' # type: str
         summary_header = (
             '#FASTQ',
             'TOTAL_READS',
@@ -584,12 +587,12 @@ def main():
             'PERC_MIS_G'
         )
         logging.info("Writing summary to %s", summary_name)
-        summary_start = time.time()
+        summary_start = time.time() # type: float
         with open(summary_name, 'w') as summfile:
             summfile.write('\t'.join(summary_header) + '\n')
             summfile.flush()
-            for sum_dict in sorted(summaries, key=lambda d: d['filename']):
-                out = (
+            for sum_dict in sorted(summaries, key=lambda d: d['filename']): # type: Dict[str, Any]
+                out = ( # type: Tuple[Any]
                     sum_dict['filename'],
                     sum_dict['total_reads'] + sum_dict['discarded'],
                     sum_dict['total_reads'],
@@ -611,7 +614,7 @@ def main():
                     sum_dict['perc_c'],
                     sum_dict['perc_g']
                 )
-                out = map(str, out)
+                out = map(str, out) # type: Iterable[str]
                 summfile.write('\t'.join(out))
                 summfile.write('\n')
                 summfile.flush()

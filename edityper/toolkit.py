@@ -23,6 +23,7 @@ if PYTHON_VERSION is 2:
     from itertools import imap as map
     from itertools import ifilter as filter
     range = xrange
+    FileNotFoundError = IOError
 elif PYTHON_VERSION is 3:
     maketrans = str.maketrans
 else:
@@ -56,7 +57,7 @@ class ExitPool(Exception):
 
 
 class ColoredFormatter(logging.Formatter):
-    """A colorized stream handler for logging"""
+    """A colorized formatter for logging"""
 
     _colors = {
         50: '\x1b[1m\x1b[31m', # CRITICAL: bold red
@@ -69,13 +70,11 @@ class ColoredFormatter(logging.Formatter):
     _default = '\x1b[0m' # Anything else: reset
 
     def __init__(self, *args, **kwargs):
-        # super(ColoredFormatter, self).__init__(*args, **kwargs)
         logging.Formatter.__init__(self, *args, **kwargs)
 
-    def format(self, record):
+    def format(self, record): # type: (logging.LogRecord) -> str
         """Colorize to console"""
-        # color_record = copy.copy(record)
-        message = logging.Formatter.format(self, record)
+        message = logging.Formatter.format(self, record) # type: str
         if sys.platform not in ('win32', 'cygwin'):
             color_level = min(self._colors.keys(), key=lambda level: abs(level - record.levelno)) # type: int
             color_level = min((color_level, record.levelno)) # type: int
@@ -97,14 +96,14 @@ class ColoredStreamHandler(logging.StreamHandler):
 
     _default = '\x1b[0m' # Anything else: reset
 
-    def emit(self, record):
+    def emit(self, record): # type: (logging.LogRecord) -> None
         """Colorize to console"""
-        color_record = copy.copy(record)
+        color_record = copy.copy(record) # type: logging.LogRecord
         if sys.platform not in ('win32', 'cygwin'):
-            color_level = min(self._colors.keys(), key=lambda level: abs(level - color_record.levelno))
-            color_level = min((color_level, color_record.levelno))
-            color = self._colors.get(color_level, self._default)
-            color_record.msg = color + str(color_record.msg) + self._default
+            color_level = min(self._colors.keys(), key=lambda level: abs(level - color_record.levelno)) # type: int
+            color_level = min((color_level, color_record.levelno)) # type: int
+            color = self._colors.get(color_level, self._default) # type: str
+            color_record.msg = color + str(color_record.msg) + self._default # type: str
         logging.StreamHandler.emit(self, color_record)
 
 
@@ -161,17 +160,16 @@ def load_fastq(fastq_file): # type: (str, Optional[str]) -> Tuple[Read]:
     read_start = time.time() # type: float
     reads = [] # type: List[Read]
     if os.path.splitext(fastq_file)[-1] == '.gz':
-        my_open = gzip.open
+        my_open = gzip.open # type: function
     else:
-        my_open = open
+        my_open = open # type: function
     try:
         with my_open(fastq_file, 'rt') as ffile:
             for read in FastqGeneralIterator(ffile): # type: Tuple[str, str, str]
                 name, seq, qual = read # type: str, str, str
                 reads.append(Read(name=name, seq=seq, qual=qual))
-    except:
+    except (IOError, FileNotFoundError):
         raise ExitPool(logging.critical("Cannot find or read FASTQ file '%s'", fastq_file))
-        # sys.exit(logging.critical("Cannot find or read FASTQ file '%s'", fastq_file))
     logging.debug("Reading in FASTQ file '%s' took %s seconds", fastq_file, round(time.time() - read_start, 3))
     return tuple(reads)
 
@@ -192,10 +190,10 @@ def load_seq(seq_file, chrom=None): # type: (str, Optional[str]) -> NamedSequenc
                     name += line.strip()
                     continue
                 output += line.strip().replace(' ', '').upper()
-    except:
+    except (IOError, FileNotFoundError):
         raise SystemExit(logging.critical("Cannot find or read sequence file '%s'", seq_file))
     if chrom:
-        name = chrom
+        name = chrom # type: str
     if not name:
         name = os.path.basename(seq_file) # type:str
         if name.count('.') == 2:
@@ -238,9 +236,9 @@ def get_mismatch(
         raise ValueError("Sequences must be the same length")
     mis_list, match_list = list(), list() # type: List[Tuple[int, Tuple[str, str]]], List[int]
     if head and tail:
-        seq_range = range(head, tail + 1) # type: int
+        seq_range = range(head, tail + 1) # type: Iterable[int]
     else:
-        seq_range = range(len(seq_a)) # type: int
+        seq_range = range(len(seq_a)) # type: Iterable[int]
     for index in seq_range: # type: int
         try:
             if seq_a[index] == '-' or seq_b[index] == '-':
