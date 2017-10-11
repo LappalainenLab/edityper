@@ -208,7 +208,7 @@ def display_classification(
         'UNIQUE:%s' % num_unique,
         'PERC_UNIQ:%s' % percent(num=num_unique, total=total_reads)
     )
-    score_header = ('##SCORE', 'FWD:%s' % fwd_score, 'REV:%s' % rev_score, 'THESHOLD:%s' % score_threshold) # type: Tuple[str]
+    score_header = ('##SCORE', 'FWD:%s' % fwd_score, 'REV:%s' % rev_score, 'THRESHOLD:%s' % score_threshold) # type: Tuple[str]
     category_header = ( # type: Tuple[str]
         '#TAG',
         'COUNT',
