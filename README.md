@@ -69,7 +69,7 @@ EdiTyper
 | --------- | ---------- | --------- | ------- |
 | `-d | --output-directory` | Choose where to put all output files | No | 'output' |
 | `-j | --project` | Give this project a name, will be used as the basename for output files | No | 'edityper' |
-| `--bam` | Convert SAM files to BAM files, optionally use CSI indecies instead of BAI indeces with `--bam csi`; requires [SAMtools](https://github.com/samtools/samtools) |
+| `--bam` | Convert SAM files to BAM files, optionally use CSI indecies instead of BAI indeces with `--bam csi`; requires [SAMtools](https://github.com/samtools/samtools) | No | None |
 
 ### Read Group Arguments
 
