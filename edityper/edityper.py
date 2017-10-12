@@ -25,6 +25,7 @@ try:
         from edityper import analysis
         from edityper import alignment
         from edityper import quality_control
+        from edityper.toolkit import ExitPool
         from multiprocessing import pool as Pool
         from edityper.arguments import make_argument_parser
     elif PYTHON_VERSION is 2:
@@ -34,6 +35,7 @@ try:
         import analysis
         import alignment
         import quality_control
+        from toolkit import ExitPool
         from multiprocessing import Pool
         from arguments import make_argument_parser
         from itertools import izip as zip
@@ -44,8 +46,6 @@ try:
 except ImportError as error:
     sys.exit(error)
 
-
-from toolkit import ExitPool
 
 LOCK = Lock()
 SNP = namedtuple('SNP', ('reference', 'target', 'position'))
