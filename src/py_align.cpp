@@ -1,11 +1,14 @@
+
 /*-------------------------------------------
  * AUTHOR: Alexandre YAHI
  * AFFILIATION: Columbia University Medical Center
- * FALL 2015
+                Department of Biomedical Informatics
+ * FALL 2015-2017
+ * email: alexandre.yahi@columbia.edu
  -------------------------------------------*/
 
 #include "py_align.h"
-#include <utility>
+ #include <utility>
 #include <map>
 #include <sstream>
 
@@ -190,48 +193,47 @@ std::string nw_align_aff(                  // Needleman-Wunsch algorithm
         i = L1-1;
         j = L2-1;
 
-        if(L1>L2)
+        // Look for max in the last column
+        temp_i = F[0][L2-1];
+        for(int k = 1; k < L1; k++)
         {
-            temp_i = F[0][L2-1];
-            for(int k = 1; k < L1; k++)
+            if( F[k][L2-1] > temp_i )
             {
-                if( F[k][L2-1] > temp_i )
-                {
-                    i_max = k;
-                    temp_i = F[k][L2-1];
-                }
+                i_max = k;
+                temp_i = F[k][L2-1];
             }
-            j_max = L2-1;
+        }
 
-            while(i>i_max)
-            {
-                seq_1_al = seq_1[i-1] + seq_1_al;
-                seq_2_al = '-' + seq_2_al;
-                i--;
-            }
-        }
-        else if(L2>L1)
+        // Look for max in the last row
+        temp_j = F[L1-1][0];
+        for(int l = 1; l < L2; l++)
         {
-            temp_j = F[L1-1][0];
-            for(int l = 1; l < L2; l++)
+            if( F[L1-1][l] > temp_j )
             {
-                if( F[L1-1][l] > temp_j )
-                {
-                    j_max = l;
-                    temp_j = F[L1-1][l];
-                }
-            }
-            i_max = L1-1;
-            while(j>j_max)
-            {
-                seq_1_al = '-' + seq_1_al;
-                seq_2_al = seq_2[j-1] + seq_2_al;
-                j--;
+                j_max = l;
+                temp_j = F[L1-1][l];
             }
         }
-        else{
-            i_max = L1-1;
-            j_max = L2-1;
+
+        if (temp_j > temp_i) // Start with the max of the last row
+        {
+          i_max = L1-1;
+          while(j>j_max)
+          {
+              seq_1_al = '-' + seq_1_al;
+              seq_2_al = seq_2[j-1] + seq_2_al;
+              j--;
+          }
+        }
+        else                // Start with the max of the last column
+        {
+          j_max = L2-1;
+          while(i>i_max)
+          {
+              seq_1_al = seq_1[i-1] + seq_1_al;
+              seq_2_al = '-' + seq_2_al;
+              i--;
+          }
         }
 
         score = F[i_max][j_max];
@@ -432,48 +434,47 @@ std::string nw_align_aff_param(                  // Needleman-Wunsch algorithm
         i = L1-1;
         j = L2-1;
 
-        if(L1>L2)
+        // Look for max in the last column
+        temp_i = F[0][L2-1];
+        for(int k = 1; k < L1; k++)
         {
-            temp_i = F[0][L2-1];
-            for(int k = 1; k < L1; k++)
+            if( F[k][L2-1] > temp_i )
             {
-                if( F[k][L2-1] > temp_i )
-                {
-                    i_max = k;
-                    temp_i = F[k][L2-1];
-                }
+                i_max = k;
+                temp_i = F[k][L2-1];
             }
-            j_max = L2-1;
+        }
 
-            while(i>i_max)
-            {
-                seq_1_al = seq_1[i-1] + seq_1_al;
-                seq_2_al = '-' + seq_2_al;
-                i--;
-            }
-        }
-        else if(L2>L1)
+        // Look for max in the last row
+        temp_j = F[L1-1][0];
+        for(int l = 1; l < L2; l++)
         {
-            temp_j = F[L1-1][0];
-            for(int l = 1; l < L2; l++)
+            if( F[L1-1][l] > temp_j )
             {
-                if( F[L1-1][l] > temp_j )
-                {
-                    j_max = l;
-                    temp_j = F[L1-1][l];
-                }
-            }
-            i_max = L1-1;
-            while(j>j_max)
-            {
-                seq_1_al = '-' + seq_1_al;
-                seq_2_al = seq_2[j-1] + seq_2_al;
-                j--;
+                j_max = l;
+                temp_j = F[L1-1][l];
             }
         }
-        else{
-            i_max = L1-1;
-            j_max = L2-1;
+
+        if (temp_j > temp_i) // Start with the max of the last row
+        {
+          i_max = L1-1;
+          while(j>j_max)
+          {
+              seq_1_al = '-' + seq_1_al;
+              seq_2_al = seq_2[j-1] + seq_2_al;
+              j--;
+          }
+        }
+        else                // Start with the max of the last column
+        {
+          j_max = L2-1;
+          while(i>i_max)
+          {
+              seq_1_al = seq_1[i-1] + seq_1_al;
+              seq_2_al = '-' + seq_2_al;
+              i--;
+          }
         }
 
         score = F[i_max][j_max];
@@ -678,48 +679,47 @@ std::string nw_align_aff_mem(                  // Needleman-Wunsch algorithm
         i = L1-1;
         j = L2-1;
 
-        if(L1>L2)
+        // Look for max in the last column
+        temp_i = M[0][L2-1];
+        for(int k = 1; k < L1; k++)
         {
-            temp_i = M[0][L2-1];
-            for(int k = 1; k < L1; k++)
+            if( M[k][L2-1] > temp_i )
             {
-                if( M[k][L2-1] > temp_i )
-                {
-                    i_max = k;
-                    temp_i = M[k][L2-1];
-                }
+                i_max = k;
+                temp_i = M[k][L2-1];
             }
-            j_max = L2-1;
+        }
 
-            while(i>i_max)
-            {
-                seq_1_al = seq_1[i-1] + seq_1_al;
-                seq_2_al = '-' + seq_2_al;
-                i--;
-            }
-        }
-        else if(L2>L1)
+        // Look for max in the last row
+        temp_j = M[L1-1][0];
+        for(int l = 1; l < L2; l++)
         {
-            temp_j = M[L1-1][0];
-            for(int l = 1; l < L2; l++)
+            if( M[L1-1][l] > temp_j )
             {
-                if( M[L1-1][l] > temp_j )
-                {
-                    j_max = l;
-                    temp_j = M[L1-1][l];
-                }
-            }
-            i_max = L1-1;
-            while(j>j_max)
-            {
-                seq_1_al = '-' + seq_1_al;
-                seq_2_al = seq_2[j-1] + seq_2_al;
-                j--;
+                j_max = l;
+                temp_j = M[L1-1][l];
             }
         }
-        else{
-            i_max = L1-1;
-            j_max = L2-1;
+
+        if (temp_j > temp_i) // Start with the max of the last row
+        {
+          i_max = L1-1;
+          while(j>j_max)
+          {
+              seq_1_al = '-' + seq_1_al;
+              seq_2_al = seq_2[j-1] + seq_2_al;
+              j--;
+          }
+        }
+        else                // Start with the max of the last column
+        {
+          j_max = L2-1;
+          while(i>i_max)
+          {
+              seq_1_al = seq_1[i-1] + seq_1_al;
+              seq_2_al = '-' + seq_2_al;
+              i--;
+          }
         }
 
         score = M[i_max][j_max];
@@ -1106,48 +1106,47 @@ std::string nw_align_mem(                  // Needleman-Wunsch algorithm
         i = L1-1;
         j = L2-1;
 
-        if(L1>L2)
+        // Look for max in the last column
+        temp_i = F[0][L2-1];
+        for(int k = 1; k < L1; k++)
         {
-            temp_i = F[0][L2-1];
-            for(int k = 1; k < L1; k++)
+            if( F[k][L2-1] > temp_i )
             {
-                if( F[k][L2-1] > temp_i )
-                {
-                    i_max = k;
-                    temp_i = F[k][L2-1];
-                }
+                i_max = k;
+                temp_i = F[k][L2-1];
             }
-            j_max = L2-1;
+        }
 
-            while(i>i_max)
-            {
-                seq_1_al = seq_1[i-1] + seq_1_al;
-                seq_2_al = '-' + seq_2_al;
-                i--;
-            }
-        }
-        else if(L2>L1)
+        // Look for max in the last row
+        temp_j = F[L1-1][0];
+        for(int l = 1; l < L2; l++)
         {
-            temp_j = F[L1-1][0];
-            for(int l = 1; l < L2; l++)
+            if( F[L1-1][l] > temp_j )
             {
-                if( F[L1-1][l] > temp_j )
-                {
-                    j_max = l;
-                    temp_j = F[L1-1][l];
-                }
-            }
-            i_max = L1-1;
-            while(j>j_max)
-            {
-                seq_1_al = '-' + seq_1_al;
-                seq_2_al = seq_2[j-1] + seq_2_al;
-                j--;
+                j_max = l;
+                temp_j = F[L1-1][l];
             }
         }
-        else{
-            i_max = L1-1;
-            j_max = L2-1;
+
+        if (temp_j > temp_i) // Start with the max of the last row
+        {
+          i_max = L1-1;
+          while(j>j_max)
+          {
+              seq_1_al = '-' + seq_1_al;
+              seq_2_al = seq_2[j-1] + seq_2_al;
+              j--;
+          }
+        }
+        else                // Start with the max of the last column
+        {
+          j_max = L2-1;
+          while(i>i_max)
+          {
+              seq_1_al = seq_1[i-1] + seq_1_al;
+              seq_2_al = '-' + seq_2_al;
+              i--;
+          }
         }
 
         score = F[i_max][j_max];
@@ -1311,48 +1310,47 @@ std::string nw_align(                  // Needleman-Wunsch algorithm
         i = L1-1;
         j = L2-1;
 
-        if(L1>L2)
+        // Look for max in the last column
+        temp_i = F[0][L2-1];
+        for(int k = 1; k < L1; k++)
         {
-            temp_i = F[0][L2-1];
-            for(int k = 1; k < L1; k++)
+            if( F[k][L2-1] > temp_i )
             {
-                if( F[k][L2-1] > temp_i )
-                {
-                    i_max = k;
-                    temp_i = F[k][L2-1];
-                }
+                i_max = k;
+                temp_i = F[k][L2-1];
             }
-            j_max = L2-1;
+        }
 
-            while(i>i_max)
-            {
-                seq_1_al = seq_1[i-1] + seq_1_al;
-                seq_2_al = '-' + seq_2_al;
-                i--;
-            }
-        }
-        else if(L2>L1)
+        // Look for max in the last row
+        temp_j = F[L1-1][0];
+        for(int l = 1; l < L2; l++)
         {
-            temp_j = F[L1-1][0];
-            for(int l = 1; l < L2; l++)
+            if( F[L1-1][l] > temp_j )
             {
-                if( F[L1-1][l] > temp_j )
-                {
-                    j_max = l;
-                    temp_j = F[L1-1][l];
-                }
-            }
-            i_max = L1-1;
-            while(j>j_max)
-            {
-                seq_1_al = '-' + seq_1_al;
-                seq_2_al = seq_2[j-1] + seq_2_al;
-                j--;
+                j_max = l;
+                temp_j = F[L1-1][l];
             }
         }
-        else{
-            i_max = L1-1;
-            j_max = L2-1;
+
+        if (temp_j > temp_i) // Start with the max of the last row
+        {
+          i_max = L1-1;
+          while(j>j_max)
+          {
+              seq_1_al = '-' + seq_1_al;
+              seq_2_al = seq_2[j-1] + seq_2_al;
+              j--;
+          }
+        }
+        else                // Start with the max of the last column
+        {
+          j_max = L2-1;
+          while(i>i_max)
+          {
+              seq_1_al = seq_1[i-1] + seq_1_al;
+              seq_2_al = '-' + seq_2_al;
+              i--;
+          }
         }
 
         score = F[i_max][j_max];

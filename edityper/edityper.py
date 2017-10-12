@@ -186,10 +186,8 @@ def crispr_analysis(
             results = Events(num_reads=num_reads, num_ins=num_ins, num_del=num_del, num_mis=num_mis) # type: Events
             # reposition the SNP index with deletion shift
             new_snp_index = snp_info.position # type: int
-            while al_read_seq[new_snp_index] == '-': # Won't do anything if al_read_seq[new_snp_index] != '-'
+            while al_read_seq[new_snp_index] == '-' and new_snp_index < len(al_read_seq) -1:: # Won't do anything if al_read_seq[new_snp_index] != '-'
                 new_snp_index += 1
-                if new_snp_index == len(al_read_seq) - 3:
-                    break
             snp_info_new = snp_info._replace(position=new_snp_index) # created new named tuple
             if al_read_seq[snp_info_new.position] == snp_info_new.target:
                 if all(map(lambda x: not x, (num_del, num_ins))):
