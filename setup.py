@@ -20,6 +20,8 @@ except ImportError as error:
     sys.exit("Please install Tkinter and Tcl/Tk: " + str(error))
 
 
+import os
+
 #   Get stuff from setuptools
 from setuptools import setup
 from setuptools.extension import Extension
@@ -30,10 +32,11 @@ try:
     from Cython.Distutils import build_ext
 except ImportError:
     import pip
-    install_cython = ['install', 'cython']
-    if '--user' in sys.argv:
-        install_cython.insert(1, '--user')
-    pip.main(install_cython)
+    INSTALL_CYTHON = ['install', 'cython']
+    DEFAULT_DIR = tuple(filter(os.path.isdir, sys.path))[0]
+    if not os.access(os.path.join(DEFAULT_DIR, 'site_packages'), os.W_OK):
+        INSTALL_CYTHON.insert(1, '--user')
+    pip.main(INSTALL_CYTHON)
     from Cython.Distutils import build_ext
 
 
