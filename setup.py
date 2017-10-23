@@ -2,6 +2,9 @@
 
 """Setup EdiTyper"""
 
+from __future__ import division
+from __future__ import print_function
+
 #   Deal with Tkinter stuff
 #   Needed for matplotlib
 #   However, not on Pip
@@ -27,7 +30,10 @@ try:
     from Cython.Distutils import build_ext
 except ImportError:
     import pip
-    pip.main(['install', 'cython'])
+    install_cython = ['install', 'cython']
+    if '--user' in sys.argv:
+        install_cython.insert(1, '--user')
+    pip.main(install_cython)
     from Cython.Distutils import build_ext
 
 
