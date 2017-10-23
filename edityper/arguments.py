@@ -33,9 +33,18 @@ _VALID_PLATFORMS = (
     'PACBIO'
 )
 
-def _num_cores(value):
+def _analysis_mode(value): # type: (str) -> List[str]
+    value = value.upper().split('+') # type: List[str]
+    if not all(map(lambda x: x in ('SNP', 'PAM'), value)):
+        raise argparse.ArgumentTypeError("The mode must contain 'SNP' and/or 'PAM', delimted by '+'")
+    if value.count('SNP') != 1:
+        raise argparse.ArgumentTypeError("There must be at only one 'SNP' in the mode")
+    return value
+
+
+def _num_cores(value): # type: (str) -> int
     try:
-        value = int(value)
+        value = int(value) # type: int
     except ValueError:
         raise argparse.ArgumentTypeError("Must pass an integer value")
     try:
@@ -47,7 +56,7 @@ def _num_cores(value):
     return value
 
 
-def _validate_bam_index(value):
+def _validate_bam_index(value): # type: (str) -> str
     if value is False or value in ('bai', 'csi'):
         return value
     else:
@@ -89,13 +98,11 @@ def make_argument_parser():
         '-m',
         '--analysis-mode',
         dest='analysis_mode',
-        type=str,
-        choices=('SNP', 'SNP+PAM'),
+        type=_analysis_mode,
         default=_MODE_DEFAULT,
         required=False,
         metavar='analysis mode',
-        # help="Set the analysis mode, choose from 'SNP' or 'SNP+PAM', defaults to '%s'" % _MODE_DEFAULT
-        help=argparse.SUPPRESS
+        help="Set the analysis mode, specified by a combination of 'SNP' and 'PAM' separated by '+' (eg. SNP+PAM), must contain at least one 'SNP'; defaults to '%s'" % _MODE_DEFAULT
     )
     align_opts.add_argument( # p-value threshold
         '-p',

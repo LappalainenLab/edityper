@@ -116,7 +116,7 @@ def crispr_analysis(
         gap_extension=args_dict['gap_extension']
     )
     #   Classify the reads
-    logging.info("FASTQ %s: Starting read classifcation...", fastq_name)
+    logging.info("FASTQ %s: Starting read analysis...", fastq_name)
     classifcation_start = time.time() # type: float
     counts = { # type: Dict[str, defaultdict]
         'deletions': defaultdict(list),
@@ -428,7 +428,7 @@ def main():
     except OSError:
         pass
     finally:
-        logging.warning("Using outdirectory %s", args['outdirectory'])
+        logging.warning("Using outdirectory \x1b[1m%s", args['outdirectory'])
     #   Check suppression values and other arguments
     if _check_suppressions(suppressions=args): # All output suppressed? Error
         sys.exit(logging.critical("All output suppressed, not running"))
@@ -480,15 +480,22 @@ def main():
     template_reference_mismatch = toolkit.get_mismatch(seq_a=aligned_reference.sequence, seq_b=aligned_template.sequence) # type: List
     if not template_reference_mismatch:
         raise ValueError(logging.error("There must be at least one mismatch between the template and reference sequences"))
-    if len(template_reference_mismatch) > 1 and args['analysis_mode'] == 'SNP':
-        raise ValueError(logging.error("There can only be one mismatch between the template and reference sequences in SNP mode"))
+    # if len(template_reference_mismatch) > 1 and args['analysis_mode'] == 'SNP':
+    #     raise ValueError(logging.error("There can only be one mismatch between the template and reference sequences in SNP mode"))
+    if len(template_reference_mismatch) != len(args['analysis_mode']):
+        msg = "There can only be %(num)s mismatches in '%(mode)s' mode" % { # type: str
+            'num': len(args['analysis_mode']),
+            'mode': '+'.join(args['analysis_mode'])
+        }
+        if len(args['analysis_mode']) == 1:
+            msg = msg.replace('mismatches', 'mismatch') # type: str
+        raise ValueError(logging.error(msg))
     logging.debug("Reference/template aligmnent validation took %s seconds", round(time.time() - alignment_validation, 3))
     #   Get SNP information
     snp_index, reference_state, target_snp = quality_control.get_snp_states( # type: int, str, str
         reference=aligned_reference.sequence,
         template=aligned_template.sequence,
-        mismatch=template_reference_mismatch,
-        mode=args['analysis_mode']
+        mismatch=template_reference_mismatch[args['analysis_mode'].index('SNP')]
     )
     snp = SNP(reference=reference_state, target=target_snp, position=snp_index) # type: SNP
     logging.debug("Quality control took %s seconds", round(time.time() - qc_start, 3))

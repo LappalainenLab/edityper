@@ -57,14 +57,11 @@ def align_reference(reference, template, gap_penalty): # type: (str, str, int) -
         return fwd_ref, fwd_template
 
 
-def get_snp_states(reference, template, mismatch, mode): # type: (str, str, List, str) -> (int, str, str)
+def get_snp_states(reference, template, mismatch): # type: (str, str, List, str) -> (int, str, str)
     """Get the SNP states from our alignment"""
     logging.info("Finding reference and template SNP states")
     snp_start = time.time()
-    if mode.split('+')[0] == 'SNP':
-        snp_index = mismatch[0][0]
-    else:
-        snp_index = mismatch[1][0]
+    snp_index = mismatch[0]
     reference_state = reference[snp_index]
     target_snp = template[snp_index]
     logging.debug("Finding reference and template SNP states took %s seconds", round(time.time() - snp_start, 3))
