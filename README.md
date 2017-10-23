@@ -32,6 +32,12 @@ To get a basic help message, simply run
 EdiTyper
 ```
 
+The minimal arguments needed to run are `-r | --reference-sequence`, `-t | --template-sequence`, and one of the following: `-i | --input file`, `-l | --sample-list`, or `-d | --fastq-directory`
+
+```bash
+EdiTyper -r reference.fasta -t template.fasta -i sample.fastq
+```
+
 ## Arguments
 
 ### Alignment Arguments
@@ -59,7 +65,7 @@ EdiTyper
 
 | Parameter | Definition |
 | --------- | ---------- |
-| `-i | --input-file` | Provide a single FASTQ file for aligning |
+| `-i | --input-file` | Provide a FASTQ file for aligning, this option can be specified multiple times for multiple FASTQs |
 | `-l | --sample-list` | Provide a list of FASTQ files for aligning; there should be one FASTQ file per line |
 | `-d | --fastq-directory` | Provide a directory where FASTQ files are located; files must end in .fastq or .fq (.gz is allowed afterwards) |
 
