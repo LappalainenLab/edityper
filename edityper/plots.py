@@ -40,7 +40,8 @@ _INS_COLOR = 'r'
 _DEL_COLOR = 'g'
 _MISMATCH_COLOR = 'b'
 # _COVERAGE_COLOR = '#00000022'
-_COVERAGE_COLOR = '%08.x' % 0x00000022
+# _COVERAGE_COLOR = '%08.x' % 0x00000022
+_COVERAGE_COLOR = '#e5e5e8'
 _THRESHOLD_LENGTH = 0.05
 _XKCD = False
 
@@ -80,6 +81,12 @@ def locus_plot(
     del_counts = tuple(map(lambda tup: tup[1], sorted(del_dict.items()))) # type: Tuple[int]
     cov_counts = tuple(map(lambda tup: tup[1], sorted(coverage.items()))) # type: Tuple[int]
     #   Create the bar graphs
+    ax.bar( # Coverage
+        left=sorted(coverage),
+        height=cov_counts,
+        width=1.0,
+        color=_COVERAGE_COLOR
+    )
     ax.bar( # Insertions
         left=sorted(insertions),
         height=ins_counts,
@@ -98,12 +105,6 @@ def locus_plot(
         width=_LOCUS_WIDTH,
         color=_MISMATCH_COLOR
     )
-    ax.bar( # Coverage
-        left=sorted(coverage),
-        height=cov_counts,
-        width=1.0,
-        color=_COVERAGE_COLOR
-    )
     #   Add title and legend
     plt.title(fastq_name)
     #   Add patches for colors
@@ -121,6 +122,12 @@ def locus_plot(
     ax2.set_yticks(tuple(map(lambda x: round(x * 100), ax2.get_yticks())))
     #   Zoomed plot
     fig_z, ax_z = plt.subplots()
+    ax_z.bar( # Coverage
+        left=sorted(coverage),
+        height=cov_counts,
+        width=1.0,
+        color=_COVERAGE_COLOR
+    )
     ax_z.bar( # Insertions
         left=sorted(insertions),
         height=ins_counts,
@@ -138,12 +145,6 @@ def locus_plot(
         height=mis_counts,
         width=_LOCUS_WIDTH,
         color=_MISMATCH_COLOR
-    )
-    ax_z.bar( # Coverage
-        left=sorted(coverage),
-        height=cov_counts,
-        width=1.0,
-        color=_COVERAGE_COLOR
     )
     #   Add title and legend
     plt.title(fastq_name)
