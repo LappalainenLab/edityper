@@ -96,6 +96,28 @@ def crispr_analysis(
     #   Determine the alignment direction for our reads
     unique_reads = Counter(map(lambda read: read.seq, reads)) # type: Counter
     total_unique = len(unique_reads) # type: int
+    if not total_unique:
+        logging.error("No reads found in FASTQ %s", fastq_name)
+        no_reads = {
+            'filename'          :   fastq_name,
+            'score_threshold'   :   analysis.NA,
+            'total_reads'       :   0,
+            'unique_reads'      :   0,
+            'discarded'         :   0,
+            'no_edit'           :   0,
+            'no_edit_perc'      :   analysis.NA,
+            'hdr_clean'         :   0,
+            'hdr_clean_perc'    :   analysis.NA,
+            'hdr_gap'           :   0,
+            'hdr_gap_perc'      :   analysis.NA,
+            'nhej'              :   0,
+            'nhej_perc'         :   analysis.NA,
+            'perc_a'            :   analysis.NA,
+            'perc_t'            :   analysis.NA,
+            'perc_c'            :   analysis.NA,
+            'perc_g'            :   analysis.NA
+        }
+        return tuple(), no_reads
     do_reverse, fwd_score, rev_score, score_threshold = quality_control.determine_alignment_direction( # type: bool, float, float, float
         fastq_name=fastq_name,
         unique_reads=unique_reads.keys(),
@@ -570,11 +592,14 @@ def main():
     #   Final batch summary plot and table
     output_prefix = os.path.join(args['outdirectory'], args['project']) # type: str
     if not args['suppress_plots']:
-        plots.quality_plot(
-            alignments=alignments,
-            thresholds={d['filename']: d['score_threshold'] for d in summaries},
-            output_prefix=output_prefix
-        )
+        try:
+            plots.quality_plot(
+                alignments=alignments,
+                thresholds={d['filename']: d['score_threshold'] for d in summaries},
+                output_prefix=output_prefix
+            )
+        except ValueError:
+            logging.error("No reads found in any file, not producing quality plot")
     if not (args['suppress_classification'] or args['suppress_events'] or args['suppress_tables']):
         summary_name = output_prefix + '.summary' # type: str
         summary_header = (
