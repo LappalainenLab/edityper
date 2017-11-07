@@ -598,7 +598,7 @@ def main():
                 thresholds={d['filename']: d['score_threshold'] for d in summaries},
                 output_prefix=output_prefix
             )
-        except ValueError:
+        except (ValueError, IndexError):
             logging.error("No reads found in any file, not producing quality plot")
     if not (args['suppress_classification'] or args['suppress_events'] or args['suppress_tables']):
         summary_name = output_prefix + '.summary' # type: str
