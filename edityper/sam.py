@@ -606,7 +606,8 @@ def bam(fastq_name, samfile, samtools, index_type): # type: (str, str, str, str)
     bamfile = samfile.replace('sam', 'bam') # type: str
     view_cmd = (samtools, 'view -bhS', samfile, '>', bamfile) # type: Tuple[str]
     index_arg = 'c' if index_type == 'csi' else 'b' # type: str
-    index_cmd = [samtools, 'index -%(arg)s %(bamfile)s' % {'arg': index_arg, 'bamfile': bamfile}] # type: List[str]
+    index_cmd = '%(samtools)s index -%(arg)s %(bamfile)s' % {'samtools': samtools, 'arg': index_arg, 'bamfile': bamfile} # type: str
+    index_cmd = index_cmd.split() # type: List[str]
     logging.info("FASTQ %s: Writing BAM to %s", fastq_name, bamfile)
     subprocess.call(' '.join(view_cmd), shell=True)
     logging.info("FASTQ %s: Indexing BAM file", fastq_name)
