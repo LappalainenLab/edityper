@@ -152,7 +152,8 @@ def locus_plot(
     plt.title(fastq_name)
     plt.legend(handles=(ins_patch, del_patch, mismatch_patch, coverage_patch))
     #   Set y label and add percent?
-    ax_z.set_ylim(0, max(map(max, (cov_counts, ins_counts, del_counts, mis_counts))) + 1)
+    all_counts = toolkit.unpack(collection=(cov_counts, ins_counts, del_counts, mis_counts))
+    ax_z.set_ylim(0, max(all_counts) + 1)
     ax_z.set_ylabel('Number of Reads')
     ax_z2 = ax_z.twinx()
     ax_z2.set_ylabel('Percent')
