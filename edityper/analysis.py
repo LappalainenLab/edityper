@@ -81,8 +81,8 @@ def calc_coverage(cummul_del, mismatches): # type: (Dict[int, int], Dict[int, Li
 
 def percent(num, total): # type: (int, int) -> float
     """Calculate a percent"""
-    percent = num * 100 / total if total is not 0 else 0
-    return round(percent, 2)
+    perc = num * 100 / total if total is not 0 else 0
+    return float(round(perc, 2))
 
 
 def summarize(data, rounding=None): # type: (Iterable[Union[int, float]], Optional[int]) -> Union[int, float], float, float
