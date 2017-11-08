@@ -152,14 +152,12 @@ def locus_plot(
     plt.title(fastq_name)
     plt.legend(handles=(ins_patch, del_patch, mismatch_patch, coverage_patch))
     #   Set y label and add percent?
+    ax_z.set_ybound(lower=0)
     ax_z.set_ylabel('Number of Reads')
-    try:
-        ax_z2 = ax_z.twinx()
-        ax_z2.set_ylabel('Percent')
-        ax_z2_percent = percent(num=max(ax_z.get_ylim()), total=num_reads) # type: float
-        ax_z2.set_yticks(tuple(map(lambda x: round(x * ax_z2_percent, 2), ax_z2.get_yticks())))
-    except ValueError:
-        pass
+    ax_z2 = ax_z.twinx()
+    ax_z2.set_ylabel('Percent')
+    ax_z2_percent = percent(num=max(ax_z.get_ylim()), total=num_reads) # type: float
+    ax_z2.set_yticks(tuple(map(lambda x: round(float(x) * ax_z2_percent, 2), ax_z2.get_yticks())))
     #   Adjust the plot area to ensure everything is shown
     plt.tight_layout()
     #   Yield the plots
