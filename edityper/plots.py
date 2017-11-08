@@ -157,7 +157,7 @@ def locus_plot(
         ax_z2 = ax_z.twinx()
         ax_z2.set_ylabel('Percent')
         ax_z2_percent = percent(num=max(ax_z.get_ylim()), total=num_reads) # type: float
-        ax_z2.set_yticks(tuple(map(lambda x: round(float(x) * ax_z2_percent, 2), ax_z2.get_yticks())))
+        ax_z2.set_yticks(tuple(map(lambda x: round(x * ax_z2_percent, 2), ax_z2.get_yticks())))
     except ValueError:
         pass
     #   Adjust the plot area to ensure everything is shown
