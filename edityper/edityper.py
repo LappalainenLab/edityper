@@ -573,9 +573,11 @@ def main():
             #   Use map_async and get with a large timeout
             #   to allow for KeyboardInterrupts to be caught
             #   and handled with the try/except
+            timeout = max((9999, 600 * len(fastq_list)))
+            logging.debug("Setting timeout to %s seconds", timeout)
             res = pool.map_async(crispr_analysis, zipped_args) # type: multiprocessing.pool.MapResult
             pool.close()
-            results = res.get(9999)
+            results = res.get(timeout)
         except (KeyboardInterrupt, ExitPool) as error: # Handle ctrl+c or custom ExitPool
             pool.terminate()
             pool.join()
