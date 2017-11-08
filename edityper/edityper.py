@@ -9,6 +9,7 @@ import sys
 PYTHON_VERSION = sys.version_info.major
 
 import os
+import gc
 import time
 import signal
 import logging
@@ -398,6 +399,7 @@ def crispr_analysis(
     #   Add stuff that's required no matter classification or not
     fastq_summary['filename'] = fastq_name # Add FASTQ name
     fastq_summary['score_threshold'] = score_threshold # Add score threshold
+    gc.collect()
     if all_discard:
         return tuple(), fastq_summary
     else:
