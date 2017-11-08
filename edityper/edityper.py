@@ -96,9 +96,9 @@ def crispr_analysis(
     #   Determine the alignment direction for our reads
     unique_reads = Counter(map(lambda read: read.seq, reads)) # type: Counter
     total_unique = len(unique_reads) # type: int
-    if not total_unique:
-        logging.error("No reads found in FASTQ %s", fastq_name)
-        no_reads = {
+    if not total_unique: # No unique reads
+        logging.error("FASTQ %(name)s: No reads found in FASTQ %(name)s", {'name': fastq_name})
+        no_reads = { # type: Dict[str, Any]
             'filename'          :   fastq_name,
             'score_threshold'   :   analysis.NA,
             'total_reads'       :   0,
@@ -260,6 +260,12 @@ def crispr_analysis(
                 afile.write('\t'.join(out))
                 afile.write('\n')
                 afile.flush()
+    #   Check to see if all reads were discared
+    all_discard = len(discard) == len(unique_reads)
+    if all_discard:
+        logging.error("FASTQ %s: All reads discarded", fastq_name)
+        if not args_dict['suppress_plots']:
+            logging.error("FASTQ %s: Not producing plots for this FASTQ", fastq_name)
     if not (args_dict['suppress_classification'] or args_dict['suppress_tables']):
         LOCK.acquire()
         hdr_indels, total_counts = analysis.display_classification(
@@ -287,7 +293,7 @@ def crispr_analysis(
             output_prefix=output_prefix
         )
     #   Make the locus plot
-    if not args_dict['suppress_plots']:
+    if not args_dict['suppress_plots'] and not all_discard:
         plots.locus_plot(
             insertions=counts['insertions'],
             deletions=counts['deletions'],
@@ -392,7 +398,10 @@ def crispr_analysis(
     #   Add stuff that's required no matter classification or not
     fastq_summary['filename'] = fastq_name # Add FASTQ name
     fastq_summary['score_threshold'] = score_threshold # Add score threshold
-    return tuple(toolkit.unpack(collection=alignments.values())), fastq_summary
+    if all_discard:
+        return tuple(), fastq_summary
+    else:
+        return tuple(toolkit.unpack(collection=alignments.values())), fastq_summary
 
 
 def main():
@@ -592,14 +601,14 @@ def main():
     #   Final batch summary plot and table
     output_prefix = os.path.join(args['outdirectory'], args['project']) # type: str
     if not args['suppress_plots']:
-        try:
+        if alignments:
             plots.quality_plot(
                 alignments=alignments,
                 thresholds={d['filename']: d['score_threshold'] for d in summaries},
                 output_prefix=output_prefix
             )
-        except (ValueError, IndexError):
-            logging.error("No reads found in any file, not producing quality plot")
+        else:
+            logging.error("No passing reads found in any file, not producing quality plot")
     if not (args['suppress_classification'] or args['suppress_events'] or args['suppress_tables']):
         summary_name = output_prefix + '.summary' # type: str
         summary_header = (
