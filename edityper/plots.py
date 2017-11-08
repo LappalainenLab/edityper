@@ -167,7 +167,7 @@ def locus_plot(
     logging.debug(ax_z2_percent)
     logging.debug(ax_z2.get_yticks())
     logging.debug("Setting ticks")
-    ax_z2.set_yticks(tuple(map(lambda x: round(x * ax_z2_percent), ax_z2.get_yticks())))
+    ax_z2.set_yticks(tuple(map(lambda x: round(float(x) * ax_z2_percent, 2), ax_z2.get_yticks())))
     #   Adjust the plot area to ensure everything is shown
     plt.tight_layout()
     #   Yield the plots
