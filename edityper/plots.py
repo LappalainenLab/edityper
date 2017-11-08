@@ -162,7 +162,9 @@ def locus_plot(
     ax_z.set_ylabel('Number of Reads')
     ax_z2 = ax_z.twinx()
     ax_z2.set_ylabel('Percent')
+    logging.debug("Calculating percent")
     ax_z2_percent = percent(num=max(ax_z.get_ylim()), total=num_reads) # type: float
+    logging.debug("Setting ticks")
     ax_z2.set_yticks(tuple(map(lambda x: round(x * ax_z2_percent), ax_z2.get_yticks())))
     #   Adjust the plot area to ensure everything is shown
     plt.tight_layout()
