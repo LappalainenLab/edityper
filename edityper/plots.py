@@ -72,18 +72,15 @@ def locus_plot(
     #   Create our subplots
     fig, ax = plt.subplots()
     #   Get our data ready for plotting
-    logging.debug("Makind dictionaries")
     mis_dict = {position: len(bases) for position, bases in mismatches.items()} # type: Dict[int, int]
     ins_dict = {position: len(counts) for position, counts in insertions.items()} # type: Dict[int, int]
     del_dict = {position: len(counts) for position, counts in deletions.items()} # type: Dict[int, int]
     #   Sort our data
-    logging.debug("Counting events")
     mis_counts = tuple(map(lambda tup: tup[1], sorted(mis_dict.items()))) # type: Tuple[int]
     ins_counts = tuple(map(lambda tup: tup[1], sorted(ins_dict.items()))) # type: Tuple[int]
     del_counts = tuple(map(lambda tup: tup[1], sorted(del_dict.items()))) # type: Tuple[int]
     cov_counts = tuple(map(lambda tup: tup[1], sorted(coverage.items()))) # type: Tuple[int]
     #   Create the bar graphs
-    logging.debug("Making 0-100 plots")
     ax.bar( # Coverage
         left=sorted(coverage),
         height=cov_counts,
@@ -112,7 +109,6 @@ def locus_plot(
     #   Add title and legend
     plt.title(fastq_name)
     #   Add patches for colors
-    logging.debug("Setting colors")
     ins_patch = ptch.Patch(color=_INS_COLOR, label='Insertions')
     del_patch = ptch.Patch(color=_DEL_COLOR, label='Deletions')
     mismatch_patch = ptch.Patch(color=_MISMATCH_COLOR, label='Mismatches')
@@ -122,12 +118,10 @@ def locus_plot(
     ax.set_ylim(0, num_reads)
     ax.set_ylabel('Number of Reads')
     #   Add a percent y axis
-    logging.debug("Calculating percents")
     ax2 = ax.twinx()
     ax2.set_ylabel('Percent')
     ax2.set_yticks(tuple(map(lambda x: round(x * 100), ax2.get_yticks())))
     #   Zoomed plot
-    logging.debug("Making zoomed plots")
     fig_z, ax_z = plt.subplots()
     ax_z.bar( # Coverage
         left=sorted(coverage),
@@ -158,16 +152,11 @@ def locus_plot(
     plt.title(fastq_name)
     plt.legend(handles=(ins_patch, del_patch, mismatch_patch, coverage_patch))
     #   Set y label and add percent?
-    logging.debug("Making zoomed percents")
     ax_z.set_ylim(0, max(map(max, (cov_counts, ins_counts, del_counts, mis_counts))) + 1)
     ax_z.set_ylabel('Number of Reads')
     ax_z2 = ax_z.twinx()
     ax_z2.set_ylabel('Percent')
-    logging.debug("Calculating percent")
     ax_z2_percent = percent(num=max(ax_z.get_ylim()), total=num_reads) # type: float
-    logging.debug(ax_z2_percent)
-    logging.debug(ax_z2.get_yticks())
-    logging.debug("Setting ticks")
     ax_z2.set_yticks(tuple(map(lambda x: round(float(x) * ax_z2_percent, 2), ax_z2.get_yticks())))
     #   Adjust the plot area to ensure everything is shown
     plt.tight_layout()
