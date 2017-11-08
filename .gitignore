@@ -30,6 +30,12 @@ nw_align.cpp
 *.ini
 *.txt
 
+# Ignore FASTQ and template files
+#################################
+*.fastq*
+*.fq*
+*.template
+
 # Ignore build directories
 ##########################
 bin/
