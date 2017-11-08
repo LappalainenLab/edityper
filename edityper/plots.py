@@ -64,6 +64,7 @@ def locus_plot(
     # type: (...) -> None
     """Make a locus plot"""
     logging.info("FASTQ %s: Making locus plot", fastq_name)
+    import code; code.interact(local=locals()); sys.exit()
     locus_start = time.time() # type: float
     if _check_fonts():
         plt.xkcd()
