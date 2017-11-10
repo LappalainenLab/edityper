@@ -242,7 +242,7 @@ def display_classification(
     }
     counted_total = 0 # type: int
     hdr_indels = 0 # type: int
-    total_counts = dict.fromkeys(iter_tag.values(), 0)
+    total_counts = dict.fromkeys(iter_tag.values(), 0) # type: Dict[str, int]
     with open(output_name, 'w') as cfile:
         cfile.write(_fastq_header(fastq_name=fastq_name, fastq_path=fastq_path) + '\n')
         cfile.write(_snp_header(snp_info=snp_info) + '\n')
