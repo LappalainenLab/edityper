@@ -631,7 +631,7 @@ def main():
             'HDR_GAP',
             'PERC_HDR_GAP',
             'NHEJ',
-            'NHEJ_GAP',
+            'NHEJ_PERC',
             'PERC_MIS_A',
             'PERC_MIS_T',
             'PERC_MIS_C',
