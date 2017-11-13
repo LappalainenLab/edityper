@@ -69,13 +69,15 @@ def cummulative_deletions(deletions): # type: Dict[int, List[int]] -> Dict[int, 
     return dict(cummul_del)
 
 
-def calc_coverage(cummul_del, mismatches): # type: (Dict[int, int], Dict[int, List[str]]) -> Dict[int, int]
+def calc_coverage(cummul_del, mismatches, matches): # type: (Dict[int, int], Dict[int, List[str]], Dict[int, int]) -> Dict[int, int]
     """Calculate coverage"""
     coverage = defaultdict(int) # type: defaultdict
     for base, cummul_count in cummul_del.items(): # type: int, int
         coverage[base] += cummul_count
     for base, mismatch_list in mismatches.items(): # type: int, List[str]
         coverage[base] += len(mismatch_list)
+    for base, match_count in matches.items(): # type: int, int
+        coverage[base] += match_count
     return coverage
 
 
@@ -158,10 +160,10 @@ def events_report(
                 base,
                 coverage.get(index, 0),
                 deletion_count,
-                avg_deletion,
+                round(avg_deletion, 2),
                 cummul_del.get(index, 0),
                 insertion_count,
-                avg_insertion,
+                round(avg_insertion, 2),
                 nucleotides.get('A', 0),
                 nucleotides.get('T', 0),
                 nucleotides.get('C', 0),

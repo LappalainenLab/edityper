@@ -107,10 +107,10 @@ def crispr_analysis(
             'discarded'         :   0,
             'no_edit'           :   0,
             'no_edit_perc'      :   analysis.NA,
-            'hdr_clean'         :   0,
-            'hdr_clean_perc'    :   analysis.NA,
-            'hdr_gap'           :   0,
-            'hdr_gap_perc'      :   analysis.NA,
+            'hdr'               :   0,
+            'hdr_perc'          :   analysis.NA,
+            'mix'               :   0,
+            'mix_perc'          :   analysis.NA,
             'nhej'              :   0,
             'nhej_perc'         :   analysis.NA,
             'perc_a'            :   analysis.NA,
@@ -142,10 +142,10 @@ def crispr_analysis(
     logging.info("FASTQ %s: Starting read analysis...", fastq_name)
     classifcation_start = time.time() # type: float
     counts = { # type: Dict[str, defaultdict]
-        'deletions': defaultdict(list),
-        'insertions': defaultdict(list),
-        'mismatches': defaultdict(list),
-        'matches': defaultdict(int)
+        'deletions': defaultdict(list), # type: Dict[int, List[str]]
+        'insertions': defaultdict(list), # type: Dict[int, List[str]]
+        'mismatches': defaultdict(list), # type: Dict[int, List[str]]
+        'matches': defaultdict(int) # type: Dict[int, int]
     }
     read_assignments = dict() # type: Dict[str, Tuple[str, Events]]
     classifications = (dict(), dict(), dict(), dict(), dict()) # type: Tuple[Dict[str, Events]]
@@ -237,7 +237,7 @@ def crispr_analysis(
     logging.debug("FASTQ %s: Read classifcation took %s seconds", fastq_name, round(time.time() - classifcation_start, 3))
     #   Calculate cummulative deletions and coverage
     cummulative_deletions = analysis.cummulative_deletions(deletions=counts['deletions'])
-    coverage = analysis.calc_coverage(cummul_del=cummulative_deletions, mismatches=counts['mismatches'])
+    coverage = analysis.calc_coverage(cummul_del=cummulative_deletions, mismatches=counts['mismatches'], matches=counts['matches'])
     #   Output read assignments if verbosity is set to 'debug' and we're not suppressing tables
     if _set_verbosity(level=args_dict['verbosity']) == 10 and not args_dict['suppress_tables']:
         assignments_name = os.path.join(output_prefix, fastq_name + '.assignments')
@@ -383,10 +383,10 @@ def crispr_analysis(
             'discarded'         :   total_counts['DISCARD'],
             'no_edit'           :   total_counts['NO_EDIT'],
             'no_edit_perc'      :   analysis.percent(num=total_counts['NO_EDIT'], total=total_reads),
-            'hdr_clean'         :   total_counts['HDR'] - hdr_indels,
-            'hdr_clean_perc'    :   analysis.percent(num=total_counts['HDR'] - hdr_indels, total=total_counts['HDR']),
-            'hdr_gap'           :   hdr_indels,
-            'hdr_gap_perc'      :   analysis.percent(num=hdr_indels, total=total_counts['HDR']),
+            'hdr'               :   total_counts['HDR'],
+            'hdr_perc'          :   analysis.percent(num=total_counts['HDR'], total=total_reads),
+            'mix'               :   total_counts['MIX'],
+            'mix_perc'          :   analysis.percent(num=total_counts['MIX'], total=total_reads),
             'nhej'              :   total_counts['NHEJ'],
             'nhej_perc'         :   analysis.percent(num=total_counts['NHEJ'], total=total_reads),
             'perc_a'            :   analysis.percent(num=mismatch_bases['A'], total=total_mismatch),
@@ -626,12 +626,12 @@ def main():
             'TEMP_SNP',
             'NO_EDIT',
             'PERC_NO_EDIT',
-            'HDR_CLEAN',
-            'PERC_HDR_CLEAN',
-            'HDR_GAP',
-            'PERC_HDR_GAP',
+            'HDR',
+            'PERC_HDR',
+            'MIX',
+            'PERC_MIX',
             'NHEJ',
-            'NHEJ_PERC',
+            'PERC_NHEJ',
             'PERC_MIS_A',
             'PERC_MIS_T',
             'PERC_MIS_C',
@@ -654,10 +654,10 @@ def main():
                     snp.target,
                     sum_dict['no_edit'],
                     sum_dict['no_edit_perc'],
-                    sum_dict['hdr_clean'],
-                    sum_dict['hdr_clean_perc'],
-                    sum_dict['hdr_gap'],
-                    sum_dict['hdr_gap_perc'],
+                    sum_dict['hdr'],
+                    sum_dict['hdr_perc'],
+                    sum_dict['mix'],
+                    sum_dict['mix_perc'],
                     sum_dict['nhej'],
                     sum_dict['nhej_perc'],
                     sum_dict['perc_a'],
