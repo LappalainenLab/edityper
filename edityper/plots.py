@@ -206,18 +206,20 @@ def quality_plot(
     #   Get FASTQ names
     fastqs = sorted(set(scores_by_fastq.keys())) # type: List[str]
     #   Assemble our scores
-    # scores = tuple(tuple(scores_by_fastq[fastq]) for fastq in sorted(scores_by_fastq)) # type: Tuple[Tuple[int]]
-    # thresh_values = tuple(thresholds[fastq] for fastq in sorted(scores_by_fastq)) # type: Tuple[float]
     scores = {f: tuple(scores_by_fastq[f]) for f in fastqs} # type: Dict[str, Tuple[int]]
     with PdfPages(plot_name) as pdf:
         logging.info("Saving plot to %s", plot_name)
+        #   Set chunksize
         chunksize = _CHUNK_DEFAULT if len(fastqs) > _CHUNK_DEFAULT else len(fastqs)
         logging.debug("Plotting %s FASTQ files per page", chunksize)
+        #   Put at most 5 plots per page
         for fastq_chunk in ichunk(x=fastqs, chunksize=chunksize):
             logging.debug("Plotting quality scores for %s", ', '.join(fastq_chunk))
             fig, ax = plt.subplots(nrows=1, ncols=1)
+            #   Plot the scores for this chunk
             scores_chunk = tuple(scores[f] for f in fastq_chunk) # type: Tuple[Tuple[int]]
             ax.violinplot(scores_chunk)
+            #   Set labels for this page
             if len(scores) == 1:
                 rotation = 'horizontal' # type: st
             else:
@@ -228,37 +230,14 @@ def quality_plot(
             ax.set_xticks(range(1, len(scores) + 1))
             mod_names = tuple(_splitstr(string=f) for f in fastq_chunk) # type: Tuple[str]
             ax.set_xticklabels(mod_names, rotation=rotation, fontsize='small')
+            #   Add threshold cutoff lines
             ax.hlines(
                 y=tuple(thresholds[f] for f in fastq_chunk),
                 xmin=tuple(map(lambda x: x - _THRESHOLD_LENGTH, ax.get_xticks())),
                 xmax=tuple(map(lambda x: x + _THRESHOLD_LENGTH, ax.get_xticks()))
             )
+            #   Ensure everything is shown
             plt.tight_layout()
+            #   Save this figure
             pdf.savefig(fig)
     logging.debug("Making quality scores plot took %s seconds", round(time.time() - quality_start, 3))
-    # #   Plot the scores
-    # fig, ax = plt.subplots(nrows=1, ncols=1)
-    # ax.violinplot(scores)
-    # #   Determine rotation of xtick text
-    # if len(scores) == 1:
-    #     rotation = 'horizontal' # type: str
-    # else:
-    #     rotation = 45 # type: int
-    # #   Set labels
-    # plt.title("Alignment Score Distribution by FASTQ File")
-    # plt.ylabel('Alignment Score')
-    # plt.xlabel('FASTQ')
-    # ax.set_xticks(range(1, len(scores) + 1))
-    # ax.set_xticklabels(fastqs, rotation=rotation, fontsize='small')
-    # #   Draw score thresholds lines
-    # ax.hlines(
-    #     y=thresh_values,
-    #     xmin=tuple(map(lambda x: x - _THRESHOLD_LENGTH, ax.get_xticks())),
-    #     xmax=tuple(map(lambda x: x + _THRESHOLD_LENGTH, ax.get_xticks()))
-    # )
-    # # #   Adjust the plot area to ensure everything is shown
-    # # plt.tight_layout()
-    # #   Yield the plot
-    # logging.info("Saving plot to %s", plot_name)
-    # plt.savefig(plot_name, format='pdf')
-    # logging.debug("Making quality scores plot took %s seconds", round(time.time() - quality_start, 3))
