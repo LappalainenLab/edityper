@@ -126,7 +126,7 @@ def locus_plot(
         color=_MISMATCH_COLOR
     )
     #   Add title and legend
-    plt.title(fastq_name)
+    plt.title(_splitstr(string=fastq_name))
     #   Add patches for colors
     ins_patch = ptch.Patch(color=_INS_COLOR, label='Insertions')
     del_patch = ptch.Patch(color=_DEL_COLOR, label='Deletions')
@@ -168,10 +168,12 @@ def locus_plot(
         color=_MISMATCH_COLOR
     )
     #   Add title and legend
-    plt.title(fastq_name)
+    plt.title(_splitstr(string=fastq_name))
     plt.legend(handles=(ins_patch, del_patch, mismatch_patch, coverage_patch))
     #   Set y label and add percent?
-    ax_z.set_ybound(lower=0)
+    max_y_z = max(toolkit.unpack(collection=(mis_counts, ins_counts, del_counts))) # type: int
+    max_y_z *= 1.10
+    ax_z.set_ybound(lower=0, upper=max_y_z)
     ax_z.set_ylabel('Number of Reads')
     ax_z2 = ax_z.twinx()
     ax_z2.set_ylabel('Percent')
