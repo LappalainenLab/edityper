@@ -58,16 +58,16 @@ def _check_fonts(): # type: (None) -> bool
 def _splitstr(string, cutoff=20): # type: (str, int) -> str
     if len(string) <= cutoff:
         return string
-    pts = tuple(i.start() for i in re.finditer(r'([-_\.])', string))
-    midpoint = len(string) / 2
-    closest = min(pts, key=lambda x: abs(midpoint - x)) + 1
+    pts = tuple(i.start() for i in re.finditer(r'([-_\.])', string)) # type: Tuple[int]
+    midpoint = len(string) / 2 # type: float
+    closest = min(pts, key=lambda x: abs(midpoint - x)) + 1 # type: int
     return string[:closest] + '\n' + string[closest:]
 
 
 def ichunk(x, chunksize): # type: (Iterable[Any], int) -> Iterator[Iterable[Any]]
     """Iterate by chunks"""
-    chunk_range = range(0, len(x), chunksize)
-    for i in chunk_range:
+    chunk_range = range(0, len(x), chunksize) # type: range
+    for i in chunk_range: # type: int
         yield x[i:(i + chunksize)]
 
 
