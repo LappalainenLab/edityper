@@ -131,7 +131,7 @@ def events_report(
         'G'
     )
     #   Create output file
-    output_name = os.path.join(output_prefix, fastq_name + '.events')
+    output_name = os.path.join(output_prefix, fastq_name + '.events.txt')
     with open(output_name, 'w') as efile:
         logging.info("FASTQ %s: Writing events table to %s", fastq_name, output_name)
         efile.write(_fastq_header(fastq_name=fastq_name, fastq_path=fastq_path) + '\n')
@@ -195,7 +195,7 @@ def display_classification(
     post_repeat = int(ceil((len(class_header) - len(fastq_name)) / 2)) # type: int
     name_header = ''.join(itertools.repeat('-', pre_repeat)) + fastq_name + ''.join(itertools.repeat('-', post_repeat))
     #   Create an output name
-    output_name = os.path.join(output_prefix, fastq_name + '.classifications')
+    output_name = os.path.join(output_prefix, fastq_name + '.classifications.txt')
     logging.info("FASTQ %s: Writing full classification breakdown to %s", fastq_name, output_name)
     #   Quick statistics
     num_unique = len(unique_reads)

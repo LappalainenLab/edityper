@@ -240,7 +240,7 @@ def crispr_analysis(
     coverage = analysis.calc_coverage(cummul_del=cummulative_deletions, mismatches=counts['mismatches'], matches=counts['matches'])
     #   Output read assignments if verbosity is set to 'debug' and we're not suppressing tables
     if _set_verbosity(level=args_dict['verbosity']) == 10 and not args_dict['suppress_tables']:
-        assignments_name = os.path.join(output_prefix, fastq_name + '.assignments')
+        assignments_name = os.path.join(output_prefix, fastq_name + '.assignments.txt')
         with open(assignments_name, 'w') as afile:
             logging.debug("FASTQ %s: Writing read assignments to %s", fastq_name, assignments_name)
             afile.write(analysis._fastq_header(fastq_name=fastq_name, fastq_path=fastq_file))
@@ -614,7 +614,7 @@ def main():
         else:
             logging.error("No passing reads found in any file, not producing quality plot")
     if not (args['suppress_classification'] or args['suppress_events'] or args['suppress_tables']):
-        summary_name = output_prefix + '.summary' # type: str
+        summary_name = output_prefix + '.summary.txt' # type: str
         summary_header = (
             '#FASTQ',
             'TOTAL_READS',
