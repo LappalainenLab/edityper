@@ -9,6 +9,7 @@ import sys
 PYTHON_VERSION = sys.version_info.major
 
 import os
+import re
 import time
 import logging
 from collections import defaultdict
@@ -20,6 +21,7 @@ try:
     elif PYTHON_VERSION is 2:
         import toolkit
         from analysis import percent
+        range = xrange
     else:
         raise SystemExit("Please use Python 2.7 or 3.5 or higher for this module: " + __name__)
 except ImportError as error:
@@ -43,6 +45,7 @@ _MISMATCH_COLOR = 'b'
 # _COVERAGE_COLOR = '%08.x' % 0x00000022
 _COVERAGE_COLOR = '#e5e5e8'
 _THRESHOLD_LENGTH = 0.05
+_CHUNK_DEFAULT = 5
 _XKCD = False
 
 def _check_fonts(): # type: (None) -> bool
@@ -50,6 +53,22 @@ def _check_fonts(): # type: (None) -> bool
     if _XKCD and not humor:
         logging.error("Cannot find 'Humor-Sans.ttf' font. Please install and clear your matplotlib cache")
     return _XKCD and humor
+
+
+def _splitstr(string, cutoff=20): # type: (str, int) -> str
+    if len(string) <= cutoff:
+        return string
+    pts = tuple(i.start() for i in re.finditer(r'([-_\.])', string))
+    midpoint = len(string) / 2
+    closest = min(pts, key=lambda x: abs(midpoint - x)) + 1
+    return string[:closest] + '\n' + string[closest:]
+
+
+def ichunk(x, chunksize): # type: (Iterable[Any], int) -> Iterator[Iterable[Any]]
+    """Iterate by chunks"""
+    chunk_range = range(0, len(x), chunksize)
+    for i in chunk_range:
+        yield x[i:(i + chunksize)]
 
 
 def locus_plot(
@@ -181,35 +200,65 @@ def quality_plot(
     if _check_fonts():
         plt.xkcd()
     plot_name = output_prefix + '_quality.pdf' # type: str
-    alignments_by_fastq = defaultdict(list) # type: Mapping[str, List[int]]
+    scores_by_fastq = defaultdict(list) # type: Mapping[str, List[int]]
     for aligned in alignments: # type: alignment.Alignment
-        alignments_by_fastq[aligned.source].append(aligned.score)
+        scores_by_fastq[aligned.source].append(aligned.score)
+    #   Get FASTQ names
+    fastqs = sorted(set(scores_by_fastq.keys())) # type: List[str]
     #   Assemble our scores
-    scores = tuple(tuple(alignments_by_fastq[fastq]) for fastq in sorted(alignments_by_fastq)) # type: Tuple[Tuple[int]]
-    thresh_values = tuple(thresholds[fastq] for fastq in sorted(alignments_by_fastq)) # type: Tuple[float]
-    #   Plot the scores
-    fig, ax = plt.subplots(nrows=1, ncols=1)
-    ax.violinplot(scores)
-    #   Determine rotation of xtick text
-    if len(scores) == 1:
-        rotation = 'horizontal' # type: str
-    else:
-        rotation = 45 # type: int
-    #   Set labels
-    plt.title("Alignment Score Distribution by FASTQ File")
-    plt.ylabel('Alignment Score')
-    plt.xlabel('FASTQ')
-    ax.set_xticks(range(1, len(scores) + 1))
-    #   Draw score thresholds lines
-    ax.hlines(
-        y=thresh_values,
-        xmin=tuple(map(lambda x: x - _THRESHOLD_LENGTH, ax.get_xticks())),
-        xmax=tuple(map(lambda x: x + _THRESHOLD_LENGTH, ax.get_xticks()))
-    )
-    ax.set_xticklabels(sorted(alignments_by_fastq), rotation=rotation, fontsize='small')
-    #   Adjust the plot area to ensure everything is shown
-    plt.tight_layout()
-    #   Yield the plot
-    logging.info("Saving plot to %s", plot_name)
-    plt.savefig(plot_name, format='pdf')
+    # scores = tuple(tuple(scores_by_fastq[fastq]) for fastq in sorted(scores_by_fastq)) # type: Tuple[Tuple[int]]
+    # thresh_values = tuple(thresholds[fastq] for fastq in sorted(scores_by_fastq)) # type: Tuple[float]
+    scores = {f: tuple(scores_by_fastq[f]) for f in fastqs} # type: Dict[str, Tuple[int]]
+    with PdfPages(plot_name) as pdf:
+        logging.info("Saving plot to %s", plot_name)
+        chunksize = _CHUNK_DEFAULT if len(fastqs) > _CHUNK_DEFAULT else len(fastqs)
+        logging.debug("Plotting %s FASTQ files per page", chunksize)
+        for fastq_chunk in ichunk(x=fastqs, chunksize=chunksize):
+            logging.debug("Plotting quality scores for %s", ', '.join(fastq_chunk))
+            fig, ax = plt.subplots(nrows=1, ncols=1)
+            scores_chunk = tuple(scores[f] for f in fastq_chunk) # type: Tuple[Tuple[int]]
+            ax.violinplot(scores_chunk)
+            if len(scores) == 1:
+                rotation = 'horizontal' # type: st
+            else:
+                rotation = 45 # type: int
+            plt.title("Alignment Score Distribution by FASTQ File")
+            plt.ylabel('Alignment Score')
+            plt.xlabel('FASTQ')
+            ax.set_xticks(range(1, len(scores) + 1))
+            mod_names = tuple(_splitstr(string=f) for f in fastq_chunk) # type: Tuple[str]
+            ax.set_xticklabels(mod_names, rotation=rotation, fontsize='small')
+            ax.hlines(
+                y=tuple(thresholds[f] for f in fastq_chunk),
+                xmin=tuple(map(lambda x: x - _THRESHOLD_LENGTH, ax.get_xticks())),
+                xmax=tuple(map(lambda x: x + _THRESHOLD_LENGTH, ax.get_xticks()))
+            )
+            plt.tight_layout()
+            pdf.savefig(fig)
     logging.debug("Making quality scores plot took %s seconds", round(time.time() - quality_start, 3))
+    # #   Plot the scores
+    # fig, ax = plt.subplots(nrows=1, ncols=1)
+    # ax.violinplot(scores)
+    # #   Determine rotation of xtick text
+    # if len(scores) == 1:
+    #     rotation = 'horizontal' # type: str
+    # else:
+    #     rotation = 45 # type: int
+    # #   Set labels
+    # plt.title("Alignment Score Distribution by FASTQ File")
+    # plt.ylabel('Alignment Score')
+    # plt.xlabel('FASTQ')
+    # ax.set_xticks(range(1, len(scores) + 1))
+    # ax.set_xticklabels(fastqs, rotation=rotation, fontsize='small')
+    # #   Draw score thresholds lines
+    # ax.hlines(
+    #     y=thresh_values,
+    #     xmin=tuple(map(lambda x: x - _THRESHOLD_LENGTH, ax.get_xticks())),
+    #     xmax=tuple(map(lambda x: x + _THRESHOLD_LENGTH, ax.get_xticks()))
+    # )
+    # # #   Adjust the plot area to ensure everything is shown
+    # # plt.tight_layout()
+    # #   Yield the plot
+    # logging.info("Saving plot to %s", plot_name)
+    # plt.savefig(plot_name, format='pdf')
+    # logging.debug("Making quality scores plot took %s seconds", round(time.time() - quality_start, 3))
