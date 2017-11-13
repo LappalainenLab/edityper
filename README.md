@@ -38,6 +38,10 @@ The minimal arguments needed to run are `-r | --reference-sequence`, `-t | --tem
 EdiTyper -r reference.fasta -t template.fasta -i sample.fastq
 ```
 
+## Classification scheme
+
+We classify the unique reads based on their alignment with the reference. HDR are reads with the right SNP edited to the target SNP as identified in the template sequence, and no deletion and no insertions but tolerate mismatches. If there are insertions or deletions then the read is classified as MIX, which is a HDR with indels. If the SNP of interest is not edited and there are no indels, then the read is unchanged (NO_EDIT). Otherwise, the read is a NHEJ.
+
 ## Arguments
 
 ### Alignment Arguments
@@ -105,11 +109,11 @@ For each output table, all lines starting with `#` are header lines. All lines s
 | Output file | Extension |
 | ----------- | --------- |
 | Alignments in SAM/BAM format | `.sam | .bam` |
-| Table of events by base | `.events` |
-| Classification of reads in tabular format | `.classification` |
+| Table of events by base | `.events.txt` |
+| Classification of reads in tabular format | `.classification.txt` |
 | Locus and alignment quality plots | `.pdf` |
-| Summary of read classifications per input FASTQ file | `.summary` |
-| Read assignments table | `.assignments` |
+| Summary of read classifications per input FASTQ file | `.summary.txt` |
+| Read assignments table | `.assignments.txt` |
 
 ### SAM/BAM Output
 
@@ -138,7 +142,7 @@ The `.events` table shows a locus-by-locus overview of indels and mismatches in 
 
 ### Read Classifications
 
-The `.classifications` table shows a breakdown of indels and mismatches per read category. One table is generated per FASTQ file. The read categories are HDR, MIX, NHEJ, NO_EDIT, and DISCARD.
+The `.classifications.txt` table shows a breakdown of indels and mismatches per read category. One table is generated per FASTQ file. The read categories are HDR, MIX, NHEJ, NO_EDIT, and DISCARD.
 
 <!-- counts, indels, and mismatches for HDR, NHEJ, no editing, and discarded reads. In addition, this file shows SNP state and position, read counts, and alignment scoring information. -->
 
@@ -167,7 +171,7 @@ The `.classifications` table shows a breakdown of indels and mismatches per read
 
 ### Summary Table
 
-The `.summary` table shows total reads, unique reads, discarded reads, SNP information, no editing, HDR, NHEJ, and mismatch percentages by base. One table is generated for *all* FASTQ files.
+The `.summary.txt` table shows total reads, unique reads, discarded reads, SNP information, no editing, HDR, NHEJ, and mismatch percentages by base. One table is generated for *all* FASTQ files.
 
 | Column | Meaning |
 | ------ | ------- |
@@ -200,7 +204,7 @@ The quality plot shows the distribution of alignment quality scores.  One PDF is
 
 ### Assignments Table
 
-The `.assignments` table shows how each read was classified as well as the number of insertions, deletions, and mismatches for each read. One table is generated per FASTQ. This table is *only* generated when verbosity is set to 'debug' (`-v debug | --verbosty debug`) and `--suppress-tables` is **not** passed.
+The `.assignments.txt` table shows how each read was classified as well as the number of insertions, deletions, and mismatches for each read. One table is generated per FASTQ. This table is *only* generated when verbosity is set to 'debug' (`-v debug | --verbosty debug`) and `--suppress-tables` is **not** passed.
 
 | Column | Meaning |
 | ------ | ------- |
