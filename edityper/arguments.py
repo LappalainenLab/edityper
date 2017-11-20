@@ -1,10 +1,6 @@
 #!/usr/bin/env python
 
-# TODO: Add argument for genomic location of reference
-#   Use in SAM output
-#   BED input?
-
-'''Set the arguments for EdiTyper'''
+"""Set the arguments for EdiTyper"""
 
 import os
 import sys
@@ -172,7 +168,7 @@ def make_argument_parser():
         metavar='template sequence',
         help="Choose a template FASTA file"
     )
-    ref_opts.add_argument(
+    ref_opts.add_argument( # Reference BED file
         '-b',
         '--reference-bed',
         dest='reference_bed',

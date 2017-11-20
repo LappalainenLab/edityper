@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-'''Alignment functions for EdiTyper'''
+"""Alignment functions for EdiTyper"""
 
 from __future__ import division
 from __future__ import print_function
