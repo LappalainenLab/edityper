@@ -269,7 +269,7 @@ def crispr_analysis(
             logging.error("FASTQ %s: Not producing plots for this FASTQ", fastq_name)
     if not (args_dict['suppress_classification'] or args_dict['suppress_tables']):
         LOCK.acquire()
-        hdr_indels, total_counts = analysis.display_classification(
+        total_counts = analysis.display_classification(
             fastq_name=fastq_name,
             fastq_path=fastq_file,
             classifications=classifications,
