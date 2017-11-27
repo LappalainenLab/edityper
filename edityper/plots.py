@@ -8,6 +8,7 @@ from __future__ import print_function
 import sys
 PYTHON_VERSION = sys.version_info.major
 
+import gc
 import os
 import re
 import time
@@ -242,4 +243,5 @@ def quality_plot(
             plt.tight_layout()
             #   Save this figure
             pdf.savefig(fig)
+            gc.collect()
     logging.debug("Making quality scores plot took %s seconds", round(time.time() - quality_start, 3))

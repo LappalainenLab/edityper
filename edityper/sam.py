@@ -8,6 +8,7 @@ from __future__ import print_function
 import sys
 PYTHON_VERSION = sys.version_info.major
 
+import gc
 import os
 import time
 import logging
@@ -609,9 +610,11 @@ def bam(fastq_name, samfile, samtools, index_type): # type: (str, str, str, str)
     index_cmd = '%(samtools)s index -%(arg)s %(bamfile)s' % {'samtools': samtools, 'arg': index_arg, 'bamfile': bamfile} # type: str
     logging.info("FASTQ %s: Writing BAM to %s", fastq_name, bamfile)
     subprocess.call(' '.join(view_cmd), shell=True)
+    gc.collect()
     logging.info("FASTQ %s: Indexing BAM file", fastq_name)
     logging.debug("FASTQ %s: Making %s indices", fastq_name, index_type)
     subprocess.call(index_cmd, shell=True)
+    gc.collect()
     logging.debug("FASTQ %s: Converting SAM to BAM took %s seconds", fastq_name, round(time.time() - bam_start, 3))
     logging.debug("FASTQ %s: Removing SAM file, leaving only BAM file", fastq_name)
     os.remove(samfile)
