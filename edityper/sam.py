@@ -670,10 +670,12 @@ def bam(fastq_name, samfile, samtools, index_type): # type: (str, str, str, str)
     index_arg = 'c' if index_type == 'csi' else 'b' # type: str
     index_cmd = '%(samtools)s index -%(arg)s %(bamfile)s' % {'samtools': samtools, 'arg': index_arg, 'bamfile': bamfile} # type: str
     logging.info("FASTQ %s: Writing BAM to %s", fastq_name, bamfile)
+    logging.debug(' '.join(view_cmd))
     subprocess.call(' '.join(view_cmd), shell=True)
     gc.collect()
     logging.info("FASTQ %s: Indexing BAM file", fastq_name)
     logging.debug("FASTQ %s: Making %s indices", fastq_name, index_type)
+    logging.debug(index_cmd)
     subprocess.call(index_cmd, shell=True)
     gc.collect()
     logging.debug("FASTQ %s: Converting SAM to BAM took %s seconds", fastq_name, round(time.time() - bam_start, 3))
