@@ -613,6 +613,8 @@ def make_sequence_header(
     #   Make @SQ headers for the RNAMEs we found in our reference
     sq_header = [] # type: List[str]
     for rname in sorted(rnames): # type: str
+        if rname == '*':
+            continue
         seq, mod = ref_seq_dict[rname] # type: str, int
         # seq = ref_seq_dict[rname].replace('-', '') # type: str
         seq = seq.replace('-', '') # type: str
