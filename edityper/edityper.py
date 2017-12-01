@@ -316,6 +316,8 @@ def crispr_analysis(
         for read in reads:
             reads_dict[read.seq].append(read)
         for aligned in itertools.chain.from_iterable(alignments.values()): # type: alignment.Alignment
+            if str(aligned) in discard:
+                continue
             head, tail = toolkit.trim_interval(seq=aligned.read) # type: int, int
             unaligned = toolkit.reverse_complement(sequence=aligned.unaligned) if do_reverse else aligned.unaligned # type: str
             supporting_reads = tuple(reads_dict.pop(unaligned)) # type: Tuple[toolkit.Read]
