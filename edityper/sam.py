@@ -602,6 +602,8 @@ def make_sequence_header(
         #   modify any SAM lines that map to it as unmapped
         #   and remove the RNAME for our set of RNAMEs so
         #   that we do not make a @SQ header for it
+        if rname == '*':
+            continue
         if rname not in ref_seq_dict:
             logging.error("Could not find reference sequence %s", rname)
             for sam in sam_lines: # type: SAM
