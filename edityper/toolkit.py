@@ -59,7 +59,7 @@ class ExitPool(Exception):
 class ColoredFormatter(logging.Formatter):
     """A colorized formatter for logging"""
 
-    _colors = {
+    _colors = { # type: Dict[int, str]
         50: '\x1b[1m\x1b[31m', # CRITICAL: bold red
         40: '\x1b[31m', # ERROR: red
         30: '\x1b[33m', # WARNING: yellow

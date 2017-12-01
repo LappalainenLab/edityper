@@ -269,7 +269,7 @@ def crispr_analysis(
             logging.error("FASTQ %s: Not producing plots for this FASTQ", fastq_name)
     if not (args_dict['suppress_classification'] or args_dict['suppress_tables']):
         LOCK.acquire()
-        hdr_indels, total_counts = analysis.display_classification(
+        total_counts = analysis.display_classification(
             fastq_name=fastq_name,
             fastq_path=fastq_file,
             classifications=classifications,
@@ -330,8 +330,8 @@ def crispr_analysis(
                 itertools.repeat(position), # pos=
                 itertools.repeat(255), # mapq=
                 itertools.repeat(cigar), # cigar=
-                itertools.repeat('*'), # rnex=
-                itertools.repeat(0), # pnex=
+                itertools.repeat('*'), # rnext=
+                itertools.repeat(0), # pnext=
                 itertools.repeat(0), # tlen=
                 itertools.repeat(sam_seq), # seq=
                 (read.qual for read in supporting_reads) # qual=
@@ -353,7 +353,7 @@ def crispr_analysis(
         rg_header = sam.make_read_group(sam_lines=sam_lines, conf_dict=args_dict) # type: Tuple[str]
         sq_header = sam.make_sequence_header( # type: Tuple[str]
             sam_lines=sam_lines,
-            ref_seq_dict={reference.name: reference.sequence}
+            ref_seq_dict={reference.name: (reference.sequence, args_dict['genomic_start'])}
         )
         #   Write the SAM file
         with open(sam_name, 'w') as sfile:
@@ -372,7 +372,6 @@ def crispr_analysis(
             del samline
         if args_dict['bam']:
             sam.bam(fastq_name=fastq_name,samfile=sam_name, samtools=args_dict['samtools_exec'], index_type=args_dict['bam'])
-    logging.debug("FASTQ %s: Analysis took %s seconds", fastq_name, round(time.time() - analysis_start, 3))
     #   Assemble return values
     if not (args_dict['suppress_classification'] or args_dict['suppress_events'] or args_dict['suppress_tables']):
         mismatch_bases = Counter(itertools.chain.from_iterable(counts['mismatches'].values()))
@@ -400,6 +399,7 @@ def crispr_analysis(
     fastq_summary['filename'] = fastq_name # Add FASTQ name
     fastq_summary['score_threshold'] = score_threshold # Add score threshold
     gc.collect()
+    logging.debug("FASTQ %s: Analysis took %s seconds", fastq_name, round(time.time() - analysis_start, 3))
     if all_discard:
         return tuple(), fastq_summary
     else:
@@ -414,6 +414,16 @@ def main():
     if not sys.argv[1:] or any(map(lambda a: a in sys.argv, ('-h', '--help'))):
         sys.exit(parser.print_help())
     args = {key: value for key, value in vars(parser.parse_args()).items() if value is not None} # type: Dict[str, Any]
+    #   Make an output directory
+    if os.path.exists(args['outdirectory']):
+        args['outdirectory'] = args['outdirectory'] + time.strftime('_%Y-%m-%d_%H:%M')
+    try:
+        os.makedirs(args['outdirectory'])
+    except OSError:
+        pass
+    finally:
+        #   Make a prefix for project-level output files
+        output_prefix = os.path.join(args['outdirectory'], args['project']) # type: str
     #   Setup logger
     #   Formatting values
     log_format = '%(asctime)s %(levelname)s:\t%(message)s' # type: str
@@ -433,13 +443,18 @@ def main():
         logging.captureWarnings(True)
     else:
         warnings.filterwarnings('ignore')
-    #   Setup a FileHandler for any logging to a file we may do
-    try:
-        logfile = logging.FileHandler(filename=args['logfile'], mode='w') # type: Logging.FileHandler
-        logfile.setFormatter(formatter)
-        logging.getLogger().addHandler(logfile)
-    except KeyError:
-        pass
+    # #   Setup a FileHandler for any logging to a file we may do
+    # try:
+    #     logfile = logging.FileHandler(filename=args['logfile'], mode='w') # type: Logging.FileHandler
+    #     logfile.setFormatter(formatter)
+    #     logging.getLogger().addHandler(logfile)
+    # except KeyError:
+    #     pass
+    #   Setup a FileHandler for the log file
+    logname = output_prefix + '.log'
+    logfile = logging.FileHandler(filename=logname, mode='w') # type: Logging.FileHandler
+    logfile.setFormatter(formatter)
+    logging.getLogger().addHandler(logfile)
     #   Setup the console handler
     #   Colorize the entire line
     colored_formater = toolkit.ColoredFormatter(fmt=log_format, datefmt=date_format) # type: toolkit.ColoredFormatter
@@ -453,15 +468,9 @@ def main():
     #   Begin the program
     logging.info("Welcome to %s!", os.path.basename(sys.argv[0]))
     program_start = time.time() # type: float
-    #   Make an output directory
-    if os.path.exists(args['outdirectory']):
-        args['outdirectory'] = args['outdirectory'] + time.strftime('_%Y-%m-%d_%H:%M')
-    try:
-        os.makedirs(args['outdirectory'])
-    except OSError:
-        pass
-    finally:
-        logging.warning("Using outdirectory \x1b[1m%s", args['outdirectory'])
+    #   Where are we putting our output directory?
+    logging.warning("Using outdirectory \x1b[1m%s", args['outdirectory'])
+    logging.warning("Full logfile can be found at %s", logname)
     #   Check suppression values and other arguments
     if _check_suppressions(suppressions=args): # All output suppressed? Error
         sys.exit(logging.critical("All output suppressed, not running"))
@@ -603,7 +612,6 @@ def main():
     #   Unpack our alignments into a single tuple
     alignments = toolkit.unpack(collection=alignments) # type: Tuple[alignment.Alignment]
     #   Final batch summary plot and table
-    output_prefix = os.path.join(args['outdirectory'], args['project']) # type: str
     if not args['suppress_plots']:
         if alignments:
             plots.quality_plot(

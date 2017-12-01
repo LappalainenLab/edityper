@@ -406,9 +406,56 @@ class SAM(object):
     program = property(fget=_get_program, fset=_set_program, doc="Program used to make SAM file")
 
 
+# def get_genomic_location(bedfile): # type: (str) -> (str, int)
+#     """Get the chromosome and start location of the first line in a BED or GTF/GFF file, returns 1-based coordinates"""
+#     logging.info("Finding genomic location of the reference sequence")
+#     genomic_start = time.time() # type: float
+#     extension = os.path.splitext(bedfile)[1].lower() # type: str
+#     if extension != '.bed':
+#         raise ValueError("Currently, only BED files are supported at this time")
+#     start_index, position_modifier = 1, 1 # type: int, int
+#     # if extension in ('.gtf', '.gff'):
+#     #     logging.warning("Reading %s as GTF/GFF file", bedfile)
+#     #     start_index, position_modifier = 3, 0 # type: int, int
+#     # elif extension == '.bed':
+#     #     logging.info("Reading %s", bedfile)
+#     #     start_index, position_modifier = 1, 1 # type: int, int
+#     # else:
+#     #     logging.warning("Could not identify annotation file type, assuming BED format")
+#     #     extension = '.bed' # type: str
+#     #     start_index, position_modifier = 1, 1 # type: int, int
+#     with open(bedfile, 'r') as bfile: # type: _io.TextIOWrapper
+#         completed = dict.fromkeys(('global', 'local')) # type: Dict[str, Optional[bool]]
+#         for line in bfile: # type: str
+#             line = line.strip() # type: str
+#             if line.startswith(('browser', 'track', '#')):
+#                 continue
+#             line = line.split() # type: str
+#             if len(line) != 4:
+#                 raise ValueError(logging.critical("Malformed BED file"))
+#             gl_type = line[3]
+#             try:
+#                 completed[gl_type] = True
+#             except KeyError:
+#                 continue
+#             chrom = line[0] # type: str
+#             if gl_type == 'global':
+#                 genomic_range = int(line[start_index + 1]) - int(line[start_index]) # type: int
+#             elif gl_type == 'local':
+#                 genomic_start = int(line[start_index]) + position_modifier # type: int
+#             if all(completed.values()):
+#                 break
+#         else:
+#             raise ValueError("Could not parse %s file" % extension.upper().replace('.', ''))
+#     logging.debug("Finding the genomic location took %s seconds", round(time.time() - genomic_start, 3))
+#     return chrom, genomic_start, genomic_range
+
+
 def get_genomic_location(bedfile): # type: (str) -> (str, int)
     """Get the chromosome and start location of the first line in a BED or GTF/GFF file, returns 1-based coordinates"""
-    extension = os.path.splitext(bedfile)[1].lower() # type: (str)
+    logging.info("Finding genomic location of the reference sequence")
+    genomic_start = time.time() # type: float
+    extension = os.path.splitext(bedfile)[1].lower() # type: str
     if extension in ('.gtf', '.gff'):
         logging.warning("Reading %s as GTF/GFF file", bedfile)
         start_index, position_modifier = 3, 0 # type: int, int
@@ -417,16 +464,25 @@ def get_genomic_location(bedfile): # type: (str) -> (str, int)
         start_index, position_modifier = 1, 1 # type: int, int
     else:
         logging.warning("Could not identify annotation file type, assuming BED format")
+        extension = '.bed' # type: str
         start_index, position_modifier = 1, 1 # type: int, int
-    with open(bedfile, 'r') as bfile:
-        for line in bfile:
-            line = line.strip()
+    with open(bedfile, 'r') as bfile: # type: _io.TextIOWrapper
+        for line in bfile: # type: str
+            line = line.strip() # type: str
             if line.startswith(('browser', 'track', '#')):
                 continue
-            line = line.split()
-            return line[0], int(line[start_index]) + position_modifier
+            line = line.split() # type: str
+            # return line[0], int(line[start_index]) + position_modifier
+            try:
+                chrom = line[0] # type: str
+                genomic_location = int(line[start_index]) + position_modifier # type: int
+            except (IndexError, ValueError):
+                raise ValueError("Malformed %s file" % extension.upper().replace('.', ''))
+            break
         else:
-            raise ValueError("Could not parse BED file")
+            raise ValueError("Could not parse %s file" % extension.upper().replace('.', ''))
+    logging.debug("Finding the genomic location took %s seconds", round(time.time() - genomic_start, 3))
+    return chrom, genomic_location
 
 
 def make_sam_sequence(alignment, head=None, tail=None): # type: (str, Optional[int], Optional[int]) -> str
@@ -534,10 +590,12 @@ def make_read_group(sam_lines, conf_dict): # type: (List[SAM], Dict[Any]) -> Tup
 
 def make_sequence_header(
         sam_lines, # type: Iterable[SAM]
-        ref_seq_dict # type: Dict[str, str]
+        ref_seq_dict # type: Dict[str, Tuple[str, int]]
 ):
     # type: (...) -> Tuple[str]
-    """Make reference @SQ headers"""
+    """Make reference @SQ headers
+    sam_lines       :   Iterable[SAM objects]
+    ref_seq_dict    :   Dict[ref seq name, Tuple[ref seq, global modifier (usually 0)]]"""
     rnames = {sam.get_rname() for sam in sam_lines} # type: Set[str]
     for rname in rnames: # type: str
         #   If the RNAME is not in our reference,
@@ -553,8 +611,10 @@ def make_sequence_header(
     #   Make @SQ headers for the RNAMEs we found in our reference
     sq_header = [] # type: List[str]
     for rname in sorted(rnames): # type: str
-        seq = ref_seq_dict[rname].replace('-', '') # type: str
-        line = ('@SQ', 'SN:' + rname, 'LN:%d' % len(seq)) # type: generator
+        seq, mod = ref_seq_dict[rname] # type: str, int
+        # seq = ref_seq_dict[rname].replace('-', '') # type: str
+        seq = seq.replace('-', '') # type: str
+        line = ('@SQ', 'SN:' + rname, 'LN:%d' % (len(seq) + mod)) # type: generator
         sq_header.append('\t'.join(line))
     return tuple(sq_header)
 
@@ -595,6 +655,7 @@ def calc_read_pos(alignment, genomic_start=0): # type: (alignment.Alignment, Opt
     try:
         match_start = regex.match(r'(%s){s<=%s}' % (read, nmis), reference, regex.BESTMATCH).start() # type: int
     except AttributeError:
+        logging.debug("Failed with new method for calculating read position, reverting to old method")
         return _old_calc(alignment=alignment) + genomic_start
     return match_start + read_head + genomic_start
 

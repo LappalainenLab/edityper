@@ -1,10 +1,6 @@
 #!/usr/bin/env python
 
-# TODO: Add argument for genomic location of reference
-#   Use in SAM output
-#   BED input?
-
-'''Set the arguments for EdiTyper'''
+"""Set the arguments for EdiTyper"""
 
 import os
 import sys
@@ -88,7 +84,8 @@ def make_argument_parser():
         default=None,
         required=False,
         metavar='log file',
-        help="Specify a file for the log messages, defaults to stderr"
+        # help="Specify a file for the log messages, defaults to stderr"
+        help=argparse.SUPPRESS
     )
     align_opts = parser.add_argument_group( # Alignment options
         title='alignment arguments',
@@ -137,16 +134,13 @@ def make_argument_parser():
     align_opts.add_argument( # Number of cores
         '--parallel',
         dest='num_cores',
-        # type=int,
         type=_num_cores,
         const=None,
         default=1,
         nargs='?',
         required=False,
-        # metavar='num cores',
         metavar='num jobs',
         help="Run %(prog)s in parallel. If passed, can optionally specify the number of jobs to run at once."
-        # help="How many cores should we use for multiprocessing? Defaults to the number of FASTQ files provided or the number of cores available on the system, whichever is lower"
     )
     ref_opts = parser.add_argument_group( # Reference and template sequences
         title='reference arguments',
@@ -172,7 +166,7 @@ def make_argument_parser():
         metavar='template sequence',
         help="Choose a template FASTA file"
     )
-    ref_opts.add_argument(
+    ref_opts.add_argument( # Reference BED file
         '-b',
         '--reference-bed',
         dest='reference_bed',

@@ -37,17 +37,15 @@ except ImportError as error:
     raise SystemExit(error)
 
 
-_LOCUS_WIDTH = 0.5
-_INDEL_COLOR = 'r'
-_INS_COLOR = 'r'
-_DEL_COLOR = 'g'
-_MISMATCH_COLOR = 'b'
-# _COVERAGE_COLOR = '#00000022'
-# _COVERAGE_COLOR = '%08.x' % 0x00000022
-_COVERAGE_COLOR = '#e5e5e8'
-_THRESHOLD_LENGTH = 0.05
-_CHUNK_DEFAULT = 5
-_XKCD = False
+_LOCUS_WIDTH = 0.5 # type: float
+_INDEL_COLOR = 'r' # type: str
+_INS_COLOR = 'r' # type: str
+_DEL_COLOR = 'g' # type: str
+_MISMATCH_COLOR = 'b' # type: str
+_COVERAGE_COLOR = '#e5e5e8' # type: str
+_THRESHOLD_LENGTH = 0.05 # type: float
+_CHUNK_DEFAULT = 5 # type: int
+_XKCD = False # type: bool
 
 def _check_fonts(): # type: (None) -> bool
     humor = 'Humor-Sans.ttf' in map(os.path.basename, fm.findSystemFonts()) # type: bool
@@ -173,7 +171,7 @@ def locus_plot(
     plt.legend(handles=(ins_patch, del_patch, mismatch_patch, coverage_patch))
     #   Set y label and add percent?
     max_y_z = max(toolkit.unpack(collection=(mis_counts, ins_counts, del_counts))) # type: int
-    max_y_z *= 1.10
+    max_y_z *= 1.10 # type: float
     ax_z.set_ybound(lower=0, upper=max_y_z)
     ax_z.set_ylabel('Number of Reads')
     ax_z2 = ax_z.twinx()
@@ -244,4 +242,5 @@ def quality_plot(
             #   Save this figure
             pdf.savefig(fig)
             gc.collect()
+    plt.close('all')
     logging.debug("Making quality scores plot took %s seconds", round(time.time() - quality_start, 3))

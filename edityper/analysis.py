@@ -9,10 +9,8 @@ import sys
 PYTHON_VERSION = sys.version_info.major
 
 import os
-import re
 import time
 import logging
-import warnings
 import itertools
 from math import floor, ceil
 from collections import Counter, defaultdict, namedtuple
@@ -243,7 +241,7 @@ def display_classification(
         4: 'DISCARD'
     }
     counted_total = 0 # type: int
-    hdr_indels = 0 # type: int
+    # hdr_indels = 0 # type: int
     total_counts = dict.fromkeys(iter_tag.values(), 0) # type: Dict[str, int]
     with open(output_name, 'w') as cfile:
         cfile.write(_fastq_header(fastq_name=fastq_name, fastq_path=fastq_path) + '\n')
@@ -296,7 +294,7 @@ def display_classification(
                 del_total, perc_del = event_counts['deletions'], percent(num=event_counts['deletions'], total=count)
                 ins_total, perc_ins = event_counts['insertions'], percent(num=event_counts['insertions'], total=count)
                 indel_total, perc_indel = event_counts['indels'], percent(num=event_counts['indels'], total=count)
-                hdr_indels = indel_total
+                # hdr_indels = indel_total
             else:
                 none_total, perc_none = NA, NA
                 del_total, perc_del = NA, NA
@@ -335,4 +333,5 @@ def display_classification(
         else:
             logging.error("%s reads missing after classification", total_reads - counted_total)
         logging.warning(class_header)
-    return hdr_indels, total_counts
+    # return hdr_indels, total_counts
+    return total_counts
