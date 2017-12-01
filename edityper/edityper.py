@@ -343,13 +343,14 @@ def crispr_analysis(
         if reads_dict:
             unaligned_reads = tuple(itertools.chain.from_iterable(reads_dict.values())) # type: Tuple[toolkit.Read]
             logging.warning("FASTQ %s: %s reads unaligned...", fastq_name, len(unaligned_reads))
-            for read in unaligned_reads: # type: toolkit.Read
-                unaligned_sam = sam.SAM( # type: sam.SAM
-                    qname=read.name,
-                    seq=read.seq,
-                    qual=read.qual
-                )
-                sam_lines.append(unaligned_sam)
+            logging.warning("FASTQ %s: Not including unalingned reads in SAM output")
+            # for read in unaligned_reads: # type: toolkit.Read
+            #     unaligned_sam = sam.SAM( # type: sam.SAM
+            #         qname=read.name,
+            #         seq=read.seq,
+            #         qual=read.qual
+            #     )
+            #     sam_lines.append(unaligned_sam)
         sam_lines = tuple(sorted(sam_lines)) # type: Tuple[sam.SAM]
         #   Make the header
         rg_header = sam.make_read_group(sam_lines=sam_lines, conf_dict=args_dict) # type: Tuple[str]
