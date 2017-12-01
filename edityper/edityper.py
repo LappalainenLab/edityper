@@ -343,7 +343,7 @@ def crispr_analysis(
         if reads_dict:
             unaligned_reads = tuple(itertools.chain.from_iterable(reads_dict.values())) # type: Tuple[toolkit.Read]
             logging.warning("FASTQ %s: %s reads unaligned...", fastq_name, len(unaligned_reads))
-            logging.warning("FASTQ %s: Not including unalingned reads in SAM output")
+            logging.warning("FASTQ %s: Not including unalingned reads in SAM output", fastq_name)
             # for read in unaligned_reads: # type: toolkit.Read
             #     unaligned_sam = sam.SAM( # type: sam.SAM
             #         qname=read.name,
