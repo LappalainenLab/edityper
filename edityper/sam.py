@@ -406,51 +406,6 @@ class SAM(object):
     program = property(fget=_get_program, fset=_set_program, doc="Program used to make SAM file")
 
 
-# def get_genomic_location(bedfile): # type: (str) -> (str, int)
-#     """Get the chromosome and start location of the first line in a BED or GTF/GFF file, returns 1-based coordinates"""
-#     logging.info("Finding genomic location of the reference sequence")
-#     genomic_start = time.time() # type: float
-#     extension = os.path.splitext(bedfile)[1].lower() # type: str
-#     if extension != '.bed':
-#         raise ValueError("Currently, only BED files are supported at this time")
-#     start_index, position_modifier = 1, 1 # type: int, int
-#     # if extension in ('.gtf', '.gff'):
-#     #     logging.warning("Reading %s as GTF/GFF file", bedfile)
-#     #     start_index, position_modifier = 3, 0 # type: int, int
-#     # elif extension == '.bed':
-#     #     logging.info("Reading %s", bedfile)
-#     #     start_index, position_modifier = 1, 1 # type: int, int
-#     # else:
-#     #     logging.warning("Could not identify annotation file type, assuming BED format")
-#     #     extension = '.bed' # type: str
-#     #     start_index, position_modifier = 1, 1 # type: int, int
-#     with open(bedfile, 'r') as bfile: # type: _io.TextIOWrapper
-#         completed = dict.fromkeys(('global', 'local')) # type: Dict[str, Optional[bool]]
-#         for line in bfile: # type: str
-#             line = line.strip() # type: str
-#             if line.startswith(('browser', 'track', '#')):
-#                 continue
-#             line = line.split() # type: str
-#             if len(line) != 4:
-#                 raise ValueError(logging.critical("Malformed BED file"))
-#             gl_type = line[3]
-#             try:
-#                 completed[gl_type] = True
-#             except KeyError:
-#                 continue
-#             chrom = line[0] # type: str
-#             if gl_type == 'global':
-#                 genomic_range = int(line[start_index + 1]) - int(line[start_index]) # type: int
-#             elif gl_type == 'local':
-#                 genomic_start = int(line[start_index]) + position_modifier # type: int
-#             if all(completed.values()):
-#                 break
-#         else:
-#             raise ValueError("Could not parse %s file" % extension.upper().replace('.', ''))
-#     logging.debug("Finding the genomic location took %s seconds", round(time.time() - genomic_start, 3))
-#     return chrom, genomic_start, genomic_range
-
-
 def get_genomic_location(bedfile): # type: (str) -> (str, int)
     """Get the chromosome and start location of the first line in a BED or GTF/GFF file, returns 1-based coordinates"""
     logging.info("Finding genomic location of the reference sequence")
@@ -472,7 +427,6 @@ def get_genomic_location(bedfile): # type: (str) -> (str, int)
             if line.startswith(('browser', 'track', '#')):
                 continue
             line = line.split() # type: str
-            # return line[0], int(line[start_index]) + position_modifier
             try:
                 chrom = line[0] # type: str
                 genomic_location = int(line[start_index]) + position_modifier # type: int
@@ -623,45 +577,57 @@ def make_sequence_header(
     return tuple(sq_header)
 
 
-def calc_read_pos(alignment, genomic_start=0): # type: (alignment.Alignment, Optional[int]) -> int
+# def calc_read_pos(alignment, genomic_start=0): # type: (alignment.Alignment, Optional[int]) -> int
+#     """Calculate read position"""
+#     reference = alignment.reference # type: str
+#     read = alignment.read # type: str
+#     #   Trim the sequences
+#     ref_head, ref_tail = toolkit.trim_interval(seq=reference) # type: int, int
+#     reference = reference[ref_head:ref_tail] # type: str
+#     read = read[ref_head:ref_tail] # type: str
+#     read_head, read_tail = toolkit.trim_interval(seq=read) # type: int, int
+#     reference = reference[read_head:read_tail] # type: str
+#     read = read[read_head:read_tail] # type: str
+#     #   Remove insertions
+#     insertions = toolkit.find_gaps(seq=reference) # type: List[Tuple[int, int]]
+#     reference = list(reference) # type: List[str]
+#     read = list(read) # type: List[str]
+#     for ins_start, ins_length in insertions: # type: int, int
+#         for ins_index in range(ins_start, ins_start + ins_length): # type: int
+#             reference[ins_index] = ''
+#             read[ins_index] = ''
+#     reference = ''.join(reference) # type: str
+#     read = ''.join(read) # type: str
+#     #   Handle deletions
+#     deletions = toolkit.find_gaps(seq=read) # type: List[Tuple[int, int]]
+#     reference = list(reference) # type: List[str]
+#     read = list(read) # type: List[str]
+#     for del_start, del_length in deletions: # type: int, int
+#         for del_index in range(del_start, del_start + del_length):
+#             reference[del_index] = ''
+#             read[del_index] = ''
+#     reference = ''.join(reference) # type: str
+#     read = ''.join(read) # type: str
+#     #   Handle mismatches
+#     nmis = len(toolkit.get_mismatch(seq_a=reference, seq_b=read)) # type: int
+#     try:
+#         match_start = regex.match(r'(%s){s<=%s}' % (read, nmis), reference, regex.BESTMATCH).start() # type: int
+#     except AttributeError:
+#         logging.debug("Failed with new method for calculating read position, reverting to old method")
+#         return _old_calc(alignment=alignment) + genomic_start
+#     return match_start + read_head + genomic_start
+
+def calc_read_pos(alignment, genomic_start=0): # type: (alignment.Alignment, int) -> int
     """Calculate read position"""
-    reference = alignment.reference # type: str
-    read = alignment.read # type: str
-    #   Trim the sequences
-    ref_head, ref_tail = toolkit.trim_interval(seq=reference) # type: int, int
-    reference = reference[ref_head:ref_tail] # type: str
-    read = read[ref_head:ref_tail] # type: str
-    read_head, read_tail = toolkit.trim_interval(seq=read) # type: int, int
-    reference = reference[read_head:read_tail] # type: str
-    read = read[read_head:read_tail] # type: str
-    #   Remove insertions
-    insertions = toolkit.find_gaps(seq=reference) # type: List[Tuple[int, int]]
-    reference = list(reference) # type: List[str]
-    read = list(read) # type: List[str]
-    for ins_start, ins_length in insertions: # type: int, int
-        for ins_index in range(ins_start, ins_start + ins_length): # type: int
-            reference[ins_index] = ''
-            read[ins_index] = ''
-    reference = ''.join(reference) # type: str
-    read = ''.join(read) # type: str
-    #   Handle deletions
-    deletions = toolkit.find_gaps(seq=read) # type: List[Tuple[int, int]]
-    reference = list(reference) # type: List[str]
-    read = list(read) # type: List[str]
-    for del_start, del_length in deletions: # type: int, int
-        for del_index in range(del_start, del_start + del_length):
-            reference[del_index] = ''
-            read[del_index] = ''
-    reference = ''.join(reference) # type: str
-    read = ''.join(read) # type: str
-    #   Handle mismatches
-    nmis = len(toolkit.get_mismatch(seq_a=reference, seq_b=read)) # type: int
-    try:
-        match_start = regex.match(r'(%s){s<=%s}' % (read, nmis), reference, regex.BESTMATCH).start() # type: int
-    except AttributeError:
-        logging.debug("Failed with new method for calculating read position, reverting to old method")
-        return _old_calc(alignment=alignment) + genomic_start
-    return match_start + read_head + genomic_start
+    head, tail = toolkit.trim_interval(seq=alignment.read) # type: int, int
+    cigar = make_cigar(alignment=alignment) # type: str
+    first_consumed = regex.search(r'(\d+[MDN=X])', cigar) # type: _regex.Match
+    if not first_consumed:
+        raise ValueError("Read did not align to reference")
+    cigar = cigar[:first_consumed.start()] # type: str
+    not_consumed = regex.findall(r'\d+', cigar) # type: List[str]
+    not_consumed = map(int, not_consumed) # type: Iterable[str]
+    return head + genomic_start + sum(not_consumed)
 
 
 def bam(fastq_name, samfile, samtools, index_type): # type: (str, str, str, str) -> None
