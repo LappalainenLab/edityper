@@ -56,6 +56,29 @@ class ExitPool(Exception):
         self.msg = msg
 
 
+class StrippedFormatter(logging.Formatter):
+    """A formatter where all ANSI formatting is removed"""
+
+    def __init__(self, *args, **kwargs):
+        logging.Formatter.__init__(self, *args, **kwargs)
+
+    def format(self, record): # type: (logging.LogRecord) -> str
+        """Strip ANSI formatting from log messages"""
+        message = logging.Formatter.format(self, record) # type: str
+        while True:
+            #   In Python, '\x1b' == '\033', so both codes for ANSI formatting are covered
+            start = message.find('\x1b') # type: int
+            #   If no ASI formatting is found break
+            if start == -1:
+                break
+            #   Find the first 'm' after the ANSI code start
+            #   and remove everything between and including
+            #   the ANSI code start and the 'm'
+            m_pos = message.find('m', start) # type: int
+            message = message[:start] + message[m_pos + 1:]
+        return message
+
+
 class ColoredFormatter(logging.Formatter):
     """A colorized formatter for logging"""
 
@@ -73,7 +96,7 @@ class ColoredFormatter(logging.Formatter):
         logging.Formatter.__init__(self, *args, **kwargs)
 
     def format(self, record): # type: (logging.LogRecord) -> str
-        """Colorize to console"""
+        """Colorize log messages"""
         message = logging.Formatter.format(self, record) # type: str
         if sys.platform not in ('win32', 'cygwin'):
             color_level = min(self._colors.keys(), key=lambda level: abs(level - record.levelno)) # type: int

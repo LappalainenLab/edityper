@@ -324,6 +324,9 @@ def crispr_analysis(
             position = sam.calc_read_pos(alignment=aligned, genomic_start=args_dict['genomic_start']) # type: int
             cigar = sam.make_cigar(alignment=aligned) # type: str
             sam_seq = sam.make_sam_sequence(alignment=aligned, head=head, tail=tail) # type: str
+            quals = tuple(read.qual for read in supporting_reads) # type: str
+            if do_reverse:
+                quals = tuple(map(lambda q: q[::-1], quals)) # type: str
             sams = map( # type: Iterable[sam.SAM]
                 sam.SAM,
                 (read.name for read in supporting_reads), # qname=
@@ -336,7 +339,8 @@ def crispr_analysis(
                 itertools.repeat(0), # pnext=
                 itertools.repeat(0), # tlen=
                 itertools.repeat(sam_seq), # seq=
-                (read.qual for read in supporting_reads) # qual=
+                # (read.qual for read in supporting_reads) # qual=
+                quals # qual=
             )
             sam_lines.extend(sams)
             count += 1
@@ -431,8 +435,10 @@ def main():
     #   Formatting values
     log_format = '%(asctime)s %(levelname)s:\t%(message)s' # type: str
     date_format = '%Y-%m-%d %H:%M:%S' # type: str
-    formatter = logging.Formatter(fmt=log_format, datefmt=date_format) # type: logging.Formatter
-    #   Open /dev/null (or whatever it is on Windows) to send stream information to
+    #   Formatters
+    stripped_formatter = toolkit.StrippedFormatter(fmt=log_format, datefmt=date_format) # toolkit.StrippedFormatter
+    colored_formater = toolkit.ColoredFormatter(fmt=log_format, datefmt=date_format) # type: toolkit.ColoredFormatter
+    #   Open /dev/null (or whatever it is on Windows) to send basic stream information to
     devnull = open(os.devnull, 'w')
     #   Configure the logger
     verbosity = _set_verbosity(level=args['verbosity']) # type: int
@@ -446,27 +452,16 @@ def main():
         logging.captureWarnings(True)
     else:
         warnings.filterwarnings('ignore')
-    # #   Setup a FileHandler for any logging to a file we may do
-    # try:
-    #     logfile = logging.FileHandler(filename=args['logfile'], mode='w') # type: Logging.FileHandler
-    #     logfile.setFormatter(formatter)
-    #     logging.getLogger().addHandler(logfile)
-    # except KeyError:
-    #     pass
     #   Setup a FileHandler for the log file
+    #   Use a StrippedFormatter to remove extra ANSI color codes
     logname = output_prefix + '.log'
     logfile = logging.FileHandler(filename=logname, mode='w') # type: Logging.FileHandler
-    logfile.setFormatter(formatter)
+    logfile.setFormatter(stripped_formatter)
     logging.getLogger().addHandler(logfile)
     #   Setup the console handler
-    #   Colorize the entire line
-    colored_formater = toolkit.ColoredFormatter(fmt=log_format, datefmt=date_format) # type: toolkit.ColoredFormatter
+    #   Use a ColoredFormatter because colors are cool
     console = logging.StreamHandler() # type: logging.StreamHandler
     console.setFormatter(colored_formater)
-    # #   Colorize just the message
-    # handler = logging.StreamHandler() # type: logging.StreamHandler
-    # console = toolkit.ColoredStreamHandler() # type: toolkit.ColoredStreamHandler
-    # console.setFormatter(formatter)
     logging.getLogger().addHandler(console)
     #   Begin the program
     logging.info("Welcome to %s!", os.path.basename(sys.argv[0]))
@@ -525,8 +520,6 @@ def main():
     template_reference_mismatch = toolkit.get_mismatch(seq_a=aligned_reference.sequence, seq_b=aligned_template.sequence) # type: List
     if not template_reference_mismatch:
         raise ValueError(logging.error("There must be at least one mismatch between the template and reference sequences"))
-    # if len(template_reference_mismatch) > 1 and args['analysis_mode'] == 'SNP':
-    #     raise ValueError(logging.error("There can only be one mismatch between the template and reference sequences in SNP mode"))
     if len(template_reference_mismatch) != len(args['analysis_mode']):
         msg = "There can only be %(num)s mismatches in '%(mode)s' mode" % { # type: str
             'num': len(args['analysis_mode']),
@@ -556,7 +549,7 @@ def main():
         fastq_list = toolkit.find_fastq(directory=args['fastq_directory']) # type: Tuple[str]
     else:
         sys.exit(logging.critical("No inputs provided"))
-    zipped_args = zip(
+    zipped_args = zip( # type: Iterable[str, NamedSequence, toolkit.NamedSequence, Dict[str, Any], SNP, str]
         fastq_list,
         itertools.repeat(reference),
         itertools.repeat(aligned_reference),
@@ -585,7 +578,7 @@ def main():
             #   Use map_async and get with a large timeout
             #   to allow for KeyboardInterrupts to be caught
             #   and handled with the try/except
-            timeout = max((9999, 600 * len(fastq_list)))
+            timeout = max((9999, 600 * len(fastq_list))) # type: int
             logging.debug("Setting timeout to %s seconds", timeout)
             res = pool.map_async(crispr_analysis, zipped_args) # type: multiprocessing.pool.MapResult
             pool.close()
