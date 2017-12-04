@@ -42,6 +42,8 @@ EdiTyper -r reference.fasta -t template.fasta -i sample.fastq
 
 We classify the unique reads based on their alignment with the reference. HDR are reads with the right SNP edited to the target SNP as identified in the template sequence, and no deletion and no insertions but tolerate mismatches. If there are insertions or deletions then the read is classified as MIX, which is a HDR with indels. If the SNP of interest is not edited and there are no indels, then the read is unchanged (NO_EDIT). Otherwise, the read is a NHEJ.
 
+![](.classification_scheme.svg)
+
 ## Arguments
 
 ### Alignment Arguments
