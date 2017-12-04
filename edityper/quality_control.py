@@ -37,13 +37,13 @@ random.seed(a=time.time())
 def align_reference(reference, template, gap_penalty): # type: (str, str, int) -> (str, str)
     """Align our template to our reference"""
     logging.info("Aligning reference and template sequences")
-    align_start = time.time()
-    fwd_ref, fwd_template, fwd_qual_score = nw_align.align_glocal(
+    align_start = time.time() # type: float
+    fwd_ref, fwd_template, fwd_qual_score = nw_align.align_glocal( # type: str, str, int
         seq_1=reference,
         seq_2=template,
         gap_penalty=gap_penalty
     )
-    rev_ref, rev_template, rev_qual_score = nw_align.align_glocal(
+    rev_ref, rev_template, rev_qual_score = nw_align.align_glocal( # type: str, str, int
         seq_1=reference,
         seq_2=toolkit.reverse_complement(sequence=template),
         gap_penalty=gap_penalty
@@ -57,13 +57,13 @@ def align_reference(reference, template, gap_penalty): # type: (str, str, int) -
         return fwd_ref, fwd_template
 
 
-def get_snp_states(reference, template, mismatch): # type: (str, str, List, str) -> (int, str, str)
+def get_snp_states(reference, template, mismatch): # type: (str, str, List[int, Tuple[str]]) -> (int, str, str)
     """Get the SNP states from our alignment"""
     logging.info("Finding reference and template SNP states")
-    snp_start = time.time()
-    snp_index = mismatch[0]
-    reference_state = reference[snp_index]
-    target_snp = template[snp_index]
+    snp_start = time.time() # type: float
+    snp_index = mismatch[0] # type: int
+    reference_state = reference[snp_index] # type: str
+    target_snp = template[snp_index] # type: str
     logging.debug("Finding reference and template SNP states took %s seconds", round(time.time() - snp_start, 3))
     return snp_index, reference_state, target_snp
 
@@ -76,33 +76,33 @@ def determine_alignment_direction(
         gap_extension, # type: int
         pvalue_threshold # type: float
 ):
-    # type: (...) -> None
+    # type: (...) -> (float, float, float, float)
     """Deterime if we're aligning our reads in the forward or reverse direction"""
     logging.info("FASTQ %s: determining alignment direction", fastq_name)
-    determine_start = time.time()
-    ten_percent = int(round(0.1 * len(unique_reads)) + 1)
+    determine_start = time.time() # type: float
+    ten_percent = int(round(0.1 * len(unique_reads)) + 1)# type: int
     sampled_reads = random.sample(unique_reads, k=min((500, ten_percent))) # Sample at most 500 reads
-    permutate = lambda read: ''.join(random.sample(read, k=len(read)))
-    ref_rc = toolkit.reverse_complement(sequence=reference)
-    norm_scores, perm_scores, rev_scores, perm_rev = list(), list(), list(), list()
+    permutate = lambda read: ''.join(random.sample(read, k=len(read))) # type: function
+    ref_rc = toolkit.reverse_complement(sequence=reference) # type: str
+    norm_scores, perm_scores, rev_scores, perm_rev = list(), list(), list(), list() # type: List, List, List, List
     for read in sampled_reads:
-        perm_read = permutate(read)
-        _, _, score = nw_align.align_aff(seq_1=reference, seq_2=read, gap_op=gap_open, gap_ext=gap_extension)
-        _, _, rev_score = nw_align.align_aff(seq_1=ref_rc, seq_2=read, gap_op=gap_open, gap_ext=gap_extension)
-        _, _, perm_score = nw_align.align_aff(seq_1=reference, seq_2=perm_read, gap_op=gap_open, gap_ext=gap_extension)
-        _, _, rev_perm = nw_align.align_aff(seq_1=ref_rc, seq_2=perm_read, gap_op=gap_open, gap_ext=gap_extension)
+        perm_read = permutate(read) # type: str
+        _, _, score = nw_align.align_aff(seq_1=reference, seq_2=read, gap_op=gap_open, gap_ext=gap_extension) # type: _, _, float
+        _, _, rev_score = nw_align.align_aff(seq_1=ref_rc, seq_2=read, gap_op=gap_open, gap_ext=gap_extension) # type: _, _, float
+        _, _, perm_score = nw_align.align_aff(seq_1=reference, seq_2=perm_read, gap_op=gap_open, gap_ext=gap_extension) # type: _, _, float
+        _, _, rev_perm = nw_align.align_aff(seq_1=ref_rc, seq_2=perm_read, gap_op=gap_open, gap_ext=gap_extension) # type: _, _, float
         norm_scores.append(score)
         perm_scores.append(perm_score)
         rev_scores.append(rev_score)
         perm_rev.append(rev_perm)
-    norm_median = numpy.median(norm_scores)
-    rev_median = numpy.median(rev_scores)
+    norm_median = numpy.median(norm_scores) # type: float
+    rev_median = numpy.median(rev_scores) # type: float
     do_reverse = rev_median > norm_median
     if do_reverse:
-        threshold = numpy.std(perm_rev) * norm.pdf(1 - pvalue_threshold) + numpy.median(perm_rev)
+        threshold = numpy.std(perm_rev) * norm.pdf(1 - pvalue_threshold) + numpy.median(perm_rev) # type: float
     else:
-        threshold = numpy.std(perm_scores) * norm.pdf(1 - pvalue_threshold) + numpy.median(perm_scores)
-    msg = 'Aligning in the %s direction' % ('reverse' if do_reverse else 'forward')
+        threshold = numpy.std(perm_scores) * norm.pdf(1 - pvalue_threshold) + numpy.median(perm_scores) # type: float
+    msg = 'Aligning in the %s direction' % ('reverse' if do_reverse else 'forward') # type: str
     logging.warning("FASTQ %s: %s", fastq_name, msg)
     logging.warning("FASTQ %s: %s vs %s (norm vs reverse) - threshold: %s", fastq_name, norm_median, rev_median, threshold)
     logging.debug("FASTQ %s: Determinging alignment direction took %s seconds", fastq_name, round(time.time() - determine_start, 3))
