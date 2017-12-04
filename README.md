@@ -59,7 +59,7 @@ We classify the unique reads based on their alignment with the reference. HDR ar
 | --------- | ---------- | --------- |
 | `-r | --reference-sequence` | Reference FASTA for alignment | **Yes** |
 | `-t | --template-sequence` | Template sequence for CRISPR editing | **Yes** |
-| `-b | --reference-bed` | A BED file with the genomic location of the reference sequence. Used to get chromosome name and sequence start point. Only the first entry will be read; any line starting with 'browser', 'track' or '`#`' will be ignored | No |
+| `-b | --reference-bed` | A BED file with the genomic location of the reference sequence. Used to get chromosome name and sequence start point. Only the first entry will be read; any line starting with 'browser', 'track' or '`#`' will be ignored. Please ensure this is a _zero_-based BED file | No |
 
 ### Input Arguments
 
