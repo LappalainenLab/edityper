@@ -251,7 +251,7 @@ class SAM(object):
         self._mapq = mapq # alignment.Alignment.score
         self._cigar = cigar # From write_sam.make_cigar_sequence()
         self._rnext = rnext # Not used for CRISPR program
-        self._pnext = pnext + 1 if zero_based else pnext # Not used for CRISPR program
+        self._pnext = pnext + 1 if zero_based and rnext != '*' else pnext # Not used for CRISPR program
         self._tlen = tlen # Not used for CRISPR program
         self._seq = seq # From write_sam.make_cigar_sequence()
         self._qual = qual # toolkit.Read.qual
@@ -271,7 +271,7 @@ class SAM(object):
             self._qname,
             self._flag,
             self._rname,
-            self._pos + 1 if self._pos > 0 else self._pos,
+            self._pos,
             self._mapq,
             self._cigar,
             self._rnext,
@@ -280,7 +280,7 @@ class SAM(object):
             self._seq,
             self._qual,
         )
-        out = filter(lambda x: x is not None, out) # type: Tuple[Any]
+        out = filter(lambda x: x is not None, out) # type: Iterable[Any]
         out = list(map(str, out)) # type: List[str]
         out += [':'.join((tag, tup[0], tup[1])) for tag, tup in sorted(self._metadata.items(), key=lambda tup: tup[0])]
         return '\t'.join(out)
@@ -413,14 +413,14 @@ def get_genomic_location(bedfile): # type: (str) -> (str, int)
     extension = os.path.splitext(bedfile)[1].lower() # type: str
     if extension in ('.gtf', '.gff'):
         logging.warning("Reading %s as GTF/GFF file", bedfile)
-        start_index, position_modifier = 3, 0 # type: int, int
+        start_index, position_modifier = 3, -1 # type: int, int
     elif extension == '.bed':
         logging.info("Reading %s", bedfile)
-        start_index, position_modifier = 1, 1 # type: int, int
+        start_index, position_modifier = 1, 0 # type: int, int
     else:
         logging.warning("Could not identify annotation file type, assuming BED format")
         extension = '.bed' # type: str
-        start_index, position_modifier = 1, 1 # type: int, int
+        start_index, position_modifier = 1, 0 # type: int, int
     with open(bedfile, 'r') as bfile: # type: _io.TextIOWrapper
         for line in bfile: # type: str
             line = line.strip() # type: str
@@ -619,7 +619,7 @@ def make_sequence_header(
 
 def calc_read_pos(alignment, genomic_start=0): # type: (alignment.Alignment, int) -> int
     """Calculate read position"""
-    head, tail = toolkit.trim_interval(seq=alignment.read) # type: int, int
+    head, _ = toolkit.trim_interval(seq=alignment.read) # type: int, int
     cigar = make_cigar(alignment=alignment) # type: str
     first_consumed = regex.search(r'(\d+[MDN=X])', cigar) # type: _regex.Match
     if not first_consumed:
@@ -627,6 +627,7 @@ def calc_read_pos(alignment, genomic_start=0): # type: (alignment.Alignment, int
     cigar = cigar[:first_consumed.start()] # type: str
     not_consumed = regex.findall(r'\d+', cigar) # type: List[str]
     not_consumed = map(int, not_consumed) # type: Iterable[str]
+    # import code; code.interact(local=locals()); sys.exit()
     return head + genomic_start + sum(not_consumed)
 
 
