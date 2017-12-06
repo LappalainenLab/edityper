@@ -315,18 +315,26 @@ def crispr_analysis(
         reads_dict = defaultdict(list) # type: Mapping[str, List[toolkit.Read]]
         for read in reads:
             reads_dict[read.seq].append(read)
+        logging.debug("FASTQ %s: Making SAM lines", fastq_name)
         for aligned in itertools.chain.from_iterable(alignments.values()): # type: alignment.Alignment
             if str(aligned) in discard:
+                logging.debug("FASTQ %s: Reads matching %s are discarded, moving on", fastq_name, str(aligned))
                 continue
             head, tail = toolkit.trim_interval(seq=aligned.read) # type: int, int
             unaligned = toolkit.reverse_complement(sequence=aligned.unaligned) if do_reverse else aligned.unaligned # type: str
             supporting_reads = tuple(reads_dict.pop(unaligned)) # type: Tuple[toolkit.Read]
+            logging.debug("FASTQ %s: %s supporting reads for %s sequence", fastq_name, len(supporting_reads), str(aligned))
+            logging.debug("FASTQ %s: Find alignment position for %s sequence", fastq_name, str(aligned))
             position = sam.calc_read_pos(alignment=aligned, genomic_start=args_dict['genomic_start']) # type: int
+            logging.debug("FASTQ %s: Making CIGAR string for %s sequence", fastq_name, str(aligned))
             cigar = sam.make_cigar(alignment=aligned) # type: str
+            logging.debug("FASTQ %s: Making SAM-formatted sequence for %s", fastq_name, str(aligned))
             sam_seq = sam.make_sam_sequence(alignment=aligned, head=head, tail=tail) # type: str
+            logging.debug("FASTQ %s: Finding quality scores for %s sequence", fastq_name, str(aligned))
             quals = tuple(read.qual for read in supporting_reads) # type: str
             if do_reverse:
                 quals = tuple(map(lambda q: q[::-1], quals)) # type: str
+            logging.debug("FASTQ %s: Making %s SAM lines for %s", fastq_name, len(supporting_reads), str(aligned))
             sams = map( # type: Iterable[sam.SAM]
                 sam.SAM,
                 (read.name for read in supporting_reads), # qname=
@@ -355,9 +363,12 @@ def crispr_analysis(
             #         qual=read.qual
             #     )
             #     sam_lines.append(unaligned_sam)
+        logging.debug("FASTQ %s: Sorting SAM lines by coordinate", fastq_name)
         sam_lines = tuple(sorted(sam_lines)) # type: Tuple[sam.SAM]
         #   Make the header
+        logging.debug("FASTQ %s: Making read group header")
         rg_header = sam.make_read_group(sam_lines=sam_lines, conf_dict=args_dict) # type: Tuple[str]
+        logging.debug("FASTQ %s: Making sequence header")
         sq_header = sam.make_sequence_header( # type: Tuple[str]
             sam_lines=sam_lines,
             ref_seq_dict={reference.name: (reference.sequence, args_dict['genomic_start'])}
