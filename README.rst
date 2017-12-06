@@ -151,7 +151,7 @@ Output Arguments
 |                             | batch output files (summary, quality plot, etc)              |            |
 +-----------------------------+--------------------------------------------------------------+------------+
 | ``--bam``                   | Convert SAM files to BAM files, optionally use CSI indices   | None       |
-|                             | instead of BAI indices with ``--bam csi`` requires           |            |
+|                             | instead of BAI indices with ``--bam csi``; requires          |            |
 |                             | `SAMtools <https://github.com/samtools/samtools>`__          |            |
 +-----------------------------+--------------------------------------------------------------+------------+
 
