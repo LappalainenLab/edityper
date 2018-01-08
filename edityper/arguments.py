@@ -99,7 +99,7 @@ def make_argument_parser():
         default=_MODE_DEFAULT,
         required=False,
         metavar='analysis mode',
-        help="Set the analysis mode, specified by a combination of 'SNP' and 'PAM' separated by '+' (eg. SNP+PAM), must contain at least one 'SNP'; defaults to '%s'" % _MODE_DEFAULT
+        help="Set the analysis mode, specified by a combination of 'SNP' (mismatch to analyze) and 'PAM' (mismatches to treat as NHEJ) separated by '+' (eg. SNP+PAM, PAM+SNP, PAM+PAM+SNP+PAM), must contain at least one 'SNP'; defaults to '%s'" % _MODE_DEFAULT
     )
     align_opts.add_argument( # p-value threshold
         '-p',

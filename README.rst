@@ -74,6 +74,17 @@ Alignment Arguments
 +-----------------------------+--------------------------+------------+------------+
 | Parameter                   | Definition               | Required?  | Default    |
 +=============================+==========================+============+============+
+| ``-m | --analysis-mode``    | Set which mismatch       | No         | SNP        |
+|                             | between the reference    |            |            |
+|                             | and template sequences   |            |            |
+|                             | gets analyzed (SNP) and  |            |            |
+|                             | which are treated as     |            |            |
+|                             | NHEJ (PAM). Specified as |            |            |
+|                             | a 'SNP' and a series     |            |            |
+|                             | 'PAM's separated by      |            |            |
+|                             | '+' characters           |            |            |
+|                             | (eg. SNP+PAM, PAM+SNP)   |            |            |
++-----------------------------+--------------------------+------------+------------+
 | ``-p | --pvalue-threshold`` | Set the threshold for    | No         | 1 \*10-3   |
 |                             | the alignment            |            |            |
 +-----------------------------+--------------------------+------------+------------+
