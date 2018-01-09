@@ -106,7 +106,7 @@ def events_report(
         cummul_del, # type: Dict[int, int]
         coverage, # type: Dict[int, int]
         reference, # type: str
-        snp_info, # type: SNP
+        snp_info, # type: Optional[SNP]
         output_prefix # type: str
 ):
     # type: (...) -> None
@@ -133,7 +133,8 @@ def events_report(
     with open(output_name, 'w') as efile:
         logging.info("FASTQ %s: Writing events table to %s", fastq_name, output_name)
         efile.write(_fastq_header(fastq_name=fastq_name, fastq_path=fastq_path) + '\n')
-        efile.write(_snp_header(snp_info=snp_info) + '\n')
+        if snp_info:
+            efile.write(_snp_header(snp_info=snp_info) + '\n')
         efile.write('\t'.join(header) + '\n')
         efile.flush()
         for index, base in enumerate(reference):
@@ -179,7 +180,7 @@ def display_classification(
         fastq_path, # type: str
         classifications, # type: Tuple[Dict[str, Events]]
         unique_reads, # type: Mapping[str, int]
-        snp_info, # type: SNP
+        snp_info, # type: Optional[SNP]
         fwd_score, # type: float
         rev_score, # type: float
         score_threshold, # type: float
@@ -245,7 +246,8 @@ def display_classification(
     total_counts = dict.fromkeys(iter_tag.values(), 0) # type: Dict[str, int]
     with open(output_name, 'w') as cfile:
         cfile.write(_fastq_header(fastq_name=fastq_name, fastq_path=fastq_path) + '\n')
-        cfile.write(_snp_header(snp_info=snp_info) + '\n')
+        if snp_info:
+            cfile.write(_snp_header(snp_info=snp_info) + '\n')
         cfile.write('\t'.join(read_header) + '\n')
         cfile.write('\t'.join(score_header) + '\n')
         cfile.write('\t'.join(category_header) + '\n')

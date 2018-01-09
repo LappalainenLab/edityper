@@ -252,7 +252,7 @@ def get_mismatch(
         tail=None, # type: Optional[int]
         matches=False # type: bool
 ):
-    # type: (...) -> (List[int, Tuple[str]], Optional[List[int]])
+    # type: (...) -> (List[Tuple[int, Tuple[str]]], Optional[List[int]])
     '''Get mismatches between two sequences after trimming head/tail gaps
     Optionally, get indecies where the sequences match as well'''
     if len(seq_a) != len(seq_b):

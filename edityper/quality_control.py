@@ -23,9 +23,11 @@ try:
     if PYTHON_VERSION is 3:
         from edityper import toolkit
         from edityper import nw_align
+        from edityper.analysis import NA
     elif PYTHON_VERSION is 2:
         import toolkit
         import nw_align
+        from analysis import NA
     else:
         raise SystemExit("Please use Python 2 or 3 for this module: " + __name__)
 except ImportError as error:
@@ -62,8 +64,14 @@ def get_snp_states(reference, template, mismatch): # type: (str, str, List[int, 
     logging.info("Finding reference and template SNP states")
     snp_start = time.time() # type: float
     snp_index = mismatch[0] # type: int
-    reference_state = reference[snp_index] # type: str
-    target_snp = template[snp_index] # type: str
+    try:
+        reference_state = reference[snp_index] # type: str
+    except (TypeError, IndexError):
+        reference = NA
+    try:
+        target_snp = template[snp_index] # type: str
+    except (TypeError, IndexError):
+        target_snp = NA
     logging.debug("Finding reference and template SNP states took %s seconds", round(time.time() - snp_start, 3))
     return snp_index, reference_state, target_snp
 

@@ -74,6 +74,22 @@ def _check_suppressions(suppressions): # type: (Dict[str, bool]) -> bool
     return suppressions['suppress_plots'] and suppressions['suppress_sam'] and (suppressions['suppress_tables'] or suppress_tables)
 
 
+def _is_snp(snp): # type: (SNP) -> bool
+    valid_bases = 'ACGT'
+    try:
+        assert isinstance(snp.reference, str)
+        assert isinstance(snp.target, str)
+        assert isinstance(snp.position, int)
+        assert snp.reference != snp.target
+        assert snp.reference in valid_bases
+        assert snp.target in valid_bases
+        assert snp.position > 0
+    except AssertionError:
+        return False
+    else:
+        return True
+
+
 def crispr_analysis(
         tup_args # type: Tuple[str, toolkit.NamedSequence, toolkit.NamedSequence, Dict[str, Any], SNP, str]
 ):
@@ -207,12 +223,15 @@ def crispr_analysis(
             for match_position in matches: # type: int
                 counts['matches'][match_position] += num_reads
             results = Events(num_reads=num_reads, num_ins=num_ins, num_del=num_del, num_mis=num_mis) # type: Events
-            # reposition the SNP index with deletion shift
-            new_snp_index = snp_info.position # type: int
-            while al_read_seq[new_snp_index] == '-' and new_snp_index < len(al_read_seq) -1: # Won't do anything if al_read_seq[new_snp_index] != '-'
-                new_snp_index += 1
-            snp_info_new = snp_info._replace(position=new_snp_index) # created new named tuple
-            if al_read_seq[snp_info_new.position] == snp_info_new.target:
+            if _is_snp(snp=snp_info):
+                # reposition the SNP index with deletion shift
+                new_snp_index = snp_info.position # type: int
+                while al_read_seq[new_snp_index] == '-' and new_snp_index < len(al_read_seq) -1: # Won't do anything if al_read_seq[new_snp_index] != '-'
+                    new_snp_index += 1
+                snp_info_new = snp_info._replace(position=new_snp_index) # created new named tuple
+            else:
+                snp_info_new = snp_info
+            if _is_snp(snp=snp_info_new) and al_read_seq[snp_info_new.position] == snp_info_new.target:
                 if all(map(lambda x: not x, (num_del, num_ins))):
                     hdr[str(aligned)] = results
                     read_assignments[unaligned] = ('HDR', results)
@@ -224,7 +243,7 @@ def crispr_analysis(
                     no_edit[str(aligned)] = results
                     read_assignments[unaligned] = ('NO_EDIT', results)
                 else:
-                    if num_ins != 0 and insertion_list[0][0] == snp_info.position: # if first insertion started on the snp index
+                    if _is_snp(snp=snp_info) and num_ins != 0 and insertion_list[0][0] == snp_info.position: # if first insertion started on the snp index
                         if read_w_ins[snp_info.position] == snp_info.target:
                             mix[str(aligned)] = results
                             read_assignments[unaligned] = ('MIX', results)
@@ -274,7 +293,7 @@ def crispr_analysis(
             fastq_path=fastq_file,
             classifications=classifications,
             unique_reads=unique_reads,
-            snp_info=snp_info,
+            snp_info=snp_info if _is_snp(snp=snp_info) else None,
             fwd_score=fwd_score,
             rev_score=rev_score,
             score_threshold=score_threshold,
@@ -290,7 +309,7 @@ def crispr_analysis(
             cummul_del=cummulative_deletions,
             coverage=coverage,
             reference=reference.sequence,
-            snp_info=snp_info,
+            snp_info=snp_info if _is_snp(snp=snp_info) else None,
             output_prefix=output_prefix
         )
     #   Make the locus plot
@@ -530,7 +549,8 @@ def main():
         raise ValueError(logging.error("Cannot have deletions in the template sequence"))
     template_reference_mismatch = toolkit.get_mismatch(seq_a=aligned_reference.sequence, seq_b=aligned_template.sequence) # type: List
     if not template_reference_mismatch:
-        raise ValueError(logging.error("There must be at least one mismatch between the template and reference sequences"))
+        logging.error("No mismatches found between the reference and template sequenecs, going into NHEJ-only mode")
+        template_reference_mismatch = list(itertools.repeat((None, ('',)), times=len(args['analysis_mode']))) # type: List[Tuple[None, Tuple[str]]]
     if len(template_reference_mismatch) != len(args['analysis_mode']):
         msg = "There can only be %(num)s mismatches in '%(mode)s' mode" % { # type: str
             'num': len(args['analysis_mode']),
@@ -664,9 +684,9 @@ def main():
                     sum_dict['total_reads'],
                     sum_dict['unique_reads'],
                     sum_dict['discarded'],
-                    snp.position + 1,
-                    snp.reference,
-                    snp.target,
+                    snp.position + 1 if _is_snp(snp=snp) else analysis.NA,
+                    snp.reference if _is_snp(snp=snp) else analysis.NA,
+                    snp.target if _is_snp(snp=snp) else analysis.NA,
                     sum_dict['no_edit'],
                     sum_dict['no_edit_perc'],
                     sum_dict['hdr'],
