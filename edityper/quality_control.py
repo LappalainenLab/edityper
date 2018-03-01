@@ -84,16 +84,16 @@ def determine_alignment_direction(
         gap_extension, # type: int
         pvalue_threshold # type: float
 ):
-    # type: (...) -> (float, float, float, float)
+    # type: (...) -> (bool, float, float, float)
     """Deterime if we're aligning our reads in the forward or reverse direction"""
     logging.info("FASTQ %s: determining alignment direction", fastq_name)
     determine_start = time.time() # type: float
-    ten_percent = int(round(0.1 * len(unique_reads)) + 1)# type: int
+    ten_percent = int(round(0.1 * len(unique_reads)) + 1) # type: int
     sampled_reads = random.sample(unique_reads, k=min((500, ten_percent))) # Sample at most 500 reads
     permutate = lambda read: ''.join(random.sample(read, k=len(read))) # type: function
     ref_rc = toolkit.reverse_complement(sequence=reference) # type: str
-    norm_scores, perm_scores, rev_scores, perm_rev = list(), list(), list(), list() # type: List, List, List, List
-    for read in sampled_reads:
+    norm_scores, perm_scores, rev_scores, perm_rev = list(), list(), list(), list() # type: List[float], List[float], List[float], List[float]
+    for read in sampled_reads: # type: str
         perm_read = permutate(read) # type: str
         _, _, score = nw_align.align_aff(seq_1=reference, seq_2=read, gap_op=gap_open, gap_ext=gap_extension) # type: _, _, float
         _, _, rev_score = nw_align.align_aff(seq_1=ref_rc, seq_2=read, gap_op=gap_open, gap_ext=gap_extension) # type: _, _, float
@@ -105,7 +105,7 @@ def determine_alignment_direction(
         perm_rev.append(rev_perm)
     norm_median = numpy.median(norm_scores) # type: float
     rev_median = numpy.median(rev_scores) # type: float
-    do_reverse = rev_median > norm_median
+    do_reverse = rev_median > norm_median # type: bool
     if do_reverse:
         threshold = numpy.std(perm_rev) * norm.pdf(1 - pvalue_threshold) + numpy.median(perm_rev) # type: float
     else:
