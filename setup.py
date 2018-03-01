@@ -27,19 +27,6 @@ from setuptools import setup
 from setuptools.extension import Extension
 from setuptools.command.install import install as _install
 
-#   Ensure Cython is available
-try:
-    from Cython.Distutils import build_ext
-except ImportError:
-    import pip
-    INSTALL_CYTHON = ['install', 'cython']
-    DEFAULT_DIR = tuple(filter(os.path.isdir, sys.path))[0]
-    if not os.access(os.path.join(DEFAULT_DIR, 'site_packages'), os.W_OK):
-        INSTALL_CYTHON.insert(1, '--user')
-    pip.main(INSTALL_CYTHON)
-    from Cython.Distutils import build_ext
-
-
 #   Some basic information
 NAME = 'EdiTyper'
 VERSION = '1.0.0'
@@ -49,6 +36,22 @@ DESCRIPTION = ''
 LICENSE = ''
 KEYWORDS = 'crispr rnaseq'
 URL = 'https://github.com/lappalainenlab/EdiTyper'
+
+#   Ensure Cython is available
+if 'Cython.Distutils' not in sys.modules:
+    try:
+        import pip
+    except ImportError:
+        sys.exit("Please install Cython before installing %s" % NAME)
+    else:
+        INSTALL_CYTHON = ['install', 'cython']
+        DEFAULT_DIR = tuple(filter(os.path.isdir, sys.path))[0]
+        if not os.access(os.path.join(DEFAULT_DIR, 'site_packages'), os.W_OK):
+            INSTALL_CYTHON.insert(1, '--user')
+        pip.main(INSTALL_CYTHON)
+
+
+from Cython.Distutils import build_ext
 
 #   A class to force install to run build first
 class install(_install):
