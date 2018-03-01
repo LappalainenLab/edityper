@@ -190,7 +190,7 @@ def load_fastq(fastq_file): # type: (str, Optional[str]) -> Tuple[Read]:
         with my_open(fastq_file, 'rt') as ffile:
             for read in FastqGeneralIterator(ffile): # type: Tuple[str, str, str]
                 name, seq, qual = read # type: str, str, str
-                reads.append(Read(name=name, seq=seq, qual=qual))
+                reads.append(Read(name=name, seq=seq.upper(), qual=qual))
     except (IOError, FileNotFoundError):
         raise ExitPool(logging.critical("Cannot find or read FASTQ file '%s'", fastq_file))
     logging.debug("Reading in FASTQ file '%s' took %s seconds", fastq_file, round(time.time() - read_start, 3))
