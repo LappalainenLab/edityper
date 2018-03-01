@@ -82,7 +82,8 @@ def determine_alignment_direction(
         reference, # type: str,
         gap_open, # type: int
         gap_extension, # type: int
-        pvalue_threshold # type: float
+        pvalue_threshold, # type: float
+        args_dict # type: Dict[str, Any]
 ):
     # type: (...) -> (bool, float, float, float)
     """Deterime if we're aligning our reads in the forward or reverse direction"""
@@ -106,10 +107,13 @@ def determine_alignment_direction(
     norm_median = numpy.median(norm_scores) # type: float
     rev_median = numpy.median(rev_scores) # type: float
     do_reverse = rev_median > norm_median # type: bool
-    if do_reverse:
-        threshold = numpy.std(perm_rev) * norm.pdf(1 - pvalue_threshold) + numpy.median(perm_rev) # type: float
-    else:
-        threshold = numpy.std(perm_scores) * norm.pdf(1 - pvalue_threshold) + numpy.median(perm_scores) # type: float
+    try:
+        threshold = args_dict['threshold']
+    except KeyError:
+        if do_reverse:
+            threshold = numpy.std(perm_rev) * norm.pdf(1 - pvalue_threshold) + numpy.median(perm_rev) # type: float
+        else:
+            threshold = numpy.std(perm_scores) * norm.pdf(1 - pvalue_threshold) + numpy.median(perm_scores) # type: float
     msg = 'Aligning in the %s direction' % ('reverse' if do_reverse else 'forward') # type: str
     logging.warning("FASTQ %s: %s", fastq_name, msg)
     logging.warning("FASTQ %s: %s vs %s (norm vs reverse) - threshold: %s", fastq_name, norm_median, rev_median, threshold)

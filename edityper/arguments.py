@@ -131,6 +131,16 @@ def make_argument_parser():
         metavar='gap extension penalty',
         help="Set the gap extension penalty, defaults to '1'"
     )
+    align_opts.add_argument(
+        '-q',
+        '--quality-threshold',
+        dest='threshold',
+        type=float,
+        default=None,
+        required=False,
+        metavar='quality score threshold',
+        help="Set a custom quality score threshold, defaults to EdiTyper's method of determining quality scores"
+    )
     align_opts.add_argument( # Number of cores
         '--parallel',
         dest='num_cores',
