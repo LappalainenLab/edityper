@@ -40,7 +40,7 @@ try:
         from multiprocessing import Pool
         from arguments import make_argument_parser
         from itertools import izip as zip
-        from itertools import imap as map
+        # from itertools import imap as map
         range = xrange
     else:
         sys.exit('Please use Python 2.7, 3.3, or higher')
@@ -342,18 +342,12 @@ def crispr_analysis(
             head, tail = toolkit.trim_interval(seq=aligned.read) # type: int, int
             unaligned = toolkit.reverse_complement(sequence=aligned.unaligned) if do_reverse else aligned.unaligned # type: str
             supporting_reads = tuple(reads_dict.pop(unaligned)) # type: Tuple[toolkit.Read]
-            logging.debug("FASTQ %s: %s supporting reads for %s sequence", fastq_name, len(supporting_reads), str(aligned))
-            logging.debug("FASTQ %s: Find alignment position for %s sequence", fastq_name, str(aligned))
             position = sam.calc_read_pos(alignment=aligned, genomic_start=args_dict['genomic_start']) # type: int
-            logging.debug("FASTQ %s: Making CIGAR string for %s sequence", fastq_name, str(aligned))
             cigar = sam.make_cigar(alignment=aligned) # type: str
-            logging.debug("FASTQ %s: Making SAM-formatted sequence for %s", fastq_name, str(aligned))
             sam_seq = sam.make_sam_sequence(alignment=aligned, head=head, tail=tail) # type: str
-            logging.debug("FASTQ %s: Finding quality scores for %s sequence", fastq_name, str(aligned))
-            quals = tuple(read.qual for read in supporting_reads) # type: str
-            if do_reverse:
-                quals = tuple(map(lambda q: q[::-1], quals)) # type: str
-            logging.debug("FASTQ %s: Making %s SAM lines for %s", fastq_name, len(supporting_reads), str(aligned))
+            # quals = tuple(read.qual for read in supporting_reads) # type: str
+            # if do_reverse:
+            #     quals = tuple(map(lambda q: q[::-1], quals)) # type: str
             sams = map( # type: Iterable[sam.SAM]
                 sam.SAM,
                 (read.name for read in supporting_reads), # qname=
@@ -366,8 +360,8 @@ def crispr_analysis(
                 itertools.repeat(0), # pnext=
                 itertools.repeat(0), # tlen=
                 itertools.repeat(sam_seq), # seq=
-                # (read.qual for read in supporting_reads) # qual=
-                quals # qual=
+                (read.qual for read in supporting_reads) # qual=
+                # quals # qual=
             )
             sam_lines.extend(sams)
             count += 1
@@ -385,9 +379,7 @@ def crispr_analysis(
         logging.debug("FASTQ %s: Sorting SAM lines by coordinate", fastq_name)
         sam_lines = tuple(sorted(sam_lines)) # type: Tuple[sam.SAM]
         #   Make the header
-        logging.debug("FASTQ %s: Making read group header")
         rg_header = sam.make_read_group(sam_lines=sam_lines, conf_dict=args_dict) # type: Tuple[str]
-        logging.debug("FASTQ %s: Making sequence header")
         sq_header = sam.make_sequence_header( # type: Tuple[str]
             sam_lines=sam_lines,
             ref_seq_dict={reference.name: (reference.sequence, args_dict['genomic_start'])}
@@ -517,8 +509,14 @@ def main():
         logging.warning("Read classification suppressed, not writing classification table")
     if args['suppress_plots']: # Suppressed plots?
         logging.warning("Plots suppressed, not creating plots")
-    if args['xkcd']:
-        plots._XKCD = True
+    else: # Search for Rscript
+        try:
+            args['Rscript'] = toolkit.which('Rscript')
+        except ValueError: # No Rscript found
+            logging.error("Cannot find Rscript, not generating plots")
+            args['suppress_plots'] = True
+    # if args['xkcd']:
+    #     plots._XKCD = True
     #   Enable the profiler if desired
     if args['profile']:
         toolkit._DO_PROFILE = True

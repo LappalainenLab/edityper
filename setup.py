@@ -140,6 +140,10 @@ ENTRY_POINTS = {
     ]
 }
 
+#   Package data (R scripts)
+# PACKAGE_DATA = {'': [f for f in os.listdir(PACKAGE_DIR) if os.path.splitext(f) == '.R']}
+PACKAGE_DATA = {'': ['*.r', '*.R']}
+
 #   Run setup
 setup(
     name=NAME,
@@ -154,6 +158,8 @@ setup(
     classifiers=CLASSIFIERS,
     install_requires=INSTALL_REQUIRES,
     packages=PACKAGES,
+    package_data=PACKAGE_DATA,
+    include_package_data=True,
     ext_modules=EXT_MODULES,
     entry_points=ENTRY_POINTS,
     cmdclass=CMD_CLASS
