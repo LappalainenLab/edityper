@@ -18,13 +18,13 @@ import logging
 import itertools
 from collections import namedtuple
 
-if PYTHON_VERSION is 2:
+if PYTHON_VERSION == 2:
     from string import maketrans
     from itertools import imap as map
     from itertools import ifilter as filter
     range = xrange
     FileNotFoundError = IOError
-elif PYTHON_VERSION is 3:
+elif PYTHON_VERSION == 3:
     maketrans = str.maketrans
 else:
     raise SystemExit("Please use Python 2 or 3 for this module: " + __name__)
@@ -155,8 +155,7 @@ def which(program): # type: (str) -> str
         progpath = map(lambda t: ''.join(t), itertools.product(progpath, extensions)) # type: map[str]
     except AttributeError:
         pass
-    progpath = filter(lambda e: os.path.isfile(e) and os.access(e, os.X_OK), progpath) # type: filter[str]
-    progpath = tuple(progpath) # type: tuple: str
+    progpath = tuple(filter(lambda e: os.path.isfile(e) and os.access(e, os.X_OK), progpath)) # type: Tuple[str]
     if not progpath:
         raise ValueError("Cannot find program '%s' in your PATH" % program)
     return progpath[0]

@@ -577,46 +577,6 @@ def make_sequence_header(
     return tuple(sq_header)
 
 
-# def calc_read_pos(alignment, genomic_start=0): # type: (alignment.Alignment, Optional[int]) -> int
-#     """Calculate read position"""
-#     reference = alignment.reference # type: str
-#     read = alignment.read # type: str
-#     #   Trim the sequences
-#     ref_head, ref_tail = toolkit.trim_interval(seq=reference) # type: int, int
-#     reference = reference[ref_head:ref_tail] # type: str
-#     read = read[ref_head:ref_tail] # type: str
-#     read_head, read_tail = toolkit.trim_interval(seq=read) # type: int, int
-#     reference = reference[read_head:read_tail] # type: str
-#     read = read[read_head:read_tail] # type: str
-#     #   Remove insertions
-#     insertions = toolkit.find_gaps(seq=reference) # type: List[Tuple[int, int]]
-#     reference = list(reference) # type: List[str]
-#     read = list(read) # type: List[str]
-#     for ins_start, ins_length in insertions: # type: int, int
-#         for ins_index in range(ins_start, ins_start + ins_length): # type: int
-#             reference[ins_index] = ''
-#             read[ins_index] = ''
-#     reference = ''.join(reference) # type: str
-#     read = ''.join(read) # type: str
-#     #   Handle deletions
-#     deletions = toolkit.find_gaps(seq=read) # type: List[Tuple[int, int]]
-#     reference = list(reference) # type: List[str]
-#     read = list(read) # type: List[str]
-#     for del_start, del_length in deletions: # type: int, int
-#         for del_index in range(del_start, del_start + del_length):
-#             reference[del_index] = ''
-#             read[del_index] = ''
-#     reference = ''.join(reference) # type: str
-#     read = ''.join(read) # type: str
-#     #   Handle mismatches
-#     nmis = len(toolkit.get_mismatch(seq_a=reference, seq_b=read)) # type: int
-#     try:
-#         match_start = regex.match(r'(%s){s<=%s}' % (read, nmis), reference, regex.BESTMATCH).start() # type: int
-#     except AttributeError:
-#         logging.debug("Failed with new method for calculating read position, reverting to old method")
-#         return _old_calc(alignment=alignment) + genomic_start
-#     return match_start + read_head + genomic_start
-
 def calc_read_pos(alignment, genomic_start=0): # type: (alignment.Alignment, int) -> int
     """Calculate read position"""
     head, _ = toolkit.trim_interval(seq=alignment.read) # type: int, int
