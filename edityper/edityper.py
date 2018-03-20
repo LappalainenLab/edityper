@@ -141,7 +141,8 @@ def crispr_analysis(
         reference=aligned_reference.sequence,
         gap_open=args_dict['gap_opening'],
         gap_extension=args_dict['gap_extension'],
-        pvalue_threshold=args_dict['pvalue_threshold']
+        pvalue_threshold=args_dict['pvalue_threshold'],
+        args_dict=args_dict
     )
     if do_reverse:
         unique_reads = {toolkit.reverse_complement(sequence=read): count for read, count in unique_reads.items()} # type: Dict[str, count]
@@ -461,7 +462,7 @@ def main():
     stripped_formatter = toolkit.StrippedFormatter(fmt=log_format, datefmt=date_format) # toolkit.StrippedFormatter
     colored_formater = toolkit.ColoredFormatter(fmt=log_format, datefmt=date_format) # type: toolkit.ColoredFormatter
     #   Open /dev/null (or whatever it is on Windows) to send basic stream information to
-    devnull = open(os.devnull, 'w')
+    devnull = open(os.devnull, 'w') # type: file
     #   Configure the logger
     verbosity = _set_verbosity(level=args['verbosity']) # type: int
     logging.basicConfig(
@@ -559,10 +560,12 @@ def main():
         raise ValueError(logging.error(msg))
     logging.debug("Reference/template aligmnent validation took %s seconds", round(time.time() - alignment_validation, 3))
     #   Get SNP information
+    # snp_info_raw = template_reference_mismatch.pop(args['analysis_mode'].index('SNP'))
     snp_index, reference_state, target_snp = quality_control.get_snp_states( # type: int, str, str
         reference=aligned_reference.sequence,
         template=aligned_template.sequence,
-        mismatch=template_reference_mismatch[args['analysis_mode'].index('SNP')]
+        mismatch=template_reference_mismatch.pop(args['analysis_mode'].index('SNP'))
+        # mismatch=snp_info_raw
     )
     snp = SNP(reference=reference_state, target=target_snp, position=snp_index) # type: SNP
     logging.debug("Quality control took %s seconds", round(time.time() - qc_start, 3))
