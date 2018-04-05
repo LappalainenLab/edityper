@@ -22,11 +22,11 @@ except ImportError as error:
 try:
     if PYTHON_VERSION is 3:
         from edityper import toolkit
-        from edityper import rec_nw
+        from edityper import recnw
         from edityper.analysis import NA
     elif PYTHON_VERSION is 2:
         import toolkit
-        import rec_nw
+        import recnw
         from analysis import NA
     else:
         raise SystemExit("Please use Python 2 or 3 for this module: " + __name__)
@@ -40,12 +40,12 @@ def align_reference(reference, template, gap_penalty): # type: (str, str, int) -
     """Align our template to our reference"""
     logging.info("Aligning reference and template sequences")
     align_start = time.time() # type: float
-    fwd_ref, fwd_template, fwd_qual_score = rec_nw.nw_lin( # type: str, str, int
+    fwd_ref, fwd_template, fwd_qual_score = recnw.nw_lin( # type: str, str, int
         reference,
         template,
         gap_penalty=gap_penalty
     )
-    rev_ref, rev_template, rev_qual_score = rec_nw.nw_lin( # type: str, str, int
+    rev_ref, rev_template, rev_qual_score = recnw.nw_lin( # type: str, str, int
         reference,
         toolkit.reverse_complement(sequence=template),
         gap_penalty=gap_penalty
