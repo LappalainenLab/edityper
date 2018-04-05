@@ -121,8 +121,8 @@ PACKAGES = [
 #   Set up the extension
 EXT_MODULES = [
     Extension(
-        name='%s.nw_align' % PACKAGE_DIR,
-        sources=['src/nw_align.pyx', 'src/py_align.cpp'],
+        name='%s.recnw' % PACKAGE_DIR,
+        sources=['src/recnw_cython.pyx', 'src/recnw.cpp'],
         language='c++'
     )
 ]
