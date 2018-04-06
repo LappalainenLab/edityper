@@ -9,15 +9,15 @@ from __future__ import print_function
 #   Needed for matplotlib
 #   However, not on Pip
 import sys
-try:
-    if sys.version_info.major == 2:
-        import Tkinter
-    elif sys.version_info.major == 3:
-        import tkinter
-    else:
-        sys.exit("Unsupported Python version")
-except ImportError as error:
-    sys.exit("Please install Tkinter and Tcl/Tk: " + str(error))
+# try:
+#     if sys.version_info.major == 2:
+#         import Tkinter
+#     elif sys.version_info.major == 3:
+#         import tkinter
+#     else:
+#         sys.exit("Unsupported Python version")
+# except ImportError as error:
+#     sys.exit("Please install Tkinter and Tcl/Tk: " + str(error))
 
 
 import os
@@ -26,6 +26,9 @@ import os
 from setuptools import setup
 from setuptools.extension import Extension
 from setuptools.command.install import install as _install
+
+#   Load which
+from edityper.toolkit import which
 
 #   Some basic information
 NAME = 'EdiTyper'
@@ -43,15 +46,27 @@ if 'Cython.Distutils' not in sys.modules:
         import pip
     except ImportError:
         sys.exit("Please install Cython before installing %s" % NAME)
-    else:
-        INSTALL_CYTHON = ['install', 'cython']
-        DEFAULT_DIR = tuple(filter(os.path.isdir, sys.path))[0]
-        if not os.access(os.path.join(DEFAULT_DIR, 'site_packages'), os.W_OK):
-            INSTALL_CYTHON.insert(1, '--user')
-        pip.main(INSTALL_CYTHON)
+    INSTALL_CYTHON = ['install', 'cython']
+    DEFAULT_DIR = tuple(filter(os.path.isdir, sys.path))[0]
+    if not os.access(os.path.join(DEFAULT_DIR, 'site_packages'), os.W_OK):
+        INSTALL_CYTHON.insert(1, '--user')
+    pip.main(INSTALL_CYTHON)
 
 
 from Cython.Distutils import build_ext
+
+# File finder for R files
+def find_r_files(dirname=None): # type: (Optional[str]) -> List[str]
+    """Find R files"""
+    rfiles = list()
+    if not dirname:
+        dirname = '.'
+    for root, _, filenames in os.walk(dirname):
+        for fname in filenames:
+            if os.path.splitext(fname)[-1].upper() == '.R':
+                rfiles.append(os.path.join(root, fname))
+    return rfiles
+
 
 #   A class to force install to run build first
 class install(_install):
@@ -59,6 +74,12 @@ class install(_install):
 
     def run(self):
         self.run_command('build_ext')
+        try:
+            rscript = which('Rscript')
+        except ValueError:
+            raise
+        else:
+            pass
         _install.run(self)
 
 
@@ -141,7 +162,6 @@ ENTRY_POINTS = {
 }
 
 #   Package data (R scripts)
-# PACKAGE_DATA = {'': [f for f in os.listdir(PACKAGE_DIR) if os.path.splitext(f) == '.R']}
 PACKAGE_DATA = {'': ['*.r', '*.R']}
 
 #   Run setup
