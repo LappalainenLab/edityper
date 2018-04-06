@@ -1,3 +1,3 @@
-include src/py_align.h
+include src/recnw.h
 include edityper/locusPlot.R
 include edityper/qualityPlot.R
