@@ -15,10 +15,10 @@ from collections import defaultdict
 try:
     if PYTHON_VERSION is 3:
         from edityper import toolkit
-        from edityper import nw_align
+        from edityper import recnw
     elif PYTHON_VERSION is 2:
         import toolkit
-        import nw_align
+        import recnw
     else:
         raise SystemExit("Please use Python 2.7 or 3.5 or higher for this module: " + __name__)
 except ImportError as error:
@@ -122,12 +122,12 @@ def align_recurse(
             # names = tuple(read.get_readid() for read in summary.reads) # type: Tuple[str]
             # fastqs = {read.get_source() for read in summary.reads} # type: Set[str]
             if not temp: # basically, first sequence to be aligned
-                al_ref, al_read, score = nw_align.align_aff_mem(
-                    seq_1=reference,
-                    seq_2=read,
+                al_ref, al_read, score = recnw.nw_aff(
+                    reference,
+                    read,
                     gap_op=gap_open,
                     gap_ext=gap_extension,
-                    sim=0,
+                    sim=-1,
                     terminate=0
                 ) # type: str, str, int
                 aligned = Alignment(ref_align=al_ref, read_align=al_read, score=score) # type: Alignment
@@ -138,19 +138,19 @@ def align_recurse(
                 continue
             index = toolkit.sim_seq(seq1=temp, seq2=read) # type: int
             reuse += index
-            if count == total:
-                al_ref, al_read, score = nw_align.align_aff_mem(
-                    seq_1=reference,
-                    seq_2=read,
+            if count == total: # de-allocate memory
+                al_ref, al_read, score = recnw.nw_aff(
+                    reference,
+                    read,
                     gap_op=gap_open,
                     gap_ext=gap_extension,
                     sim=index,
                     terminate=1
                 ) # type: str, str, int
             else:
-                al_ref, al_read, score = nw_align.align_aff_mem(
-                    seq_1=reference,
-                    seq_2=read,
+                al_ref, al_read, score = recnw.nw_aff(
+                    reference,
+                    read,
                     gap_op=gap_open,
                     gap_ext=gap_extension,
                     sim=index,

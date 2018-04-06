@@ -22,11 +22,11 @@ except ImportError as error:
 try:
     if PYTHON_VERSION is 3:
         from edityper import toolkit
-        from edityper import nw_align
+        from edityper import recnw
         from edityper.analysis import NA
     elif PYTHON_VERSION is 2:
         import toolkit
-        import nw_align
+        import recnw
         from analysis import NA
     else:
         raise SystemExit("Please use Python 2 or 3 for this module: " + __name__)
@@ -40,14 +40,14 @@ def align_reference(reference, template, gap_penalty): # type: (str, str, int) -
     """Align our template to our reference"""
     logging.info("Aligning reference and template sequences")
     align_start = time.time() # type: float
-    fwd_ref, fwd_template, fwd_qual_score = nw_align.align_glocal( # type: str, str, int
-        seq_1=reference,
-        seq_2=template,
+    fwd_ref, fwd_template, fwd_qual_score = recnw.nw_lin( # type: str, str, int
+        reference,
+        template,
         gap_penalty=gap_penalty
     )
-    rev_ref, rev_template, rev_qual_score = nw_align.align_glocal( # type: str, str, int
-        seq_1=reference,
-        seq_2=toolkit.reverse_complement(sequence=template),
+    rev_ref, rev_template, rev_qual_score = recnw.nw_lin( # type: str, str, int
+        reference,
+        toolkit.reverse_complement(sequence=template),
         gap_penalty=gap_penalty
     )
     logging.debug("Alignment took %s seconds", round(time.time() - align_start, 3))
@@ -96,10 +96,10 @@ def determine_alignment_direction(
     norm_scores, perm_scores, rev_scores, perm_rev = list(), list(), list(), list() # type: List[float], List[float], List[float], List[float]
     for read in sampled_reads: # type: str
         perm_read = permutate(read) # type: str
-        _, _, score = nw_align.align_aff(seq_1=reference, seq_2=read, gap_op=gap_open, gap_ext=gap_extension) # type: _, _, float
-        _, _, rev_score = nw_align.align_aff(seq_1=ref_rc, seq_2=read, gap_op=gap_open, gap_ext=gap_extension) # type: _, _, float
-        _, _, perm_score = nw_align.align_aff(seq_1=reference, seq_2=perm_read, gap_op=gap_open, gap_ext=gap_extension) # type: _, _, float
-        _, _, rev_perm = nw_align.align_aff(seq_1=ref_rc, seq_2=perm_read, gap_op=gap_open, gap_ext=gap_extension) # type: _, _, float
+        _, _, score = recnw.nw_aff(reference, read, gap_op=gap_open, gap_ext=gap_extension) # type: _, _, float
+        _, _, rev_score = recnw.nw_aff(ref_rc, read, gap_op=gap_open, gap_ext=gap_extension) # type: _, _, float
+        _, _, perm_score = recnw.nw_aff(reference, perm_read, gap_op=gap_open, gap_ext=gap_extension) # type: _, _, float
+        _, _, rev_perm = recnw.nw_aff(ref_rc, perm_read, gap_op=gap_open, gap_ext=gap_extension) # type: _, _, float
         norm_scores.append(score)
         perm_scores.append(perm_score)
         rev_scores.append(rev_score)
