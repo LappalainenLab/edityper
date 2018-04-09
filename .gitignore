@@ -12,9 +12,9 @@ __pycache__/
 ###########################
 *.so
 
-# Ignore nw_align.cpp
+# Ignore recnw_cython.cpp
 ##################
-nw_align.cpp
+recnw_cython.cpp
 
 # Ignore output files and lists
 ###############################
