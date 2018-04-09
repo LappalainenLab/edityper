@@ -27,9 +27,6 @@ from setuptools import setup
 from setuptools.extension import Extension
 from setuptools.command.install import install as _install
 
-#   Load which
-from edityper.toolkit import which
-
 #   Some basic information
 NAME = 'EdiTyper'
 VERSION = '1.0.0'
@@ -41,11 +38,12 @@ KEYWORDS = 'crispr rnaseq'
 URL = 'https://github.com/lappalainenlab/EdiTyper'
 
 #   Ensure Cython is available
-if 'Cython.Distutils' not in sys.modules:
-    try:
-        import pip
-    except ImportError:
-        sys.exit("Please install Cython before installing %s" % NAME)
+try:
+    import pip
+except ImportError:
+    sys.exit("Please install Cython before installing %s" % NAME)
+
+if 'cython' not in {mod.key for mod in pip.get_installed_distributions()}:
     INSTALL_CYTHON = ['install', 'cython']
     DEFAULT_DIR = tuple(filter(os.path.isdir, sys.path))[0]
     if not os.access(os.path.join(DEFAULT_DIR, 'site_packages'), os.W_OK):
@@ -55,31 +53,12 @@ if 'Cython.Distutils' not in sys.modules:
 
 from Cython.Distutils import build_ext
 
-# File finder for R files
-def find_r_files(dirname=None): # type: (Optional[str]) -> List[str]
-    """Find R files"""
-    rfiles = list()
-    if not dirname:
-        dirname = '.'
-    for root, _, filenames in os.walk(dirname):
-        for fname in filenames:
-            if os.path.splitext(fname)[-1].upper() == '.R':
-                rfiles.append(os.path.join(root, fname))
-    return rfiles
-
-
 #   A class to force install to run build first
 class install(_install):
     """Force install to build first"""
 
     def run(self):
         self.run_command('build_ext')
-        try:
-            rscript = which('Rscript')
-        except ValueError:
-            raise
-        else:
-            pass
         _install.run(self)
 
 

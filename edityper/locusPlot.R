@@ -83,8 +83,7 @@ counts <- counts[order(apply(X = counts, MARGIN = 1, FUN = max), decreasing = FA
 pdf(file = file.path(dirname(path = counts.file), paste0(fastq.name, '_locus.pdf')))
 # Overarching locus plot
 locusplot(counts = counts, fastq.name = fastq.name, num.reads = num.reads)
-# # Locus plot zoomed in to only events
-# locusplot(counts = counts, fastq.name = fastq.name, num.reads = num.reads, max.reads = max(counts[1:3, ]))
+
 # Locus plot per event type
 for (i in rownames(x = counts)[1:3]) {
   locusplot(
