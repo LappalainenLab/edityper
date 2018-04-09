@@ -20,11 +20,11 @@ except ImportError as error:
 
 
 try:
-    if PYTHON_VERSION is 3:
+    if PYTHON_VERSION == 3:
         from edityper import toolkit
         from edityper import recnw
         from edityper.analysis import NA
-    elif PYTHON_VERSION is 2:
+    elif PYTHON_VERSION == 2:
         import toolkit
         import recnw
         from analysis import NA

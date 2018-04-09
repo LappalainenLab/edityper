@@ -15,11 +15,11 @@ import itertools
 from math import floor, ceil
 from collections import Counter, defaultdict, namedtuple
 
-if PYTHON_VERSION is 2:
+if PYTHON_VERSION == 2:
     import toolkit
     from itertools import imap as map
     range = xrange
-elif PYTHON_VERSION is 3:
+elif PYTHON_VERSION == 3:
     from edityper import toolkit
 else:
     raise SystemExit("Please use Python 2 or 3 for this module: " + __name__)
@@ -88,7 +88,7 @@ def percent(num, total): # type: (int, int) -> float
 def summarize(data, rounding=None): # type: (Iterable[Union[int, float]], Optional[int]) -> Union[int, float], float, float
     '''Get the sum, mean, and standard deviation of a collection of data'''
     total = sum(data)
-    if len(data) > 0:
+    if data:
         avg = numpy.mean(data)
         std = numpy.std(data)
     else:

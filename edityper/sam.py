@@ -14,14 +14,13 @@ import time
 import logging
 import itertools
 import subprocess
-from copy import copy
 from warnings import warn
 from collections import defaultdict
 
 try:
-    if PYTHON_VERSION is 3:
+    if PYTHON_VERSION == 3:
         from edityper import toolkit
-    elif PYTHON_VERSION is 2:
+    elif PYTHON_VERSION == 2:
         import toolkit
         from itertools import imap as map
         range = xrange
@@ -47,89 +46,6 @@ READ_GROUP_VALUES = { # type: Dict[str, str]
     'read_platform' :   'PL',
     'read_sample'   :   'SM'
 }
-
-def _old_calc(alignment): # type: alignment.Alignment -> int
-    """Calculate alignment read position"""
-    cigar = make_cigar(alignment=alignment, exact=True) # type: str
-    reference = alignment.reference # type: str
-    read = alignment.read # type: str
-    if len(reference) != len(read):
-        raise ValueError(logging.error("The read and reference must be the same length"))
-    reference = reference.replace('-', '') # type: str
-    read = read.replace('-', '') # type: str
-    SAM.validate_cigar(cigar=cigar, sequence=read)
-    #   Split our cigar string into a list of component operations
-    operations = regex.findall(r'(\d+[%s])' % ''.join(SAM.VALID_OPS), cigar) # type Tuple[str]
-    #   Create a regex for finding digits
-    digits = regex.compile(r'(\d+)[%s]' % ''.join(SAM.VALID_OPS)).findall
-    #   Start our pattern for the final regex search
-    pattern = '(' # type: str
-    #   Create this iterable to validate the checks below
-    possible_references = tuple(itertools.repeat(reference, 2)) # type: Tuple[str]
-    #   Count the number of types we modify the reference
-    #   Use this for fuzzy matching bounds
-    #   when searching for a new reference
-    num_ref_adjust = 0 # type: int
-    #   Start parsing the CIGAR string operations
-    for oper in operations: # type: str
-        this_op = ''.join((char for char in oper if not char.isdigit())) # type: str
-        this_digit = int(digits(oper)[0]) # type: int
-        #   Pattern/read/reference adjustment
-        #   If sequence match
-        if this_op in {'='}:
-            #   Add to the pattern the sequence that matches
-            #   Adjust the read because we've covered this sequence
-            pattern += read[:this_digit]
-            read = read[this_digit:] # type: str
-        #   If sequence mismatch, but alignment match
-        elif this_op in {'X'}:
-            #   Start a counter so that we only go up to the number of sequence mismatches
-            i = 0 # type: int
-            while i < this_digit:
-                #   Add to the pattern the base that doesn't match
-                #   Remove this base from the read
-                #   Increment the counter
-                pattern += '[^%s]' % read[0]
-                read = read[1:] # type: str
-                i += 1
-        #   If we have part of our read that isn't in our reference
-        elif this_op in {'I', 'S', 'P'}: # Insertion in read relative to reference, soft clipping of read, or silent deletion of reference
-            #   Remove these bases from the read and continue, don't check
-            read = read[this_digit:] # type: str
-            continue
-        elif this_op in {'D'}: # Deletion in read relative to reference
-            adjustments = list(regex.finditer(r'%s.{%s})' % (pattern, this_digit), ref) for ref in possible_references) # type: List
-            adjustments = (match.groups() for adj in adjustments for match in adj) # type: generator
-            adjustments = itertools.chain.from_iterable(adjustments) # type: itertools.chain
-            adj_ref = copy(possible_references) # type: List[str]
-            for adj in adjustments: # type: str
-                for ref in adj_ref: # type: str
-                    temp = list() # type: List[str]
-                    try:
-                        ref.index(adj)
-                        ref.replace(adj, adj[:-this_digit])
-                        temp.append(ref)
-                    except ValueError:
-                        continue
-                adj_ref = copy(temp) # type: List[str]
-                del temp
-            possible_references = copy(adj_ref) # type: List[str]
-            del adj_ref
-            num_ref_adjust += this_digit
-        else: # Hard clipping, sequence not found in seq
-            pass
-        possible_references = (regex.findall(r'%s.*)' % pattern, ref) for ref in possible_references) # type: generator
-        possible_references = tuple(itertools.chain.from_iterable(possible_references)) # type: Tuple[str]
-        if len(possible_references) == 1:
-            break
-        elif not possible_references:
-            raise ValueError("Something happened")
-    if len(possible_references) > 1:
-        logging.error("Multiple mapping is currently not supported, setting position to '-8' for fixing later")
-        return -8
-    adjusted_ref = possible_references[0] # type: str
-    return regex.search(r'(%s){e<=%d}' % (adjusted_ref, num_ref_adjust), reference, regex.BESTMATCH).start()
-
 
 class SAM(object):
     """A SAM alignment
@@ -464,13 +380,19 @@ def make_cigar(alignment, exact=False): # type: (al.Alignment, bool) -> (str, st
     #   Iterate through our range, comparing bases between read and reference
     for i in range(head, tail + 1): # type: int
         try:
-            if reference[i] == '-' and read[i] == '-': continue # This shouldn't happen, but just in case
+            if reference[i] == '-' and read[i] == '-': # This shouldn't happen, but just in case
+                continue
             #   Actual comparisons
-            if reference[i] == '-': cigar_ops.append('I') # Insertion relative to reference
-            elif read[i] == '-': cigar_ops.append('D') # Deletion relative to reference
-            elif exact and read[i] == reference[i]: cigar_ops.append('=') # Sequence match, when exact CIGAR is needed
-            elif exact and read[i] != reference[i]: cigar_ops.append('X') # Sequence mismatch, when exact CIGAR is needed
-            else: cigar_ops.append('M') # Alignment match (not base match)
+            if reference[i] == '-': # Insertion relative to reference
+                cigar_ops.append('I')
+            elif read[i] == '-': # Deletion relative to reference
+                cigar_ops.append('D')
+            elif exact and read[i] == reference[i]: # Sequence match, when exact CIGAR is needed
+                cigar_ops.append('=')
+            elif exact and read[i] != reference[i]: # Sequence mismatch, when exact CIGAR is needed
+                cigar_ops.append('X')
+            else: # Alignment match (not base match)
+                cigar_ops.append('M')
         except IndexError:
             break
     #   Now, turn our list of operations into a proper cigar string
@@ -481,7 +403,8 @@ def make_cigar(alignment, exact=False): # type: (al.Alignment, bool) -> (str, st
         #   Are we still on the same operation?
         if operation == prev_op:
             counter += 1 # If so, increment our counter
-            if index != len(cigar_ops) - 1: continue # If this isn't the last operation, iterate
+            if index != len(cigar_ops) - 1: # If this isn't the last operation, iterate
+                continue
         #   Go straight here if new operation
         #   or come here if this is the last operation
         #   and the previous operation continued

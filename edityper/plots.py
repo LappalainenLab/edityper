@@ -18,12 +18,10 @@ import pkg_resources
 from collections import defaultdict
 
 try:
-    if PYTHON_VERSION is 3:
+    if PYTHON_VERSION == 3:
         from edityper import toolkit
-        from edityper.analysis import percent
-    elif PYTHON_VERSION is 2:
+    elif PYTHON_VERSION == 2:
         import toolkit
-        from analysis import percent
         range = xrange
     else:
         raise SystemExit("Please use Python 2.7 or 3.5 or higher for this module: " + __name__)

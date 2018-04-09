@@ -13,10 +13,10 @@ import logging
 from collections import defaultdict
 
 try:
-    if PYTHON_VERSION is 3:
+    if PYTHON_VERSION == 3:
         from edityper import toolkit
         from edityper import recnw
-    elif PYTHON_VERSION is 2:
+    elif PYTHON_VERSION == 2:
         import toolkit
         import recnw
     else:
