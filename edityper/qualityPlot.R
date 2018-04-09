@@ -1,13 +1,14 @@
 #!/usr/bin/env Rscript
 
+if (!'sm' %in% rownames(x = installed.packages())) {
+  options(repos = c(CRAN = 'http://cran.rstudio.com'))
+  install.packages('sm')
+}
+
 library(sm)
 library(tools)
 library(utils)
 library(graphics)
-# library(vioplot)
-
-# args <- list(display = 'none')
-# est.xlim <- c(132, 750)
 
 # Taken from vioplot::vioplot
 # Copied because vioplot::vioplot is not flexible
@@ -52,8 +53,8 @@ vioplot <- function(
     data <- datas[[i]]
     data.min <- min(data)
     data.max <- max(data)
-    q1[i] <- quantile(data, 0.25)
-    q3[i] <- quantile(data, 0.75)
+    q1[i] <- quantile(data, 0.25, na.rm = TRUE)
+    q3[i] <- quantile(data, 0.75, na.rm = TRUE)
     med[i] <- median(data)
     iqd <- q3[i] - q1[i]
     upper[i] <- min(q3[i] + range * iqd, data.max)
@@ -158,10 +159,8 @@ vioplot <- function(
   ))
 }
 
-
 # The quality plot function
 qualityplot <- function(scores) {
-  # x.mod <- 0.125
   vioplot(
     x = scores[-1, ],
     col = 'skyblue',
@@ -183,10 +182,10 @@ args <- commandArgs(trailingOnly = TRUE)
 if (length(x = args) != 1) {
   stop("Usage: qualityPlots.R scores.file")
 }
+
 scores.file <- args[1]
-# scores.file <- '/home/paul/newplots/output_2018-03-01_11:18/edityper_quality.txt'
 if (!file.exists(scores.file)) {
-  stop(paste("Cannot find counts file", scores.file))
+  stop(paste("Cannot find scores file", scores.file))
 }
 
 # Make an output name
@@ -195,9 +194,12 @@ output.name <- paste0(file_path_sans_ext(x = scores.file), '.pdf')
 # Read in and transpose the scores table
 scores <- read.table(file = scores.file, header = FALSE, as.is = TRUE, row.names = 1)
 scores <- as.data.frame(x = t(x = scores))
+colnames(x = scores) <- gsub(pattern = '\\n', replacement = '\n', x = colnames(x = scores), fixed = TRUE)
 
 # Start the thing
 pdf(file = output.name)
+par(mar = c(14.1, 4.1, 4.1, 2.1))
+par(las = 2)
 if (ncol(x = scores) == 1) {
   qualityplot(scores = scores)
 } else {

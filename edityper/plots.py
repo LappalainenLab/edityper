@@ -8,7 +8,6 @@ from __future__ import print_function
 import sys
 PYTHON_VERSION = sys.version_info.major
 
-# import gc
 import os
 import re
 import time
@@ -31,24 +30,16 @@ try:
 except ImportError as error:
     raise SystemExit(error)
 
-# try:
-#     import matplotlib.pyplot as plt
-#     import matplotlib.patches as ptch
-#     import matplotlib.font_manager as fm
-#     from matplotlib.backends.backend_pdf import PdfPages
-# except ImportError as error:
-#     raise SystemExit(error)
-
 
 NAN = 'NaN'
 
-_LOCUS_HEADER = (
+_LOCUS_HEADER = ( # type: Tuple[str]
     # 'Position',
     'Insertions',
     'Deletions',
     'Mismatches',
     'Coverage'
-) # type: Tuple[str]
+)
 
 _LOCUS_WIDTH = 0.5 # type: float
 _INDEL_COLOR = 'r' # type: str
@@ -73,7 +64,7 @@ def _splitstr(string, cutoff=20): # type: (str, int) -> str
     pts = tuple(i.start() for i in re.finditer(r'([-_\.])', string)) # type: Tuple[int]
     midpoint = len(string) / 2 # type: float
     closest = min(pts, key=lambda x: abs(midpoint - x)) + 1 # type: int
-    return string[:closest] + '\n' + string[closest:]
+    return string[:closest] + '\\n' + string[closest:]
 
 
 # def ichunk(x, chunksize): # type: (Iterable[Any], int) -> Iterator[Iterable[Any]]
@@ -143,10 +134,6 @@ def quality_plot(
     """Make a violin plot of the alignment scores"""
     logging.info("Making quality scores plot")
     quality_start = time.time() # type: float
-    # if _check_fonts():
-    #     plt.xkcd()
-    # import code; code.interact(local=locals()); sys.exit()
-    # plot_name = output_prefix + '_quality.pdf' # type: str
     scores_by_fastq = defaultdict(list) # type: Mapping[str, List[int]]
     for aligned in alignments: # type: alignment.Alignment
         scores_by_fastq[aligned.source].append(aligned.score)
@@ -161,49 +148,32 @@ def quality_plot(
             scores = toolkit.unpack(collection=(scores, itertools.repeat(NAN, max_num_scores - len(scores)))) # type: Tuple[Union[int, str]]]
             scores = toolkit.unpack(collection=(thresholds[fastq], scores)) # type: Tuple[Untion[int, str, float]]
             scores = tuple(map(str, scores)) # type: Tuple[str]
-            tfile.write(fastq + '\t')
+            tfile.write(_splitstr(fastq) + '\t')
             tfile.write('\t'.join(scores))
             tfile.write('\n')
             tfile.flush()
-    rscript_exec = toolkit.which('Rscript')
-    qp_script = pkg_resources.resource_filename('edityper', 'qualityPlot.R')
-    cmd = [rscript_exec, qp_script, table_name]
-    rc = subprocess.check_call(cmd)
-    if rc != 0:
-        logging.error("Something failed when making locus plot")
-    # with PdfPages(plot_name) as pdf:
-    #     logging.info("Saving plot to %s", plot_name)
-    #     #   Set chunksize
-    #     chunksize = _CHUNK_DEFAULT if len(fastqs) > _CHUNK_DEFAULT else len(fastqs)
-    #     logging.debug("Plotting %s FASTQ files per page", chunksize)
-    #     #   Put at most 5 plots per page
-    #     for fastq_chunk in ichunk(x=fastqs, chunksize=chunksize):
-    #         logging.debug("Plotting quality scores for %s", ', '.join(fastq_chunk))
-    #         fig, ax = plt.subplots(nrows=1, ncols=1)
-    #         #   Plot the scores for this chunk
-    #         scores_chunk = tuple(scores[f] for f in fastq_chunk) # type: Tuple[Tuple[int]]
-    #         ax.violinplot(scores_chunk)
-    #         #   Set labels for this page
-    #         if len(scores) == 1:
-    #             rotation = 'horizontal' # type: st
-    #         else:
-    #             rotation = 45 # type: int
-    #         plt.title("Alignment Score Distribution by FASTQ File")
-    #         plt.ylabel('Alignment Score')
-    #         plt.xlabel('FASTQ')
-    #         ax.set_xticks(range(1, len(scores) + 1))
-    #         mod_names = tuple(_splitstr(string=f) for f in fastq_chunk) # type: Tuple[str]
-    #         ax.set_xticklabels(mod_names, rotation=rotation, fontsize='small')
-    #         #   Add threshold cutoff lines
-    #         ax.hlines(
-    #             y=tuple(thresholds[f] for f in fastq_chunk),
-    #             xmin=tuple(map(lambda x: x - _THRESHOLD_LENGTH, ax.get_xticks())),
-    #             xmax=tuple(map(lambda x: x + _THRESHOLD_LENGTH, ax.get_xticks()))
-    #         )
-    #         #   Ensure everything is shown
-    #         plt.tight_layout()
-    #         #   Save this figure
-    #         pdf.savefig(fig)
-    #         gc.collect()
-    # plt.close('all')
+    r_exec = toolkit.which('R') # type: str
+    rscript_exec = toolkit.which('Rscript') # type: str
+    qp_script = pkg_resources.resource_filename('edityper', 'qualityPlot.R') # type: str
+    #   Check for writeable R library location
+    lib_cmd = '%s --no-restore --no-save --slave -e "cat(.libPaths())"' % r_exec # type: str
+    proc = subprocess.Popen(lib_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE) # type: subprocess.Popen
+    out, _ = proc.communicate() # type: str, str
+    out = out.split() # type: list[str]
+    for libdir in out: # type: str
+        if os.access(libdir, os.W_OK):
+            break
+    else:
+        libdir = os.path.dirname(qp_script) # type: str
+        if not os.access(libdir, os.W_OK):
+            libdir = None # type: NoneType
+    if libdir: # type: Optional[str]
+        os.environ['R_LIBS'] = libdir
+        #   Assemble plotting command
+        plt_cmd = [rscript_exec, qp_script, table_name] # type: List[str]
+        ret_code = subprocess.check_call(plt_cmd) # type: int
+        if ret_code != 0:
+            logging.error("Something failed when making quality plot")
+    else:
+        logging.error("Cannot make quality plots as there is no writeable R library location")
     logging.debug("Making quality scores plot took %s seconds", round(time.time() - quality_start, 3))
