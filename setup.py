@@ -5,22 +5,8 @@
 from __future__ import division
 from __future__ import print_function
 
-#   Deal with Tkinter stuff
-#   Needed for matplotlib
-#   However, not on Pip
-import sys
-# try:
-#     if sys.version_info.major == 2:
-#         import Tkinter
-#     elif sys.version_info.major == 3:
-#         import tkinter
-#     else:
-#         sys.exit("Unsupported Python version")
-# except ImportError as error:
-#     sys.exit("Please install Tkinter and Tcl/Tk: " + str(error))
-
-
 import os
+import sys
 
 #   Get stuff from setuptools
 from setuptools import setup
@@ -105,9 +91,6 @@ PLATFORMS = ['Linux', 'Mac OS-X', 'UNIX']
 #   Dependencies
 INSTALL_REQUIRES = [
     'cython',
-    'numpy',
-    'scipy',
-    'matplotlib',
     'biopython',
     'regex'
 ]

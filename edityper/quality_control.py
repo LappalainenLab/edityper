@@ -13,13 +13,6 @@ import random
 import logging
 
 try:
-    import numpy
-    from scipy.stats import norm
-except ImportError as error:
-    raise SystemExit(error)
-
-
-try:
     if PYTHON_VERSION == 3:
         from edityper import toolkit
         from edityper import recnw
@@ -104,16 +97,16 @@ def determine_alignment_direction(
         perm_scores.append(perm_score)
         rev_scores.append(rev_score)
         perm_rev.append(rev_perm)
-    norm_median = numpy.median(norm_scores) # type: float
-    rev_median = numpy.median(rev_scores) # type: float
+    norm_median = toolkit.median(x=norm_scores) # type: float
+    rev_median = toolkit.median(x=rev_scores)
     do_reverse = rev_median > norm_median # type: bool
     try:
         threshold = args_dict['threshold']
     except KeyError:
         if do_reverse:
-            threshold = numpy.std(perm_rev) * norm.pdf(1 - pvalue_threshold) + numpy.median(perm_rev) # type: float
+            threshold = toolkit.stdev(x=perm_rev) * toolkit.norm_pdf(x=1 - pvalue_threshold) + toolkit.median(x=perm_rev) # type: float
         else:
-            threshold = numpy.std(perm_scores) * norm.pdf(1 - pvalue_threshold) + numpy.median(perm_scores) # type: float
+            threshold = toolkit.stdev(x=perm_scores) * toolkit.norm_pdf(x=1 - pvalue_threshold) + toolkit.median(x=perm_scores) # type: float
     msg = 'Aligning in the %s direction' % ('reverse' if do_reverse else 'forward') # type: str
     logging.warning("FASTQ %s: %s", fastq_name, msg)
     logging.warning("FASTQ %s: %s vs %s (norm vs reverse) - threshold: %s", fastq_name, norm_median, rev_median, threshold)

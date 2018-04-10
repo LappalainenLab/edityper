@@ -14,6 +14,7 @@ import re
 import time
 import copy
 import gzip
+import math
 import logging
 import itertools
 from collections import namedtuple
@@ -159,6 +160,53 @@ def which(program): # type: (str) -> str
     if not progpath:
         raise ValueError("Cannot find program '%s' in your PATH" % program)
     return progpath[0]
+
+
+def median(x): # type: (Iterable[Union[int, float]]) -> float
+    """Get the median of a dataset"""
+    if isinstance(x, (int, float)):
+        return float(x)
+    if not all(map(lambda i: isinstance(i, (int, float)), x)):
+        raise ValueError("'x' must be an iterable of integers or floats")
+    x_sorted = sorted(x)
+    midpoint = int(len(x_sorted) / 2)
+    if len(x_sorted) % 2:
+        return float(x_sorted[midpoint])
+    lower, upper = x_sorted[midpoint:(midpoint + 2)]
+    return upper - ((upper - lower) / 2)
+
+
+def mean(x): # type: (Iterable[Union[int, float]]) -> float
+    """Get the mean of a dataset"""
+    if not x:
+        return 0.0
+    if isinstance(x, (int, float)):
+        x = (x,) # type: Tuple[float]
+    if not all(map(lambda i: isinstance(i, (int, float)), x)):
+        raise ValueError("'x' must be an iterable of integers or floats")
+    return sum(x) / len(x)
+
+
+def variance(x): # type: (Iterable[Union[int, float]]) -> float
+    """Get the variance of a dataset"""
+    if not x:
+        return 0.0
+    if isinstance(x, (int, float)):
+        x = (x,) # type: Tuple[float]
+    if not all(map(lambda i: isinstance(i, (int, float)), x)):
+        raise ValueError("'x' must be an iterable of integers or floats")
+    avg = mean(x=x)
+    return sum(map(lambda i: (i - avg) ** 2, x)) / len(x)
+
+
+def stdev(x): # type: (Iterable[Union[int, float]]) -> float
+    """Get the standard deviation of a dataset"""
+    return math.sqrt(variance(x=x))
+
+
+def norm_pdf(x, mu=0, sigma=1): # type: (float, float, float) -> float
+    """Calculate a the probability density of a normal distribution"""
+    return math.exp(-(((x - mu) ** 2) / (2 * (sigma ** 2)))) / math.sqrt(2 * math.pi * (sigma ** 2))
 
 
 def find_fastq(directory): # type: (str) -> Tuple[str]

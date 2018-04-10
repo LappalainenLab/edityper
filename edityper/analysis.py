@@ -24,11 +24,6 @@ elif PYTHON_VERSION == 3:
 else:
     raise SystemExit("Please use Python 2 or 3 for this module: " + __name__)
 
-try:
-    import numpy
-except ImportError as error:
-    raise SystemExit(error)
-
 
 _DISP_BREAK = '-----------------------------------------------------------------------------------------'
 NA = 'NA'
@@ -87,12 +82,9 @@ def percent(num, total): # type: (int, int) -> float
 
 def summarize(data, rounding=None): # type: (Iterable[Union[int, float]], Optional[int]) -> Union[int, float], float, float
     '''Get the sum, mean, and standard deviation of a collection of data'''
-    total = sum(data)
-    if data:
-        avg = numpy.mean(data)
-        std = numpy.std(data)
-    else:
-        avg, std = 0, 0 # type: int, int
+    total = sum(data) # type: Union[int, float]
+    avg = toolkit.mean(x=data) # type: float
+    std = toolkit.stdev(x=data) # type: float
     if rounding:
         avg = round(avg, rounding)
         std = round(std, rounding)
@@ -146,11 +138,11 @@ def events_report(
             #   Get deletions
             deletions = events['deletions'].get(index, []) # type: List[int]
             deletion_count = len(deletions) # type: int
-            avg_deletion = numpy.mean(deletions) if deletion_count else 0
+            avg_deletion = toolkit.mean(x=deletions) # type: float
             # Get insertions
             insertions = events['insertions'].get(index, []) # type: List[int]
             insertion_count = len(insertions) # type: int
-            avg_insertion = numpy.mean(insertions) if insertion_count else 0
+            avg_insertion = toolkit.mean(x=insertions) # type: float
             #   Matches
             nucleotides[base] = events['matches'].get(index, 0) # type: int
             #   Assemble and write
@@ -273,7 +265,7 @@ def display_classification(
                     event_counts['none'] += event.num_reads
                 count += event.num_reads
                 counted_total += event.num_reads
-            avg_indels = numpy.mean(event_lists['indels']) if event_lists['indels'] else 0
+            avg_indels = toolkit.mean(x=event_lists['indels'])
             if tag == 'DISCARD':
                 perc_count = NA
             else:
