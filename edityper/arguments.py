@@ -5,6 +5,7 @@
 import os
 import sys
 import argparse
+import pkg_resources
 import multiprocessing
 
 _OUTDIR_DEFAULT = os.path.join(os.getcwd(), 'output')
@@ -28,6 +29,8 @@ _VALID_PLATFORMS = (
     'ONT',
     'PACBIO'
 )
+
+VERSION = 'v' + pkg_resources.require('edityper')[0].version
 
 def _analysis_mode(value): # type: (str) -> List[str]
     value = value.upper().split('+') # type: List[str]
@@ -62,7 +65,7 @@ def _validate_bam_index(value): # type: (str) -> str
 def make_argument_parser():
     """Create an argument parser"""
     parser = argparse.ArgumentParser(
-        add_help=False
+        add_help=False,
     )
     #   Arguments for verbosity and logging
     parser.add_argument( # Verbosity
@@ -351,5 +354,10 @@ def make_argument_parser():
         action='store_true',
         required=False,
         help=argparse.SUPPRESS
+    )
+    parser.add_argument( # Version
+        '--version',
+        action='version',
+        version='%(prog)s %(version)s' % {'prog': '%(prog)s', 'version': VERSION}
     )
     return parser

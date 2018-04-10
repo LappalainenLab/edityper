@@ -25,20 +25,20 @@ try:
         from edityper import toolkit
         from edityper import analysis
         from edityper import alignment
+        from edityper import arguments
         from edityper import quality_control
         from edityper.toolkit import ExitPool
         from multiprocessing import pool as Pool
-        from edityper.arguments import make_argument_parser
     elif PYTHON_VERSION is 2:
         import sam
         import plots
         import toolkit
         import analysis
         import alignment
+        import arguments
         import quality_control
         from toolkit import ExitPool
         from multiprocessing import Pool
-        from arguments import make_argument_parser
         from itertools import izip as zip
         # from itertools import imap as map
         range = xrange
@@ -440,7 +440,7 @@ def main():
     """EdiTyper"""
     #   Setup EdiTyper
     #   Parse arguments
-    parser = make_argument_parser() # type: argparse.ArgumentParser
+    parser = arguments.make_argument_parser() # type: argparse.ArgumentParser
     if not sys.argv[1:] or any(map(lambda a: a in sys.argv, ('-h', '--help'))):
         sys.exit(parser.print_help())
     args = {key: value for key, value in vars(parser.parse_args()).items() if value is not None} # type: Dict[str, Any]
@@ -487,7 +487,7 @@ def main():
     console.setFormatter(colored_formater)
     logging.getLogger().addHandler(console)
     #   Begin the program
-    logging.info("Welcome to %s!", os.path.basename(sys.argv[0]))
+    logging.info("Welcome to %s %s!", os.path.basename(sys.argv[0]), arguments.VERSION)
     program_start = time.time() # type: float
     #   Where are we putting our output directory?
     logging.warning("Using outdirectory \x1b[1m%s", args['outdirectory'])
