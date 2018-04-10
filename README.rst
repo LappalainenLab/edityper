@@ -24,9 +24,6 @@ EdiTyper is compatible with Python 2.7 and 3.3+; it also depends on the
 following Python modules:
 
 -  `Cython <http://cython.org/>`__
--  `NumPy <http://www.numpy.org/>`__
--  `SciPy <https://www.scipy.org/>`__
--  `matplotlib <http://matplotlib.org/>`__
 -  `Biopython <http://biopython.org/>`__
 -  `regex <https://pypi.python.org/pypi/regex>`__
 
