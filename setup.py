@@ -8,6 +8,16 @@ from __future__ import print_function
 import os
 import sys
 
+#   Builtins to tell EdiTyper if we're setting up or not
+#   Inspired by NumPy
+if sys.version_info.major == 3:
+    import builtins
+else:
+    import __builtin__ as builtins
+
+
+builtins.__EDITYPER_SETUP__ = True
+
 #   Get stuff from setuptools
 from setuptools import setup
 from setuptools.extension import Extension
@@ -15,7 +25,6 @@ from setuptools.command.install import install as _install
 
 #   Some basic information
 NAME = 'EdiTyper'
-VERSION = '1.0.0'
 AUTHOR = 'Alexandre Yahi'
 AUTHOR_EMAIL = 'ay2318@cumc.columbia.edu'
 DESCRIPTION = ''
@@ -38,6 +47,8 @@ if 'cython' not in {mod.key for mod in pip.get_installed_distributions()}:
 
 
 from Cython.Distutils import build_ext
+
+from edityper import __version__ as VERSION
 
 #   A class to force install to run build first
 class install(_install):
