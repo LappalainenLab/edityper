@@ -708,6 +708,7 @@ def main():
         logging.debug("Writing summary took %s seconds", round(time.time() - summary_start, 3))
     #   Close logfile
     logging.debug("Entire program took %s seconds to run", round(time.time() - program_start, 3))
+    logging.info("Thank you for using %s", os.path.basename(sys.argv[0]))
     devnull.close()
     try:
         logfile.close()
