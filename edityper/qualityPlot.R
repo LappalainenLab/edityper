@@ -98,7 +98,7 @@ vioplot <- function(
       axis(1, at = at, label = label)
     }
     box()
-    for (i in 1:n) {
+    for (i in 1L:n) {
       polygon(
         c(at[i] - height[[i]], rev(at[i] + height[[i]])),
         c(base[[i]], rev(base[[i]])),
@@ -132,7 +132,7 @@ vioplot <- function(
       axis(2, at = at, label = label)
     }
     box()
-    for (i in 1:n) {
+    for (i in 1L:n) {
       polygon(
         c(base[[i]], rev(base[[i]])),
         c(at[i] - height[[i]], rev(at[i] + height[[i]])),
@@ -168,7 +168,7 @@ qualityplot <- function(scores) {
     names = colnames(scores),
     drawRect = FALSE
   )
-  for (i in 1:ncol(x = scores)) {
+  for (i in 1L:ncol(x = scores)) {
     lines(
       x = c(i - 0.25, i + 0.25),
       y = c(scores[1, i], scores[1, i])
@@ -192,19 +192,22 @@ if (!file.exists(scores.file)) {
 output.name <- paste0(file_path_sans_ext(x = scores.file), '.pdf')
 
 # Read in and transpose the scores table
-scores <- read.table(file = scores.file, header = FALSE, as.is = TRUE, row.names = 1)
+scores <- read.table(file = scores.file, header = FALSE, as.is = TRUE, row.names = 1L)
 scores <- as.data.frame(x = t(x = scores))
 colnames(x = scores) <- gsub(pattern = '\\n', replacement = '\n', x = colnames(x = scores), fixed = TRUE)
 
 # Start the thing
 pdf(file = output.name)
 par(mar = c(14.1, 4.1, 4.1, 2.1))
-par(las = 2)
+par(las = 2L)
 if (ncol(x = scores) == 1) {
   qualityplot(scores = scores)
 } else {
-  for (i in seq.int(from = 1, to = ncol(x = scores), by = 5)) {
-    qualityplot(scores = scores[, i:min(i + 4, ncol(x = scores))])
+  for (i in seq.int(from = 1L, to = ncol(x = scores), by = 5L)) {
+    cols.use <- i:min(i + 4L, ncol(x = scores))
+    scores.use <- as.data.frame(scores[, cols.use])
+    colnames(x = scores.use) <- colnames(x = scores)[cols.use]
+    qualityplot(scores = scores.use)
   }
 }
 garbage <- dev.off()
