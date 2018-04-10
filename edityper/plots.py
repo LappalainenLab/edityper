@@ -89,8 +89,8 @@ def locus_plot(
     mis_dict = {position: len(bases) for position, bases in mismatches.items()} # type: Dict[int, int]
     ins_dict = {position: len(counts) for position, counts in insertions.items()} # type: Dict[int, int]
     del_dict = {position: len(counts) for position, counts in deletions.items()} # type: Dict[int, int]
-    all_counts = list()
-    table_name = os.path.join(output_prefix, fastq_name + '_locus.txt')
+    all_counts = list() # type: List[Tuple[str]]
+    table_name = os.path.join(output_prefix, fastq_name + '_locus.txt') # type: str
     for position in range(max(itertools.chain(mis_dict, ins_dict, del_dict, coverage)) + 1): # type: int
         pos_counts = ( # type: Tuple[Union[int, str]]
             ins_dict.get(position, 0),
@@ -109,17 +109,16 @@ def locus_plot(
             tfile.write('\t'.join(line))
             tfile.write('\n')
             tfile.flush()
-    logging.debug("Assembling locus plot command")
-    rscript_exec = toolkit.which('Rscript')
-    lp_script = pkg_resources.resource_filename('edityper', 'locusPlot.R')
-    cmd = [rscript_exec, lp_script, table_name, num_reads]
-    cmd = map(str, cmd)
-    logging.debug("Starting subprocess")
-    logging.debug(cmd)
-    proc = subprocess.Popen(cmd, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+    rscript_exec = toolkit.which('Rscript') # type: str
+    lp_script = pkg_resources.resource_filename('edityper', 'locusPlot.R') # type: str
+    cmd = [rscript_exec, lp_script, table_name, num_reads] # type: List[Union[int, str]]
+    cmd = list(map(str, cmd)) # type: List[str]
+    proc = subprocess.Popen(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE) # type: subprocess.Popen
     proc.wait()
-    proc.communicate()
-    logging.info("Plot located at ...")
+    _, err = proc.communicate() # type: str, str
+    if err:
+        logging.error(err)
+    logging.info("Plot located at %s", os.path.splitext(table_name)[0] + '.pdf')
     logging.debug("FASTQ %s: Making locus plot took %s seconds", fastq_name, round(time.time() - locus_start, 3))
 
 
@@ -141,6 +140,7 @@ def quality_plot(
     scores = {f: tuple(scores_by_fastq[f]) for f in fastqs} # type: Dict[str, Tuple[int]]
     table_name = output_prefix + '_quality.txt' # type: str
     max_num_scores = max(map(len, scores_by_fastq.values()))
+    logging.debug("Making a table of quality scores")
     with open(table_name, 'w') as tfile:
         for fastq, scores in scores_by_fastq.items(): # type: str, List[int]
             scores = toolkit.unpack(collection=(scores, itertools.repeat(NAN, max_num_scores - len(scores)))) # type: Tuple[Union[int, str]]]
@@ -169,9 +169,12 @@ def quality_plot(
         os.environ['R_LIBS'] = libdir
         #   Assemble plotting command
         plt_cmd = [rscript_exec, qp_script, table_name] # type: List[str]
-        ret_code = subprocess.check_call(plt_cmd) # type: int
-        if ret_code != 0:
-            logging.error("Something failed when making quality plot")
+        proc = subprocess.Popen(plt_cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE) # type: subprocess.Popen
+        proc.wait()
+        _, err = proc.communicate()
+        if err:
+            logging.error(err)
+        logging.info("Quality scores plot can be found at %s", os.path.splitext(table_name)[0] + '.pdf')
     else:
         logging.error("Cannot make quality plots as there is no writeable R library location")
     logging.debug("Making quality scores plot took %s seconds", round(time.time() - quality_start, 3))

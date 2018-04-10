@@ -93,4 +93,4 @@ for (i in rownames(x = counts)[1:3]) {
     max.reads = max(counts[i, ])
   )
 }
-dev.off()
+garbage <- dev.off()

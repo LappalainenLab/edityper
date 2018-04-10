@@ -5,7 +5,7 @@ if (!'sm' %in% rownames(x = installed.packages())) {
   install.packages('sm')
 }
 
-library(sm)
+suppressMessages(library(sm))
 library(tools)
 library(utils)
 library(graphics)
@@ -207,4 +207,4 @@ if (ncol(x = scores) == 1) {
     qualityplot(scores = scores[, i:min(i + 4, ncol(x = scores))])
   }
 }
-dev.off()
+garbage <- dev.off()
