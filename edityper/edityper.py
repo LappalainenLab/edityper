@@ -352,15 +352,15 @@ def crispr_analysis(
             sams = map( # type: Iterable[sam.SAM]
                 sam.SAM,
                 (read.name for read in supporting_reads), # qname=
-                itertools.repeat(bit_base), # flag=
-                itertools.repeat(reference.name), # rname=
-                itertools.repeat(position), # pos=
-                itertools.repeat(255), # mapq=
-                itertools.repeat(cigar), # cigar=
-                itertools.repeat('*'), # rnext=
-                itertools.repeat(0), # pnext=
-                itertools.repeat(0), # tlen=
-                itertools.repeat(sam_seq), # seq=
+                itertools.repeat(bit_base, len(supporting_reads)), # flag=
+                itertools.repeat(reference.name, len(supporting_reads)), # rname=
+                itertools.repeat(position, len(supporting_reads)), # pos=
+                itertools.repeat(255, len(supporting_reads)), # mapq=
+                itertools.repeat(cigar, len(supporting_reads)), # cigar=
+                itertools.repeat('*', len(supporting_reads)), # rnext=
+                itertools.repeat(0, len(supporting_reads)), # pnext=
+                itertools.repeat(0, len(supporting_reads)), # tlen=
+                itertools.repeat(sam_seq, len(supporting_reads)), # seq=
                 (read.qual for read in supporting_reads) # qual=
                 # quals # qual=
             )
