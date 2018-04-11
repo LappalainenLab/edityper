@@ -493,8 +493,6 @@ def main():
     logging.warning("Using outdirectory \x1b[1m%s", args['outdirectory'])
     logging.warning("Full logfile can be found at %s", logname)
     #   Check suppression values and other arguments
-    if _check_suppressions(suppressions=args): # All output suppressed? Error
-        sys.exit(logging.critical("All output suppressed, not running"))
     if args['suppress_sam']: # Suppressed SAM output?
         logging.warning("SAM output suppressed, not writing SAM file")
         args['bam'] = False
@@ -516,6 +514,8 @@ def main():
         except ValueError: # No Rscript found
             logging.error("Cannot find Rscript, not generating plots")
             args['suppress_plots'] = True
+    if _check_suppressions(suppressions=args): # All output suppressed? Error
+        sys.exit(logging.critical("All output suppressed, not running"))
     # if args['xkcd']:
     #     plots._XKCD = True
     #   Enable the profiler if desired
