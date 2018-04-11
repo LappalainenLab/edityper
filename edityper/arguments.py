@@ -134,7 +134,7 @@ def make_argument_parser():
         metavar='gap extension penalty',
         help="Set the gap extension penalty, defaults to '1'"
     )
-    align_opts.add_argument(
+    align_opts.add_argument( # Quality threshold
         '-q',
         '--quality-threshold',
         dest='threshold',
