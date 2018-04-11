@@ -49,12 +49,6 @@ _THRESHOLD_LENGTH = 0.05 # type: float
 _CHUNK_DEFAULT = 5 # type: int
 _XKCD = False # type: bool
 
-# def _check_fonts(): # type: (None) -> bool
-#     humor = 'Humor-Sans.ttf' in map(os.path.basename, fm.findSystemFonts()) # type: bool
-#     if _XKCD and not humor:
-#         logging.error("Cannot find 'Humor-Sans.ttf' font. Please install and clear your matplotlib cache")
-#     return _XKCD and humor
-
 
 def _splitstr(string, cutoff=20): # type: (str, int) -> str
     if len(string) <= cutoff:
@@ -63,13 +57,6 @@ def _splitstr(string, cutoff=20): # type: (str, int) -> str
     midpoint = len(string) / 2 # type: float
     closest = min(pts, key=lambda x: abs(midpoint - x)) + 1 # type: int
     return string[:closest] + '\\n' + string[closest:]
-
-
-# def ichunk(x, chunksize): # type: (Iterable[Any], int) -> Iterator[Iterable[Any]]
-#     """Iterate by chunks"""
-#     chunk_range = range(0, len(x), chunksize) # type: range
-#     for i in chunk_range: # type: int
-#         yield x[i:(i + chunksize)]
 
 
 def locus_plot(
