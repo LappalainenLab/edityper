@@ -31,6 +31,12 @@ Each of these modules is available on
 `PyPi <https://pypi.python.org/>`__ and installable using
 `pip <https://pip.pypa.io/en/stable/>`__
 
+EdiTyper also depends on `R <https://cran.r-project.org/>`__ and
+`Rscript <https://stat.ethz.ch/R-manual/R-devel/library/utils/html/Rscript.html>`__
+for plotting. If R is not installed, then plots will be suppressed.
+EdiTyper will still run, assuming at least one other output (see
+`Suppression Arguments <https://github.com/mojaveazure/EdiTyper#suppression-arguments>`__).
+
 Basic Usage
 -----------
 
@@ -200,7 +206,7 @@ Suppression Arguments
 +---------------------------------+------------------------------------------------+
 | ``--suppress-tables``           | Suppress both events and read classification   |
 +---------------------------------+------------------------------------------------+
-| ``--suppress-plots``            | Suppress locus and quality plots               |
+| ``--suppress-plots``            | Suppress locus and quality tables and plots    |
 +---------------------------------+------------------------------------------------+
 
 Output Files
@@ -210,21 +216,23 @@ For each output table, all lines starting with ``#`` are header lines.
 All lines starting with ``##`` are extra information. See details below
 for specifics about each output.
 
-+--------------------------------------------------------+---------------------------+
-| Output file                                            | Extension                 |
-+========================================================+===========================+
-| Alignments in SAM/BAM format                           | ``.sam | .bam``           |
-+--------------------------------------------------------+---------------------------+
-| Table of events by base                                | ``.events.txt``           |
-+--------------------------------------------------------+---------------------------+
-| Classification of reads in tabular format              | ``.classification.txt``   |
-+--------------------------------------------------------+---------------------------+
-| Locus and alignment quality plots                      | ``.pdf``                  |
-+--------------------------------------------------------+---------------------------+
-| Summary of read classifications per input FASTQ file   | ``.summary.txt``          |
-+--------------------------------------------------------+---------------------------+
-| Read assignments table                                 | ``.assignments.txt``      |
-+--------------------------------------------------------+---------------------------+
++--------------------------------------------------------+---------------------------------------+
+| Output file                                            | Extension                             |
++========================================================+=======================================+
+| Alignments in SAM/BAM format                           | ``.sam | .bam``                       |
++--------------------------------------------------------+---------------------------------------+
+| Table of events by base                                | ``.events.txt``                       |
++--------------------------------------------------------+---------------------------------------+
+| Classification of reads in tabular format              | ``.classification.txt``               |
++--------------------------------------------------------+---------------------------------------+
+| Locus events table and plots                           | ``_locus.txt`` and ``_locus.pdf``     |
++--------------------------------------------------------+---------------------------------------+
+| Quality scores table and plots                         | ``_quality.txt`` and ``_quality.pdf`` |
++--------------------------------------------------------+---------------------------------------+
+| Summary of read classifications per input FASTQ file   | ``.summary.txt``                      |
++--------------------------------------------------------+---------------------------------------+
+| Read assignments table                                 | ``.assignments.txt``                  |
++--------------------------------------------------------+---------------------------------------+
 
 SAM/BAM Output
 ~~~~~~~~~~~~~~
@@ -422,19 +430,6 @@ by base. One table is generated for *all* FASTQ files.
 |                    | of mismatches                  |
 +--------------------+--------------------------------+
 
-Locus and Quality Plots
-~~~~~~~~~~~~~~~~~~~~~~~
-
-The locus plot shows events at each base along the reference and the
-number of supporting reads for each event. One PDF is generated per
-FASTQ file. The first page is scaled to total number of reads in the
-FASTQ file, the second is scaled to maximum number of supporting reads
-accross all events. Coverage at each base is also shown.
-
-The quality plot shows the distribution of alignment quality scores. One
-PDF is generated for *all* FASTQ files. The quality-score threshold for
-discarding reads is shown as a black bar.
-
 Assignments Table
 ~~~~~~~~~~~~~~~~~
 
@@ -457,6 +452,34 @@ when verbosity is set to 'debug' (``-v debug | --verbosty debug``) and
 +--------------+----------------------------------------+
 | ``NumMis``   | Number of mismatches in this read      |
 +--------------+----------------------------------------+
+
+Locus Events Table and Plot
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The locus plot shows events at each base along the reference and the
+number of supporting reads for each event (insertions, deletions,
+and mismatches). One PDF is generated per FASTQ file. The first page is
+scaled to total number of reads in the FASTQ file and shows all events,
+while the remaining pages show a specific event and are scaled to maximum number
+of supporting reads for that event. Coverage at each base is also shown.
+
+The locus events table is used to generate the locus plot and is designed to
+be read into R. It has four columns, ``Insertions``, ``Deletions``, ``Mismatches``,
+and ``Coverage``, with the counts of each read for a given event.
+Each row is a position relative to the reference sequence.
+
+Quality Scores Table and Plot
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The quality plot shows the distribution of alignment quality scores. One
+PDF is generated for *all* FASTQ files. The quality-score threshold for
+discarding reads is shown as a black bar.
+
+The quality scores table is used to generate the quality plot and is designed
+to be read into R. Each row is a FASTQ and each column is an alignment quality
+score for a read within the FASTQ file. There are N columns where N is the maximum
+number of reads across all FASTQ files. FASTQs with fewer reads than N have NaNs
+to fill the rows.
 
 
 .. |image0| image:: .classification_scheme.svg
