@@ -477,8 +477,8 @@ discarding reads is shown as a black bar.
 
 The quality scores table is used to generate the quality plot and is designed
 to be read into R. Each row is a FASTQ and each column is an alignment quality
-score for a read within the FASTQ file. There are N columns where N is the maximum
-number of reads across all FASTQ files. FASTQs with fewer reads than N have NaNs
+score for a read within the FASTQ file. There are N columns, where N is the maximum
+number of reads across all FASTQ files. FASTQs with fewer than N reads have NaNs
 to fill the rows.
 
 
