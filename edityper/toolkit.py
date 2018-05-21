@@ -170,7 +170,9 @@ def median(x): # type: (Iterable[Union[int, float]]) -> float
         raise ValueError("'x' must be an iterable of integers or floats")
     x_sorted = sorted(x)
     midpoint = int(len(x_sorted) / 2)
-    if len(x_sorted) % 2:
+    if len(x_sorted) == 1:
+        return(x[0])
+    elif len(x_sorted) % 2:
         return float(x_sorted[midpoint])
     lower, upper = x_sorted[midpoint:(midpoint + 2)]
     return upper - ((upper - lower) / 2)
