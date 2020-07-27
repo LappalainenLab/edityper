@@ -30,7 +30,7 @@ AUTHOR_EMAIL = 'ay2318@cumc.columbia.edu'
 DESCRIPTION = ''
 LICENSE = ''
 KEYWORDS = 'crispr rnaseq'
-URL = 'https://github.com/lappalainenlab/EdiTyper'
+URL = 'https://github.com/LappalainenLab/edityper'
 
 #   Ensure Cython is available
 try:
