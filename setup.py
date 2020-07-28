@@ -28,7 +28,8 @@ NAME = 'EdiTyper'
 AUTHOR = 'Alexandre Yahi'
 AUTHOR_EMAIL = 'ay2318@cumc.columbia.edu'
 DESCRIPTION = ''
-LICENSE = ''
+LICENSE = 'MIT License'
+LICENSE_FILE = 'LICENSE'
 KEYWORDS = 'crispr rnaseq'
 URL = 'https://github.com/LappalainenLab/edityper'
 
@@ -74,7 +75,7 @@ CLASSIFIERS = [
     #   Language
     'Natural Language :: English',
     #   Pick your license as you wish (should match "license" above)
-    # 'License :: OSI Approved :: MIT License',
+    'License :: OSI Approved :: MIT License',
     #   Specify the Python versions you support here. In particular, ensure
     #   that you indicate whether you support Python 2, Python 3 or both.
     'Programming Language :: C++',
@@ -145,6 +146,7 @@ setup(
     author_email=AUTHOR_EMAIL,
     description=DESCRIPTION,
     license=LICENSE,
+    license_file=LICENSE_FILE,
     url=URL,
     platforms=PLATFORMS,
     python_requires=PYTHON_REQUIRES,
